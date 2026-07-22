@@ -29,7 +29,8 @@ import RadialChart from "./pages/Charts/RadialChart";
 import Invoices from "./pages/Invoices";
 import ComingSoon from "./pages/OtherPage/ComingSoon";
 import FileManager from "./pages/FileManager";
-import Calendar from "./pages/Calendar";
+//import Calendar from "./pages/Calendar";
+import Calendar from "./pages/CrmCalendar/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
 import DataTables from "./pages/Tables/DataTables";
 import PricingTables from "./pages/PricingTables";
@@ -38,7 +39,7 @@ import Chats from "./pages/Chat/Chats";
 import FormElements from "./pages/Forms/FormElements";
 import FormLayout from "./pages/Forms/FormLayout";
 import Blank from "./pages/Blank";
-import EmailInbox from "./pages/Email/EmailInbox";
+//import EmailInbox from "./pages/Email/EmailInbox";
 import EmailDetails from "./pages/Email/EmailDetails";
 import TaskKanban from "./pages/Task/TaskKanban";
 import BreadCrumb from "./pages/UiElements/BreadCrumb";
@@ -89,6 +90,11 @@ import VectorMap from "./pages/Maps/VectorMap";
 import TextGeneratorPage from "./pages/Ai/Text/TextGenerator";
 import ImageGeneratorPage from "./pages/Ai/Image/ImageGenerator";
 import CodeGeneratorPage from "./pages/Ai/Code/CodeGenerator";
+import CrmLayout from "./layout/CrmLayout";
+import Dashboard from "./pages/CrmDashboard/Dashboard";
+import Clients from "./pages/CrmClients/Clients";
+import Tasks from "./pages/CrmTasks/Tasks";
+import Inbox from "./pages/CrmInbox/Inbox";
 
 export default function App() {
   return (
@@ -96,6 +102,15 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
+
+          <Route element={<CrmLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/contacts" element={<Clients />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/inbox" element={<Inbox />} />
+          </Route>
+
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
             <Route index path="/" element={<Ecommerce />} />
@@ -109,7 +124,7 @@ export default function App() {
             <Route path="/ai" element={<AIDashboard />} />
             <Route path="/finance" element={<FinanceDashboard />} />
 
-            <Route path="/calendar" element={<Calendar />} />
+            {/*<Route path="/calendar" element={<Calendar />} />*/}
             <Route path="/invoice" element={<Invoices />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/chat" element={<Chats />} />
@@ -145,7 +160,7 @@ export default function App() {
             <Route path="/task-kanban" element={<TaskKanban />} />
 
             {/* Email */}
-            <Route path="/inbox" element={<EmailInbox />} />
+            {/* <Route path="/inbox" element={<EmailInbox />} /> */}
             <Route path="/inbox-details" element={<EmailDetails />} />
 
             {/* Tables */}

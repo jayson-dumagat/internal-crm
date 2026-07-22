@@ -115,8 +115,16 @@ import { ReactComponent as AspectIcon } from "./aspect.svg?react";
 import { ReactComponent as StackIcon } from "./stack.svg?react";
 import { ReactComponent as DiamondIcon } from "./diamond.svg?react";
 import { ReactComponent as ShareIcon } from "./share.svg?react";
+import { ReactComponent as UsersRoundIcon } from "./users-round.svg?react";
+import { ReactComponent as IdCardIcon } from "./id-card.svg?react";
+import { ReactComponent as ListTodoIcon } from "./list-todo.svg?react";
+import { ReactComponent as InboxIcon } from "./inbox-icon.svg?react";
 
 export {
+  InboxIcon,
+  ListTodoIcon,
+  IdCardIcon,
+  UsersRoundIcon,
   ShareIcon,
   StackIcon,
   AspectIcon,
