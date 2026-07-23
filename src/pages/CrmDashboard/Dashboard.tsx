@@ -10,7 +10,7 @@ export default function CrmDashboard() {
   return (
     <>
       <PageMeta
-        title="CCRMS Dashboard | Caballes-Go Securities, Inc."
+        title="CDEX Dashboard | Caballes-Go Securities, Inc."
         description="This is CRM Dashboard page for Caballes-Go Securities, Inc."
       />
       <div className="grid grid-cols-12 gap-4 md:gap-6">

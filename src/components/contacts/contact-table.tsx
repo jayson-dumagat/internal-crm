@@ -137,7 +137,7 @@ const tableRowData = [
 type SortKey = "name" | "position" | "location" | "age" | "date" | "salary";
 type SortOrder = "asc" | "desc";
 
-export default function ClientTable() {
+export default function ContactTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<SortKey>("name");

@@ -92,9 +92,12 @@ import ImageGeneratorPage from "./pages/Ai/Image/ImageGenerator";
 import CodeGeneratorPage from "./pages/Ai/Code/CodeGenerator";
 import CrmLayout from "./layout/CrmLayout";
 import Dashboard from "./pages/CrmDashboard/Dashboard";
-import Clients from "./pages/CrmClients/Clients";
 import Tasks from "./pages/CrmTasks/Tasks";
 import Inbox from "./pages/CrmInbox/Inbox";
+import Leads from "./pages/CrmLeads/Leads";
+import Companies from "./pages/CrmCompanies/Companies";
+import Contacts from "./pages/CrmContacts/Contacts";
+import Deals from "./pages/CrmDeals/Deals";
 
 export default function App() {
   return (
@@ -102,13 +105,15 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-
           <Route element={<CrmLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/calendar" element={<Calendar />} />
-            <Route path="/contacts" element={<Clients />} />
+            <Route path="/contacts" element={<Contacts />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/inbox" element={<Inbox />} />
+            <Route path="/leads" element={<Leads />} />
+            <Route path="/companies" element={<Companies />} />
+            <Route path="/deals" element={<Deals />} />
           </Route>
 
           {/* Dashboard Layout */}

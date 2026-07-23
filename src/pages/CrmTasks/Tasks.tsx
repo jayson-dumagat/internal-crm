@@ -31,8 +31,8 @@ export default function Tasks() {
   return (
     <>
       <PageMeta
-        title="CCRMS Tasks"
-        description="Client relationship tasks, follow-ups, and workflow boards for CCRMS."
+        title="CDEX Tasks"
+        description="Client relationship tasks, follow-ups, and workflow boards for DEX."
       />
 
       <div className="space-y-4">

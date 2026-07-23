@@ -59,14 +59,12 @@ export default function AuthLayout({
               alt="CGSI Logo"
             />
 
-            <h1 className="mb-5 text-3xl leading-tight font-semibold text-white xl:text-4xl">
-              CGSI Customer Relationship Management System (CCRMS)
+            <h1 className="mb-5 text-2xl leading-tight font-semibold text-white xl:text-4xl">
+              Caballes-Go Securities, Inc. DEX (CDEX)
             </h1>
 
-            <p className="max-w-lg text-base leading-7 text-white/75">
-              A centralized platform built to help Caballes-Go Securities manage
-              client relationships, organize customer information, and support a
-              smoother service experience.
+            <p className="max-w-full text-base leading-7 text-white/75">
+              CDEX by Caballes-Go Securities, Inc. is a CRM platform built to boost business efficiency and streamline workflows.
             </p>
           </div>
         </div>

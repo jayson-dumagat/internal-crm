@@ -6,7 +6,7 @@ export default function Inbox() {
   return (
     <>
       <PageMeta
-        title="CCRMS Inbox"
+        title="CDEX Inbox"
         description="This is React.js Inbox Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
       />
       <div className="sm:h-[calc(100vh-174px)] h-screen xl:h-[calc(100vh-186px)">

@@ -119,8 +119,24 @@ import { ReactComponent as UsersRoundIcon } from "./users-round.svg?react";
 import { ReactComponent as IdCardIcon } from "./id-card.svg?react";
 import { ReactComponent as ListTodoIcon } from "./list-todo.svg?react";
 import { ReactComponent as InboxIcon } from "./inbox-icon.svg?react";
+import { ReactComponent as UserRoundIcon } from "./user-round.svg?react";
+import { ReactComponent as Building2Icon } from "./building-2.svg?react";
+import { ReactComponent as SparklesIcon } from "./sparkles-icon.svg?react";
+import { ReactComponent as NoteIcon } from "./note-icon.svg?react";
+import { ReactComponent as TrophyIcon } from "./trophy-icon.svg?react";
+import { ReactComponent as SearchAltIcon } from "./search-alt-icon.svg?react";
+import { ReactComponent as FilterIcon } from "./filter-icon.svg?react";
+import { ReactComponent as ExportIcon } from "./export-icon.svg?react";
 
 export {
+  ExportIcon,
+  FilterIcon,
+  SearchAltIcon,
+  TrophyIcon,
+  NoteIcon,
+  SparklesIcon,
+  Building2Icon,
+  UserRoundIcon,
   InboxIcon,
   ListTodoIcon,
   IdCardIcon,
