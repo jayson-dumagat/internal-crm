@@ -127,8 +127,14 @@ import { ReactComponent as TrophyIcon } from "./trophy-icon.svg?react";
 import { ReactComponent as SearchAltIcon } from "./search-alt-icon.svg?react";
 import { ReactComponent as FilterIcon } from "./filter-icon.svg?react";
 import { ReactComponent as ExportIcon } from "./export-icon.svg?react";
+import { ReactComponent as ArrowLeftAltIcon } from "./arrow-left-alt.svg?react";
+import { ReactComponent as ArrowRightAltIcon } from "./arrow-right-alt.svg?react";
+import { ReactComponent as SquarePenIcon } from "./square-pen.svg?react";
 
 export {
+  SquarePenIcon,
+  ArrowRightAltIcon,
+  ArrowLeftAltIcon,
   ExportIcon,
   FilterIcon,
   SearchAltIcon,
