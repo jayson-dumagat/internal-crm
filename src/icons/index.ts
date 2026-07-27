@@ -130,8 +130,14 @@ import { ReactComponent as ExportIcon } from "./export-icon.svg?react";
 import { ReactComponent as ArrowLeftAltIcon } from "./arrow-left-alt.svg?react";
 import { ReactComponent as ArrowRightAltIcon } from "./arrow-right-alt.svg?react";
 import { ReactComponent as SquarePenIcon } from "./square-pen.svg?react";
+import { ReactComponent as PhoneIcon } from "./phone-icon.svg?react";
+import { ReactComponent as EmailIcon } from "./email-icon.svg?react";
+import { ReactComponent as EllipsisIcon } from "./ellipsis-icon.svg?react";
 
 export {
+  EllipsisIcon,
+  EmailIcon,
+  PhoneIcon,
   SquarePenIcon,
   ArrowRightAltIcon,
   ArrowLeftAltIcon,

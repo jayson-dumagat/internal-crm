@@ -1,26 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+
 import PageMeta from "../../components/common/PageMeta";
+import LeadCards from "../../components/leads/LeadCards";
+import LeadFooter from "../../components/leads/LeadFooter";
 import LeadHeader from "../../components/leads/LeadHeader";
 import LeadTable from "../../components/leads/LeadTable";
-import LeadFooter from "../../components/leads/LeadFooter";
 import SearchField from "../../components/ui/search/Search";
-import Sheet from "../../components/ui/sheet/Sheet";
-import Badge from "../../components/ui/badge/Badge";
-import Avatar from "../../components/ui/avatar/Avatar";
+
 import { ExportIcon, FilterIcon } from "../../icons";
-import LeadCards from "../../components/leads/LeadCards";
+import LeadPreview from "../../components/leads/LeadPreview";
 
-type LeadStatus = "New" | "Contacted" | "Qualified" | "Converted" | "Lost";
-type InterestLevel = "High" | "Medium" | "Low";
+export type LeadStatus =
+  | "New"
+  | "Contacted"
+  | "Qualified"
+  | "Converted"
+  | "Lost";
 
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
+export type InterestLevel = "High" | "Medium" | "Low";
 
 export type Lead = {
   id: number;
@@ -32,6 +29,7 @@ export type Lead = {
   phone: string;
   company: string;
   source: string;
+  annualRevenue?: string;
   owner: {
     name: string;
     avatar: string;
@@ -57,6 +55,7 @@ const leads: Lead[] = [
     phone: "+63 917 555 0123",
     company: "Tech Innov Inc.",
     source: "Manual",
+    annualRevenue: "₱25M",
     owner: {
       name: "Sarah Lim",
       avatar: "/images/user/user-21.jpg",
@@ -64,7 +63,8 @@ const leads: Lead[] = [
     status: "New",
     interestLevel: "Low",
     dateCreated: "25 Apr, 2027",
-    address: "18F Corporate Center, Ortigas Center, Pasig City, Metro Manila",
+    address:
+      "18F Corporate Center, Ortigas Center, Pasig City, Metro Manila",
     assignedTo: {
       name: "John Reyes",
       avatar: "/images/user/user-22.jpg",
@@ -80,6 +80,7 @@ const leads: Lead[] = [
     phone: "+63 917 555 0182",
     company: "Anderson Holdings",
     source: "Organic",
+    annualRevenue: "₱36M",
     owner: {
       name: "Mark Santos",
       avatar: "/images/user/user-24.jpg",
@@ -103,6 +104,7 @@ const leads: Lead[] = [
     phone: "+63 917 555 0111",
     company: "Individual",
     source: "Outbound",
+    annualRevenue: "₱50M",
     owner: {
       name: "Ana Dela Cruz",
       avatar: "/images/user/user-27.jpg",
@@ -118,11 +120,7 @@ const leads: Lead[] = [
   },
 ];
 
-const interestBadgeColor: Record<InterestLevel, BadgeColor> = {
-  High: "success",
-  Medium: "warning",
-  Low: "light",
-};
+const ITEMS_PER_PAGE = 10;
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -130,19 +128,19 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  const itemsPerPage = 10;
-
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
   const filteredLeads = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
+    const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    if (!search) return leads;
+    if (!normalizedSearch) {
+      return leads;
+    }
 
-    return leads.filter((lead) =>
-      [
+    return leads.filter((lead) => {
+      const searchableValues = [
         lead.name,
         lead.role,
         lead.lastActivity,
@@ -156,18 +154,31 @@ export default function Leads() {
         lead.interestLevel,
         lead.dateCreated,
         lead.address,
-      ]
+      ];
+
+      return searchableValues
         .join(" ")
         .toLowerCase()
-        .includes(search),
-    );
+        .includes(normalizedSearch);
+    });
   }, [searchTerm]);
 
   const totalItems = filteredLeads.length;
-  const totalPages = Math.max(Math.ceil(totalItems / itemsPerPage), 1);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  const totalPages = Math.max(
+    Math.ceil(totalItems / ITEMS_PER_PAGE),
+    1,
+  );
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const endIndex = Math.min(
+    startIndex + ITEMS_PER_PAGE,
+    totalItems,
+  );
+
   const startEntry = totalItems === 0 ? 0 : startIndex + 1;
+
   const currentData = filteredLeads.slice(startIndex, endIndex);
 
   const isCurrentPageSelected =
@@ -175,23 +186,39 @@ export default function Leads() {
     currentData.every((lead) => selectedIds.includes(lead.id));
 
   const toggleSelected = (id: number) => {
-    setSelectedIds((current) =>
-      current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
-        : [...current, id],
-    );
+    setSelectedIds((currentSelectedIds) => {
+      if (currentSelectedIds.includes(id)) {
+        return currentSelectedIds.filter(
+          (selectedId) => selectedId !== id,
+        );
+      }
+
+      return [...currentSelectedIds, id];
+    });
   };
 
   const toggleCurrentPage = () => {
-    const currentIds = currentData.map((lead) => lead.id);
+    const currentPageIds = currentData.map((lead) => lead.id);
 
-    setSelectedIds((current) => {
+    setSelectedIds((currentSelectedIds) => {
       if (isCurrentPageSelected) {
-        return current.filter((id) => !currentIds.includes(id));
+        return currentSelectedIds.filter(
+          (id) => !currentPageIds.includes(id),
+        );
       }
 
-      return Array.from(new Set([...current, ...currentIds]));
+      return Array.from(
+        new Set([...currentSelectedIds, ...currentPageIds]),
+      );
     });
+  };
+
+  const handleSelectLead = (lead: Lead) => {
+    setSelectedLead(lead);
+  };
+
+  const handleCloseLeadSheet = () => {
+    setSelectedLead(null);
   };
 
   return (
@@ -220,7 +247,7 @@ export default function Leads() {
                 <button
                   type="button"
                   aria-label="Filter leads"
-                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
                 >
                   <FilterIcon />
                 </button>
@@ -228,7 +255,7 @@ export default function Leads() {
                 <button
                   type="button"
                   aria-label="Export leads"
-                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
                 >
                   <ExportIcon />
                 </button>
@@ -238,7 +265,7 @@ export default function Leads() {
             <div className="hidden items-center gap-3 md:flex">
               <button
                 type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
               >
                 <FilterIcon />
                 Filter
@@ -246,7 +273,7 @@ export default function Leads() {
 
               <button
                 type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
               >
                 <ExportIcon />
                 Export
@@ -261,10 +288,13 @@ export default function Leads() {
           isCurrentPageSelected={isCurrentPageSelected}
           onToggleSelected={toggleSelected}
           onToggleCurrentPage={toggleCurrentPage}
-          onSelectLead={setSelectedLead}
+          onSelectLead={handleSelectLead}
         />
 
-        <LeadCards leads={currentData} onSelectLead={setSelectedLead} />
+        <LeadCards
+          leads={currentData}
+          onSelectLead={handleSelectLead}
+        />
 
         <LeadFooter
           startEntry={startEntry}
@@ -276,91 +306,10 @@ export default function Leads() {
         />
       </div>
 
-      <Sheet
-        isOpen={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
-        title="Lead Details"
-        description="View detailed information about the selected lead."
-        side="right"
-        className="w-full sm:max-w-xl"
-      >
-        {selectedLead && (
-          <div className="space-y-5">
-            <div className="flex items-center gap-3 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05]">
-              <Avatar
-                src={selectedLead.avatar}
-                alt={selectedLead.name}
-                size="large"
-              />
-
-              <div>
-                <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                  {selectedLead.role}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedLead.company} ● {selectedLead.lastActivity}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ModalField label="Email" value={selectedLead.email} />
-              <ModalField label="Phone" value={selectedLead.phone} />
-              <ModalField label="Company" value={selectedLead.company} />
-              <ModalField label="Lead Source" value={selectedLead.source} />
-              <ModalField label="Owner" value={selectedLead.owner.name} />
-              <ModalField label="Status" value={selectedLead.status} />
-
-              <ModalBadgeField
-                label="Interest Level"
-                value={selectedLead.interestLevel}
-                color={interestBadgeColor[selectedLead.interestLevel]}
-              />
-
-              <ModalField
-                label="Date Created"
-                value={selectedLead.dateCreated}
-              />
-              <ModalField label="Address" value={selectedLead.address} />
-
-              <ModalField
-                label="Assigned To"
-                value={selectedLead.assignedTo.name}
-              />
-            </div>
-          </div>
-        )}
-      </Sheet>
+      <LeadPreview
+        lead={selectedLead}
+        onClose={handleCloseLeadSheet}
+      />
     </>
-  );
-}
-
-function ModalBadgeField({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color: BadgeColor;
-}) {
-  return (
-    <div className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.05]">
-      <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">{label}</p>
-      <Badge variant="light" color={color} size="sm">
-        {value}
-      </Badge>
-    </div>
-  );
-}
-
-function ModalField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.05]">
-      <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">{label}</p>
-      <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-        {value}
-      </p>
-    </div>
   );
 }

@@ -2,11 +2,11 @@ import { Link } from "react-router";
 
 const leadMetrics = [
   {
-    label: "Total Leads",
+    label: "New Leads",
     value: 120,
   },
   {
-    label: "New Leads",
+    label: "Contacted Leads",
     value: 10,
   },
   {
@@ -14,7 +14,7 @@ const leadMetrics = [
     value: 24,
   },
   {
-    label: "Lost Leads",
+    label: "Converted Leads",
     value: 5,
   },
 ];
