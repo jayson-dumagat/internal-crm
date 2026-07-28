@@ -11,7 +11,20 @@ const envSchema = z.object({
 
   FRONTEND_ORIGIN: z.string().url(),
 
-  JWT_SECRET: z.string().min(32),
+  // Microsoft Entra ID
+  AZURE_TENANT_ID: z.string().min(1),
+
+  AZURE_CLIENT_ID: z.string().uuid(),
+
+  AZURE_CLIENT_SECRET: z.string().min(1),
+
+  AZURE_AUTHORITY: z.string().url(),
+
+  AZURE_ISSUER: z.string().url(),
+
+  AZURE_JWKS_URI: z.string().url(),
+
+  AZURE_AUDIENCE: z.string().uuid(),
 });
 
 const result = envSchema.safeParse(process.env);
