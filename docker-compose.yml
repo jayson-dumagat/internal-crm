@@ -1,0 +1,135 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: crm-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    expose:
+      - "5432"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - crm_network
+
+  backend:
+    container_name: crm-backend
+    restart: unless-stopped
+
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      JWT_SECRET: ${JWT_SECRET}
+
+    expose:
+      - "5000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+    networks:
+      - crm_network
+
+  frontend:
+    container_name: crm-frontend
+    restart: unless-stopped
+
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+
+    expose:
+      - "5173"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:5173').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    networks:
+      - crm_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: crm-nginx
+    restart: unless-stopped
+
+    ports:
+      - "${HTTP_PORT:-80}:80"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+    networks:
+      - crm_network
+
+volumes:
+  postgres_data:
+    name: crm_postgres_data
+
+networks:
+  crm_network:
+    name: crm_network
+    driver: bridge

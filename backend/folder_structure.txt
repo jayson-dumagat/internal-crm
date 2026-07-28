@@ -1,0 +1,86 @@
+backend/
+├── src/
+│   ├── config/
+│   │   └── env.ts
+│   │
+│   ├── database/
+│   │   ├── data-source.ts
+│   │   ├── migrations/
+│   │   ├── subscribers/
+│   │   └── seeds/
+│   │       └── seed.ts
+│   │
+│   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── auth.validation.ts
+│   │   │   └── auth.types.ts
+│   │   │
+│   │   ├── users/
+│   │   │   ├── user.entity.ts
+│   │   │   ├── users.repository.ts
+│   │   │   ├── users.service.ts
+│   │   │   ├── users.controller.ts
+│   │   │   ├── users.routes.ts
+│   │   │   ├── users.validation.ts
+│   │   │   └── users.types.ts
+│   │   │
+│   │   ├── leads/
+│   │   │   ├── lead.entity.ts
+│   │   │   ├── lead-activity.entity.ts
+│   │   │   ├── lead-note.entity.ts
+│   │   │   ├── leads.repository.ts
+│   │   │   ├── leads.service.ts
+│   │   │   ├── leads.controller.ts
+│   │   │   ├── leads.routes.ts
+│   │   │   ├── leads.validation.ts
+│   │   │   └── leads.types.ts
+│   │   │
+│   │   ├── pipelines/
+│   │   │   ├── pipeline-view.entity.ts
+│   │   │   ├── pipeline-stage.entity.ts
+│   │   │   ├── pipeline-record.entity.ts
+│   │   │   ├── pipelines.repository.ts
+│   │   │   ├── pipelines.service.ts
+│   │   │   ├── pipelines.controller.ts
+│   │   │   ├── pipelines.routes.ts
+│   │   │   ├── pipelines.validation.ts
+│   │   │   └── pipelines.types.ts
+│   │   │
+│   │   ├── contacts/
+│   │   ├── organizations/
+│   │   └── tasks/
+│   │
+│   ├── middleware/
+│   │   ├── auth.middleware.ts
+│   │   ├── error.middleware.ts
+│   │   ├── not-found.middleware.ts
+│   │   └── validation.middleware.ts
+│   │
+│   ├── routes/
+│   │   └── index.ts
+│   │
+│   ├── shared/
+│   │   ├── errors/
+│   │   │   └── app-error.ts
+│   │   ├── utils/
+│   │   │   ├── async-handler.ts
+│   │   │   ├── pagination.ts
+│   │   │   └── response.ts
+│   │   └── types/
+│   │       └── express.d.ts
+│   │
+│   ├── app.ts
+│   └── index.ts
+│
+├── tests/
+├── Dockerfile
+├── .dockerignore
+├── .env
+├── .env.example
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+└── eslint.config.js
