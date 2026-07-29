@@ -10,6 +10,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   FRONTEND_ORIGIN: z.string().url(),
+  FRONTEND_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
 
   // Microsoft Entra ID
   AZURE_TENANT_ID: z.string().min(1),
@@ -25,6 +27,7 @@ const envSchema = z.object({
   AZURE_JWKS_URI: z.string().url(),
 
   AZURE_AUDIENCE: z.string().uuid(),
+  AZURE_REDIRECT_URI: z.string().url(),
 });
 
 const result = envSchema.safeParse(process.env);
