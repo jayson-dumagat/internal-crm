@@ -137,7 +137,7 @@ export default function LeadTable({
             </TableHeaderCell>
 
             <TableHeaderCell className="w-[130px]">
-              Quick Actions
+              Actions
             </TableHeaderCell>
           </TableRow>
         </TableHeader>

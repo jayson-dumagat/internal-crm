@@ -5,7 +5,6 @@ import Crm from "./pages/Dashboard/Crm";
 import Marketing from "./pages/Dashboard/Marketing";
 import Analytics from "./pages/Dashboard/Analytics";
 import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Carousel from "./pages/UiElements/Carousel";
@@ -98,6 +97,7 @@ import Leads from "./pages/CrmLeads/Leads";
 import Companies from "./pages/CrmCompanies/Companies";
 import Contacts from "./pages/CrmContacts/Contacts";
 import Pipelines from "./pages/CrmPipeline/Pipelines";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
   return (
@@ -106,7 +106,13 @@ export default function App() {
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Navigate to="/signin" replace />} />
-          <Route element={<CrmLayout />}>
+          <Route
+            element={
+              <ProtectedRoute>
+                <CrmLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/contacts" element={<Contacts />} />
@@ -118,7 +124,13 @@ export default function App() {
           </Route>
 
           {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
             {/*<Route index path="/" element={<Ecommerce />} />*/}
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/marketing" element={<Marketing />} />
@@ -210,7 +222,13 @@ export default function App() {
           </Route>
 
           {/* Alternative Layout - for special pages */}
-          <Route element={<AlternativeLayout />}>
+          <Route
+            element={
+              <ProtectedRoute>
+                <AlternativeLayout />
+              </ProtectedRoute>
+            }
+          >
             {/* AI Generator */}
             <Route path="/text-generator" element={<TextGeneratorPage />} />
             <Route path="/image-generator" element={<ImageGeneratorPage />} />
@@ -221,7 +239,7 @@ export default function App() {
 
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+          {/* <Route path="/signup" element={<SignUp />} /> */}
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/two-step-verification"
@@ -229,12 +247,54 @@ export default function App() {
           />
 
           {/* Layouts */}
-          <Route path="/layout-one" element={<LayoutOne />} />
-          <Route path="/layout-two" element={<LayoutTwo />} />
-          <Route path="/layout-three" element={<LayoutThree />} />
-          <Route path="/layout-four" element={<LayoutFour />} />
-          <Route path="/layout-five" element={<LayoutFive />} />
-          <Route path="/layout-six" element={<LayoutSix />} />
+          <Route
+            path="/layout-one"
+            element={
+              <ProtectedRoute>
+                <LayoutOne />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/layout-two"
+            element={
+              <ProtectedRoute>
+                <LayoutTwo />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/layout-three"
+            element={
+              <ProtectedRoute>
+                <LayoutThree />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/layout-four"
+            element={
+              <ProtectedRoute>
+                <LayoutFour />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/layout-five"
+            element={
+              <ProtectedRoute>
+                <LayoutFive />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/layout-six"
+            element={
+              <ProtectedRoute>
+                <LayoutSix />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

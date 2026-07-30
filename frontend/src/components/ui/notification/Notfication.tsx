@@ -12,6 +12,7 @@ interface NotificationProps {
   title: string; // Title text
   description?: string; // Optional description
   hideDuration?: number; // Time in milliseconds to hide the notification (default: 5000ms)
+  onClose?: () => void;
 }
 
 const Notification: React.FC<NotificationProps> = ({
@@ -19,6 +20,7 @@ const Notification: React.FC<NotificationProps> = ({
   title,
   description,
   hideDuration = 3000, // Default hide duration: 5 seconds
+  onClose,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -49,6 +51,11 @@ const Notification: React.FC<NotificationProps> = ({
   const { borderColor, iconBg, icon } = variantStyles[variant];
 
   const handleClose = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+
     // Hide the notification
     setIsVisible(false);
 
@@ -62,23 +69,23 @@ const Notification: React.FC<NotificationProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 w-full sm:max-w-[340px] rounded-md border-b-4 p-3 shadow-theme-sm dark:bg-[#1E2634] ${borderColor}`}
+      className={`flex w-full items-center justify-between gap-3 rounded-md border-b-4 bg-white p-3 shadow-theme-sm sm:max-w-[340px] dark:bg-[#1E2634] ${borderColor}`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-4">
         {/* Icon */}
         <div
-          className={`flex items-center  justify-center w-10 h-10 rounded-lg ${iconBg}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
         >
           {icon}
         </div>
 
         {/* Title and Description */}
-        <div>
-          <h4 className="text-sm text-gray-800 sm:text-base dark:text-white/90">
+        <div className="min-w-0">
+          <h4 className="text-sm font-medium text-gray-800 sm:text-base dark:text-white/90">
             {title}
           </h4>
           {description && (
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm dark:text-white/70">
+            <p className="mt-1 break-words text-xs leading-5 text-gray-600 sm:text-sm dark:text-white/70">
               {description}
             </p>
           )}
@@ -87,10 +94,12 @@ const Notification: React.FC<NotificationProps> = ({
 
       {/* Close Button */}
       <button
+        type="button"
+        aria-label="Dismiss notification"
         onClick={handleClose}
-        className="text-gray-400 hover:text-gray-800 dark:hover:text-white/90"
+        className="shrink-0 text-gray-400 transition hover:text-gray-800 dark:hover:text-white/90"
       >
-        <CloseIcon />
+        <CloseIcon className="size-5" />
       </button>
     </div>
   );

@@ -58,19 +58,26 @@ export async function handleEntraCallback(
     const pendingAuth = req.session.entraAuth;
 
     if (!code) {
-      res.status(400).json({
-        error: "authorization_code_missing",
-        message: "Microsoft did not return an authorization code.",
-      });
+      res.redirect(
+        buildFrontendCallbackUrl({
+          success: false,
+          error: "authorization_code_missing",
+          message: "Microsoft did not return an authorization code.",
+        }),
+      );
 
       return;
     }
 
     if (!pendingAuth || !returnedState) {
-      res.status(400).json({
-        error: "authentication_session_missing",
-        message: "The authentication session is missing or expired.",
-      });
+      res.redirect(
+        buildFrontendCallbackUrl({
+          success: false,
+          error: "authentication_session_missing",
+          message:
+            "Your sign-in attempt is missing or expired. Please try again.",
+        }),
+      );
 
       return;
     }
@@ -81,10 +88,13 @@ export async function handleEntraCallback(
     ) {
       delete req.session.entraAuth;
 
-      res.status(400).json({
-        error: "authentication_request_expired",
-        message: "The authentication request has expired.",
-      });
+      res.redirect(
+        buildFrontendCallbackUrl({
+          success: false,
+          error: "authentication_request_expired",
+          message: "Your sign-in attempt expired. Please try again.",
+        }),
+      );
 
       return;
     }
@@ -97,10 +107,13 @@ export async function handleEntraCallback(
     if (!stateMatches) {
       delete req.session.entraAuth;
 
-      res.status(400).json({
-        error: "invalid_authentication_state",
-        message: "The authentication state is invalid.",
-      });
+      res.redirect(
+        buildFrontendCallbackUrl({
+          success: false,
+          error: "invalid_authentication_state",
+          message: "This sign-in attempt is no longer valid. Please try again.",
+        }),
+      );
 
       return;
     }
@@ -198,9 +211,13 @@ function buildFrontendCallbackUrl(params: {
   message?: string;
 }): string {
   const url = new URL(
-    params.success ? "/dashboard" : "/signin",
+    "/signin",
     entraConfig.frontendUrl,
   );
+
+  if (params.success) {
+    url.searchParams.set("login", "success");
+  }
 
   if (params.error) {
     url.searchParams.set("error", params.error);

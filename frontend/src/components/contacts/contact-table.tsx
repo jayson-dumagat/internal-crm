@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "../ui/table";
 
-import PaginationWithIcon from "../ui/pagination/PaginationWithIcon";
+import PaginationWithIcon from "../tables/DataTables/TableOne/PaginationWithIcon";
 
 const tableRowData = [
   {
@@ -19,122 +19,76 @@ const tableRowData = [
       name: "Abram Schleifer",
     },
     position: "Sales Assistant",
-    location: "Edinburgh",
-    age: 57,
-    date: "25 Apr, 2027",
-    salary: "$89,500",
+    company: {
+      image: "/images/user/user-20.jpg",
+      name: "Edinburgh"
+    },
+    relationship_level: 97,
+    contact: {
+      email: "abram@schleifer.com",
+      phone: "+63912887665"
+    },
+    owner: {
+      image: "/images/user/user-20.jpg",
+      name: "Kiko Pangilinan"
+    },
+    location: "Makati, Philippines",
+    status: "Customer",
+    last_activity: "12 July 2026"
   },
+
   {
     id: 2,
     user: {
-      image: "/images/user/user-21.jpg",
-      name: "Charlotte Anderson",
+      image: "/images/user/user-20.jpg",
+      name: "Abram Schleifer",
     },
-    position: "Marketing Manager",
-    location: "London",
-    age: 42,
-    date: "12 Mar, 2025",
-    salary: "$105,000",
+    position: "Sales Assistant",
+    company: {
+      image: "/images/user/user-20.jpg",
+      name: "Edinburgh"
+    },
+    relationship_level: 97,
+    contact: {
+      email: "abram@schleifer.com",
+      phone: "+63912887665"
+    },
+    owner: {
+      image: "/images/user/user-20.jpg",
+      name: "Kiko Pangilinan"
+    },
+    location: "Makati, Philippines",
+    status: "Customer",
+    last_activity: "12 July 2026"
   },
+
   {
     id: 3,
     user: {
-      image: "/images/user/user-22.jpg",
-      name: "Ethan Brown",
+      image: "/images/user/user-20.jpg",
+      name: "Abram Schleifer",
     },
-    position: "Software Engineer",
-    location: "San Francisco",
-    age: 30,
-    date: "01 Jan, 2024",
-    salary: "$120,000",
-  },
-  {
-    id: 4,
-    user: {
-      image: "/images/user/user-23.jpg",
-      name: "Sophia Martinez",
+    position: "Sales Assistant",
+    company: {
+      image: "/images/user/user-20.jpg",
+      name: "Edinburgh"
     },
-    position: "Product Manager",
-    location: "New York",
-    age: 35,
-    date: "15 Jun, 2026",
-    salary: "$95,000",
-  },
-  {
-    id: 5,
-    user: {
-      image: "/images/user/user-24.jpg",
-      name: "James Wilson",
+    relationship_level: 97,
+    contact: {
+      email: "abram@schleifer.com",
+      phone: "+63912887665"
     },
-    position: "Data Analyst",
-    location: "Chicago",
-    age: 28,
-    date: "20 Sep, 2025",
-    salary: "$80,000",
-  },
-  {
-    id: 6,
-    user: {
-      image: "/images/user/user-25.jpg",
-      name: "Olivia Johnson",
+    owner: {
+      image: "/images/user/user-20.jpg",
+      name: "Kiko Pangilinan"
     },
-    position: "HR Specialist",
-    location: "Los Angeles",
-    age: 40,
-    date: "08 Nov, 2026",
-    salary: "$75,000",
-  },
-  {
-    id: 7,
-    user: {
-      image: "/images/user/user-26.jpg",
-      name: "William Smith",
-    },
-    position: "Financial Analyst",
-    location: "Seattle",
-    age: 38,
-    date: "03 Feb, 2026",
-    salary: "$88,000",
-  },
-  {
-    id: 8,
-    user: {
-      image: "/images/user/user-27.jpg",
-      name: "Isabella Davis",
-    },
-    position: "UI/UX Designer",
-    location: "Austin",
-    age: 29,
-    date: "18 Jul, 2025",
-    salary: "$92,000",
-  },
-  {
-    id: 9,
-    user: {
-      image: "/images/user/user-28.jpg",
-      name: "Liam Moore",
-    },
-    position: "DevOps Engineer",
-    location: "Boston",
-    age: 33,
-    date: "30 Oct, 2024",
-    salary: "$115,000",
-  },
-  {
-    id: 10,
-    user: {
-      image: "/images/user/user-29.jpg",
-      name: "Mia Garcia",
-    },
-    position: "Content Strategist",
-    location: "Denver",
-    age: 27,
-    date: "12 Dec, 2027",
-    salary: "$70,000",
+    location: "Makati, Philippines",
+    status: "Customer",
+    last_activity: "12 July 2026"
   },
 ];
 
-type SortKey = "name" | "position" | "location" | "age" | "date" | "salary";
+type SortKey = "name" | "position" | "company" | "age" | "date" | "salary";
 type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
@@ -150,8 +104,8 @@ export default function ContactTable() {
         Object.values(item).some(
           (value) =>
             typeof value === "string" &&
-            value.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+            value.toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
       )
       .sort((a, b) => {
         if (sortKey === "name") {
@@ -191,13 +145,13 @@ export default function ContactTable() {
   const currentData = filteredAndSortedData.slice(startIndex, endIndex);
 
   return (
-    <div className="overflow-hidden bg-white dark:bg-white/[0.03] rounded-xl">
-      <div className="flex flex-col gap-2 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-xl bg-white dark:bg-white/[0.03]">
+      <div className="flex flex-col gap-2 rounded-t-xl border border-b-0 border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.05]">
         <div className="flex items-center gap-3">
           <span className="text-gray-500 dark:text-gray-400"> Show </span>
           <div className="relative z-20 bg-transparent">
             <select
-              className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-transparent border border-gray-300 rounded-lg appearance-none dark:bg-dark-900 h-9 bg-none shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+              className="dark:bg-dark-900 h-9 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none py-2 pr-8 pl-3 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
             >
@@ -211,7 +165,7 @@ export default function ContactTable() {
                 </option>
               ))}
             </select>
-            <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
+            <span className="absolute top-1/2 right-2 z-30 -translate-y-1/2 text-gray-500 dark:text-gray-400">
               <svg
                 className="stroke-current"
                 width="16"
@@ -234,7 +188,7 @@ export default function ContactTable() {
         </div>
 
         <div className="relative">
-          <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none left-4 top-1/2 dark:text-gray-400">
+          <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-gray-500 dark:text-gray-400">
             <svg
               className="fill-current"
               width="20"
@@ -256,39 +210,43 @@ export default function ContactTable() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search..."
-            className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-11 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[300px]"
+            className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pr-4 pl-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden xl:w-[300px] dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
           />
         </div>
       </div>
 
-      <div className="max-w-full overflow-x-auto custom-scrollbar">
+      <div className="custom-scrollbar max-w-full overflow-x-auto">
         <div>
           <Table>
             <TableHeader className="border-t border-gray-100 dark:border-white/[0.05]">
               <TableRow>
                 {[
-                  { key: "name", label: "User" },
+                  { key: "name", label: "Name" },
                   { key: "position", label: "Position" },
-                  { key: "location", label: "Office" },
-                  { key: "age", label: "Age" },
-                  { key: "date", label: "Start Date" },
-                  { key: "salary", label: "Salary" },
+                  { key: "company", label: "Company" },
+                  { key: "relationship_level", label: "Relationship Level" },
+                  { key: "contact", label: "Contact" },
+                  { key: "owner", label: "Relationship Owner" },
+                  { key: "company", label: "Location" },
+                  { key: "status", label: "Status" },
+                  { key: "last_activity", label: "Last Activity" },
+                  { key: "actions", label: "Actions" },
                 ].map(({ key, label }) => (
                   <TableCell
                     key={key}
                     isHeader
-                    className="px-4 py-3 border border-gray-100 dark:border-white/[0.05]"
+                    className="border border-gray-100 px-4 py-3 dark:border-white/[0.05]"
                   >
                     <div
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex cursor-pointer items-center justify-between"
                       onClick={() => handleSort(key as SortKey)}
                     >
-                      <p className="font-medium text-gray-700 text-theme-xs dark:text-gray-400">
+                      <p className="text-theme-xs font-medium text-gray-700 dark:text-gray-400">
                         {label}
                       </p>
                       <button className="flex flex-col gap-0.5">
                         <svg
-                          className={`text-gray-300 dark:text-gray-700  ${
+                          className={`text-gray-300 dark:text-gray-700 ${
                             sortKey === key && sortOrder === "asc"
                               ? "text-brand-500"
                               : ""
@@ -305,7 +263,7 @@ export default function ContactTable() {
                           />
                         </svg>
                         <svg
-                          className={`text-gray-300 dark:text-gray-700  ${
+                          className={`text-gray-300 dark:text-gray-700 ${
                             sortKey === key && sortOrder === "desc"
                               ? "text-brand-500"
                               : ""
@@ -330,9 +288,9 @@ export default function ContactTable() {
             <TableBody>
               {currentData.map((item, i) => (
                 <TableRow key={i + 1}>
-                  <TableCell className="px-4 py-3 border border-gray-100 dark:border-white/[0.05] whitespace-nowrap">
+                  <TableCell className="border border-gray-100 px-4 py-3 whitespace-nowrap dark:border-white/[0.05]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 overflow-hidden rounded-full">
+                      <div className="h-10 w-10 overflow-hidden rounded-full">
                         <img
                           src={item.user.image}
                           className="size-10"
@@ -340,25 +298,25 @@ export default function ContactTable() {
                         />
                       </div>
                       <div>
-                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                        <span className="block text-theme-sm font-medium text-gray-800 dark:text-white/90">
                           {item.user.name}
                         </span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3 font-normal dark:text-gray-400/90 text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm whitespace-nowrap">
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     {item.position}
                   </TableCell>
-                  <TableCell className="px-4 py-3 font-normal dark:text-gray-400/90 text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm whitespace-nowrap">
-                    {item.location}
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
+                    {item.company}
                   </TableCell>
-                  <TableCell className="px-4 py-3 font-normal dark:text-gray-400/90 text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm whitespace-nowrap">
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     {item.age}
                   </TableCell>
-                  <TableCell className="px-4 py-3 font-normal dark:text-gray-400/90 text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm whitespace-nowrap">
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     {item.date}
                   </TableCell>
-                  <TableCell className="px-4 py-3 font-normal dark:text-gray-400/90 text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm whitespace-nowrap">
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     {item.salary}
                   </TableCell>
                 </TableRow>
@@ -368,15 +326,19 @@ export default function ContactTable() {
         </div>
       </div>
 
-      <div className="border border-t-0 rounded-b-xl border-gray-100 py-4 pl-[18px] pr-4 dark:border-white/[0.05]">
+      <div className="rounded-b-xl border border-t-0 border-gray-100 py-4 pr-4 pl-[18px] dark:border-white/[0.05]">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between">
           {/* Left side: Showing entries */}
           <div className="pb-3 xl:pb-0">
-            <p className="pb-3 text-sm font-medium text-center text-gray-500 border-b border-gray-100 dark:border-gray-800 dark:text-gray-400 xl:border-b-0 xl:pb-0 xl:text-left">
+            <p className="border-b border-gray-100 pb-3 text-center text-sm font-medium text-gray-500 xl:border-b-0 xl:pb-0 xl:text-left dark:border-gray-800 dark:text-gray-400">
               Showing {startIndex + 1} to {endIndex} of {totalItems} entries
             </p>
           </div>
-          <PaginationWithIcon {...({ totalPages, initialPage: currentPage, onPageChange: handlePageChange } as any)} />
+          <PaginationWithIcon
+            totalPages={totalPages}
+            initialPage={currentPage}
+            onPageChange={handlePageChange}
+          />
         </div>
       </div>
     </div>

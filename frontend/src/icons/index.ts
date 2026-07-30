@@ -134,8 +134,10 @@ import { ReactComponent as PhoneIcon } from "./phone-icon.svg?react";
 import { ReactComponent as EmailIcon } from "./email-icon.svg?react";
 import { ReactComponent as EllipsisIcon } from "./ellipsis-icon.svg?react";
 import { ReactComponent as NetworkIcon } from "./network-icon.svg?react"
+import { ReactComponent as MicrosoftIcon } from "./micrososft-icon.svg?react"
 
 export {
+  MicrosoftIcon,
   NetworkIcon,
   EllipsisIcon,
   EmailIcon,
