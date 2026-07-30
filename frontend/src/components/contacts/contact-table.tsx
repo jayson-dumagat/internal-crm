@@ -10,8 +10,33 @@ import {
 } from "../ui/table";
 
 import PaginationWithIcon from "../tables/DataTables/TableOne/PaginationWithIcon";
+import Badge from "../ui/badge/Badge";
 
-const tableRowData = [
+type ContactStatus = "Customer" | "Prospect" | "KYC Pending" | "Dormant" | "Closed";
+type BadgeColor = "primary" | "success" | "error" | "warning" | "info" | "light" | "dark";
+
+type Contact = {
+  id: number;
+  user: { image: string; name: string };
+  position: string;
+  company: { image: string; name: string };
+  relationship_level: number;
+  contact: { email: string; phone: string };
+  owner: { image: string; name: string };
+  location: string;
+  status: ContactStatus;
+  last_activity: string;
+};
+
+const statusBadgeColor: Record<ContactStatus, BadgeColor> = {
+  Customer: "success",
+  Prospect: "primary",
+  "KYC Pending": "warning",
+  Dormant: "light",
+  Closed: "error",
+};
+
+const tableRowData: Contact[] = [
   {
     id: 1,
     user: {
@@ -21,7 +46,7 @@ const tableRowData = [
     position: "Sales Assistant",
     company: {
       image: "/images/user/user-20.jpg",
-      name: "Edinburgh"
+      name: "Northbridge Capital",
     },
     relationship_level: 97,
     contact: {
@@ -40,55 +65,64 @@ const tableRowData = [
   {
     id: 2,
     user: {
-      image: "/images/user/user-20.jpg",
-      name: "Abram Schleifer",
+      image: "/images/user/user-21.jpg",
+      name: "Charlotte Anderson",
     },
-    position: "Sales Assistant",
+    position: "Managing Director",
     company: {
-      image: "/images/user/user-20.jpg",
-      name: "Edinburgh"
+      image: "/images/company/company-02.svg",
+      name: "Anderson Holdings",
     },
-    relationship_level: 97,
+    relationship_level: 86,
     contact: {
-      email: "abram@schleifer.com",
-      phone: "+63912887665"
+      email: "charlotte@andersonholdings.com",
+      phone: "+63 917 555 0182",
     },
     owner: {
-      image: "/images/user/user-20.jpg",
-      name: "Kiko Pangilinan"
+      image: "/images/user/user-24.jpg",
+      name: "Mark Santos",
     },
-    location: "Makati, Philippines",
-    status: "Customer",
-    last_activity: "12 July 2026"
+    location: "Taguig, Philippines",
+    status: "KYC Pending",
+    last_activity: "18 July 2026",
   },
 
   {
     id: 3,
     user: {
-      image: "/images/user/user-20.jpg",
-      name: "Abram Schleifer",
+      image: "/images/user/user-26.jpg",
+      name: "Ethan Brown",
     },
-    position: "Sales Assistant",
+    position: "Investor",
     company: {
-      image: "/images/user/user-20.jpg",
-      name: "Edinburgh"
+      image: "/images/company/company-03.svg",
+      name: "Individual",
     },
-    relationship_level: 97,
+    relationship_level: 72,
     contact: {
-      email: "abram@schleifer.com",
-      phone: "+63912887665"
+      email: "ethan@email.com",
+      phone: "+63 917 555 0111",
     },
     owner: {
-      image: "/images/user/user-20.jpg",
-      name: "Kiko Pangilinan"
+      image: "/images/user/user-27.jpg",
+      name: "Ana Dela Cruz",
     },
-    location: "Makati, Philippines",
-    status: "Customer",
-    last_activity: "12 July 2026"
+    location: "Quezon City, Philippines",
+    status: "Prospect",
+    last_activity: "10 July 2026",
   },
 ];
 
-type SortKey = "name" | "position" | "company" | "age" | "date" | "salary";
+type SortKey =
+  | "name"
+  | "position"
+  | "company"
+  | "relationship_level"
+  | "contact"
+  | "owner"
+  | "location"
+  | "status"
+  | "last_activity";
 type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
@@ -101,26 +135,47 @@ export default function ContactTable() {
   const filteredAndSortedData = useMemo(() => {
     return tableRowData
       .filter((item) =>
-        Object.values(item).some(
-          (value) =>
-            typeof value === "string" &&
-            value.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
+        [
+          item.user.name,
+          item.position,
+          item.company.name,
+          item.contact.email,
+          item.contact.phone,
+          item.owner.name,
+          item.location,
+          item.status,
+          item.last_activity,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()),
       )
       .sort((a, b) => {
-        if (sortKey === "name") {
-          return sortOrder === "asc"
-            ? a.user.name.localeCompare(b.user.name)
-            : b.user.name.localeCompare(a.user.name);
-        }
-        if (sortKey === "salary") {
-          const salaryA = Number.parseInt(a[sortKey].replace(/\$|,/g, ""));
-          const salaryB = Number.parseInt(b[sortKey].replace(/\$|,/g, ""));
-          return sortOrder === "asc" ? salaryA - salaryB : salaryB - salaryA;
-        }
+        const values: Record<SortKey, string | number> = {
+          name: a.user.name,
+          position: a.position,
+          company: a.company.name,
+          relationship_level: a.relationship_level,
+          contact: a.contact.email,
+          owner: a.owner.name,
+          location: a.location,
+          status: a.status,
+          last_activity: a.last_activity,
+        };
+        const comparedValues: Record<SortKey, string | number> = {
+          name: b.user.name,
+          position: b.position,
+          company: b.company.name,
+          relationship_level: b.relationship_level,
+          contact: b.contact.email,
+          owner: b.owner.name,
+          location: b.location,
+          status: b.status,
+          last_activity: b.last_activity,
+        };
         return sortOrder === "asc"
-          ? String(a[sortKey]).localeCompare(String(b[sortKey]))
-          : String(b[sortKey]).localeCompare(String(a[sortKey]));
+          ? String(values[sortKey]).localeCompare(String(comparedValues[sortKey]))
+          : String(comparedValues[sortKey]).localeCompare(String(values[sortKey]));
       });
   }, [sortKey, sortOrder, searchTerm]);
 
@@ -222,18 +277,17 @@ export default function ContactTable() {
               <TableRow>
                 {[
                   { key: "name", label: "Name" },
-                  { key: "position", label: "Position" },
                   { key: "company", label: "Company" },
                   { key: "relationship_level", label: "Relationship Level" },
                   { key: "contact", label: "Contact" },
                   { key: "owner", label: "Relationship Owner" },
-                  { key: "company", label: "Location" },
+                  { key: "location", label: "Location" },
                   { key: "status", label: "Status" },
                   { key: "last_activity", label: "Last Activity" },
                   { key: "actions", label: "Actions" },
                 ].map(({ key, label }) => (
                   <TableCell
-                    key={key}
+                    key={`${key}-${label}`}
                     isHeader
                     className="border border-gray-100 px-4 py-3 dark:border-white/[0.05]"
                   >
@@ -286,8 +340,8 @@ export default function ContactTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentData.map((item, i) => (
-                <TableRow key={i + 1}>
+              {currentData.map((item) => (
+                <TableRow key={item.id}>
                   <TableCell className="border border-gray-100 px-4 py-3 whitespace-nowrap dark:border-white/[0.05]">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 overflow-hidden rounded-full">
@@ -301,23 +355,51 @@ export default function ContactTable() {
                         <span className="block text-theme-sm font-medium text-gray-800 dark:text-white/90">
                           {item.user.name}
                         </span>
+                        <span className="mt-0.5 block text-sm text-gray-500 dark:text-gray-400">
+                          {item.position}
+                        </span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.position}
+                    <div className="flex items-center gap-2">
+                      <img src={item.company.image} alt="" className="size-8 rounded-full object-cover" />
+                      <span>{item.company.name}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.company}
+                    {item.relationship_level}
                   </TableCell>
                   <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.age}
+                    <a href={`mailto:${item.contact.email}`} className="block font-medium text-gray-800 hover:text-brand-500 dark:text-white/90">
+                      {item.contact.email}
+                    </a>
+                    <a href={`tel:${item.contact.phone}`} className="mt-1 block text-xs text-gray-500 hover:text-brand-500">
+                      {item.contact.phone}
+                    </a>
                   </TableCell>
                   <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.date}
+                    <div className="flex items-center gap-2">
+                      <img src={item.owner.image} alt="" className="size-8 rounded-full object-cover" />
+                      <span>{item.owner.name}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.salary}
+                    {item.location}
+                  </TableCell>
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
+                    <Badge variant="light" color={statusBadgeColor[item.status]} size="sm">
+                      {item.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
+                    {item.last_activity}
+                  </TableCell>
+                  <TableCell className="border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
+                    <div className="flex items-center gap-2">
+                      <button type="button" className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">View</button>
+                      <button type="button" className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">Edit</button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
