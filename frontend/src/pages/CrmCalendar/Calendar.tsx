@@ -7,6 +7,8 @@ import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
 import { Modal } from "../../components/ui/modal";
 import { useModal } from "../../hooks/useModal";
 import PageMeta from "../../components/common/PageMeta";
+import AppBreadcrumb from "../../components/common/AppBreadcrumb";
+import dayjs from "dayjs";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -39,20 +41,20 @@ const Calendar: React.FC = () => {
       {
         id: "1",
         title: "Event Conf.",
-        start: new Date().toISOString().split("T")[0],
+        start: dayjs().format("YYYY-MM-DD"),
         extendedProps: { calendar: "Danger" },
       },
       {
         id: "2",
         title: "Meeting",
-        start: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+        start: dayjs().add(1, "day").format("YYYY-MM-DD"),
         extendedProps: { calendar: "Success" },
       },
       {
         id: "3",
         title: "Workshop",
-        start: new Date(Date.now() + 172800000).toISOString().split("T")[0],
-        end: new Date(Date.now() + 259200000).toISOString().split("T")[0],
+        start: dayjs().add(2, "day").format("YYYY-MM-DD"),
+        end: dayjs().add(3, "day").format("YYYY-MM-DD"),
         extendedProps: { calendar: "Primary" },
       },
     ]);
@@ -69,8 +71,8 @@ const Calendar: React.FC = () => {
     const event = clickInfo.event;
     setSelectedEvent(event as unknown as CalendarEvent);
     setEventTitle(event.title);
-    setEventStartDate(event.start?.toISOString().split("T")[0] || "");
-    setEventEndDate(event.end?.toISOString().split("T")[0] || "");
+    setEventStartDate(event.start ? dayjs(event.start).format("YYYY-MM-DD") : "");
+    setEventEndDate(event.end ? dayjs(event.end).format("YYYY-MM-DD") : "");
     setEventLevel(event.extendedProps.calendar);
     openModal();
   };
@@ -94,7 +96,7 @@ const Calendar: React.FC = () => {
     } else {
       // Add new event
       const newEvent: CalendarEvent = {
-        id: Date.now().toString(),
+        id: `event-${dayjs().valueOf()}`,
         title: eventTitle,
         start: eventStartDate,
         end: eventEndDate,
@@ -121,6 +123,7 @@ const Calendar: React.FC = () => {
         title="CDEX Calendar"
         description="This is React.js Calendar Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
       />
+      <AppBreadcrumb pageName="Calendar" />
       <div className="rounded-2xl border  border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="custom-calendar">
           <FullCalendar

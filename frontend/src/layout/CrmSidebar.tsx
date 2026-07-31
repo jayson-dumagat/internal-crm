@@ -118,6 +118,12 @@ const navGroups: NavGroup[] = [
         icon: <InboxIcon />,
         //badges: [{ label: "3", enabled: true, variant: "warning" }],
       },
+      {
+        id: "activities",
+        label: "Activities",
+        path: "/activities",
+        icon: <ListTodoIcon />,
+      },
     ],
   },
   {

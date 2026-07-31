@@ -1,99 +1,25 @@
-import { useRef } from "react";
-import { useDrag, useDrop } from "react-dnd";
-import { Task, DropResult } from "./types/types";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { Task } from "./types/types";
 
 interface TaskItemProps {
   task: Task;
-  index: number;
-  moveTask: (dragIndex: number, hoverIndex: number) => void;
-  changeTaskStatus: (taskId: string, newStatus: string) => void;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
   task,
-  index,
-  moveTask,
-  changeTaskStatus,
-  onDragStart,
-  onDragEnd,
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ handlerId }, drop] = useDrop<
-    Task,
-    DropResult,
-    { handlerId: string | symbol | null }
-  >({
-    accept: "task",
-    collect(monitor) {
-      return {
-        handlerId: monitor.getHandlerId(),
-      };
-    },
-    drop: () => ({ name: task.status }),
-    hover(item: any, monitor) {
-      if (!ref.current) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY =
-        (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
-      }
-
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-        return;
-      }
-
-      moveTask(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-
-  const [{ isDragging }, drag] = useDrag<
-    Task,
-    DropResult,
-    { isDragging: boolean }
-  >({
-    type: "task",
-    item: () => {
-      onDragStart?.();
-      return { ...task, index };
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    end: (item, monitor) => {
-      onDragEnd?.();
-      const dropResult = monitor.getDropResult();
-      if (dropResult) {
-        changeTaskStatus(item.id, dropResult.name);
-      }
-    },
-  });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: task.id, data: { status: task.status } });
 
   const opacity = isDragging ? 0.3 : 0.8;
-  drag(drop(ref));
-
   return (
     <div
-      ref={ref}
-      style={{ opacity }}
+      ref={setNodeRef}
+      style={{ opacity, transform: CSS.Translate.toString(transform) }}
+      {...listeners}
+      {...attributes}
       className="relative p-5 bg-white border border-gray-200 task rounded-xl shadow-theme-sm dark:border-gray-800 dark:bg-white/5"
-      data-handler-id={handlerId}
     >
       <div className="space-y-4">
         <div>

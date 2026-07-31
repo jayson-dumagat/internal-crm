@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { EyeCloseIcon, EyeIcon, MicrosoftIcon } from "../../icons";
-import { getMicrosoftLoginUrl } from "../../api/auth";
+import { useMicrosoftSignIn } from "../../hooks/auth/useAuthApi";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
@@ -27,12 +26,7 @@ export default function SignInForm({
     resolver: zodResolver(microsoftSignInSchema),
     defaultValues: {},
   });
-  const microsoftSignIn = useMutation({
-    mutationFn: getMicrosoftLoginUrl,
-    onSuccess: (authorizationUrl) => {
-      window.location.assign(authorizationUrl);
-    },
-  });
+  const microsoftSignIn = useMicrosoftSignIn();
 
   const handleMicrosoftSignIn = microsoftSignInForm.handleSubmit(() => {
     microsoftSignIn.mutate();

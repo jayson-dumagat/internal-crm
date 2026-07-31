@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 import type { PipelineView } from "./types";
 
@@ -8,6 +8,8 @@ interface PipelineTabsProps {
   onChange: (viewId: string) => void;
   onCreateView: () => void;
   onCloseView: (viewId: string) => void;
+  canCreateView?: boolean;
+  actions?: ReactNode;
 }
 
 interface TabButtonProps {
@@ -76,10 +78,12 @@ export default function PipelineTabs({
   onChange,
   onCreateView,
   onCloseView,
+  canCreateView = true,
+  actions,
 }: PipelineTabsProps) {
   return (
-    <div className="border-b border-gray-100 dark:border-white/[0.05]">
-      <nav className="-mb-px flex items-center gap-2 overflow-x-auto px-4 custom-scrollbar sm:px-5">
+    <div className="flex min-w-0 flex-col border-b border-gray-100 sm:flex-row sm:items-center dark:border-white/[0.05]">
+      <nav className="-mb-px flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-4 custom-scrollbar sm:px-5">
         {views.map((view) => (
           <TabButton
             key={view.id}
@@ -95,15 +99,36 @@ export default function PipelineTabs({
         <button
           type="button"
           aria-label="Add pipeline view"
-          title="Add pipeline view"
+          title={canCreateView ? "Add pipeline view" : "Maximum of 6 pipeline views reached"}
           onClick={onCreateView}
-          className="inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-2.5 py-3 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
+          disabled={!canCreateView}
+          className="inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-2.5 py-3 text-sm font-medium text-gray-500 transition hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:text-brand-400"
         >
           <PlusIcon />
 
           <span>Add view</span>
         </button>
+
+        <span
+          aria-label={`${views.length} of 6 pipeline views used`}
+          title={`${views.length} of 6 pipeline views used`}
+          className={[
+            "mr-2 inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium",
+            views.length >= 6
+              ? "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400"
+              : views.length >= 5
+                ? "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
+                : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400",
+          ].join(" ")}
+        >
+          {views.length}/6 views
+        </span>
       </nav>
+      {actions && (
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-4 py-2.5 sm:border-t-0 sm:pl-2 sm:pr-5 dark:border-white/[0.05]">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

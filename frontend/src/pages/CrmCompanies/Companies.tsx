@@ -1,13 +1,10 @@
-import PageMeta from "../../components/common/PageMeta";
 import CompanyTable from "../../components/companies/CompanyTable";
+import AppBreadcrumb from "../../components/common/AppBreadcrumb";
 
 export default function Companies() {
   return (
     <>
-      <PageMeta
-        title="CDEX Organizations"
-        description="This is React.js E-commerce Products  page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
-      />
+      <AppBreadcrumb pageName="Companies" />
       <CompanyTable />
     </>
   );

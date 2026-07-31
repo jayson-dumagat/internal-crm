@@ -1,11 +1,10 @@
-import { useEffect, useRef, type MouseEvent } from "react";
-import { useDrag } from "react-dnd";
+import { type MouseEvent } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 import Avatar from "../ui/avatar/Avatar";
 
-import type { DraggedPipelineLead, PipelineLead } from "./types";
-
-const PIPELINE_LEAD_TYPE = "PIPELINE_LEAD";
+import type { PipelineLead } from "./types";
 
 interface PipelineCardProps {
   lead: PipelineLead;
@@ -18,41 +17,22 @@ export default function PipelineCard({
   onViewLead,
   onEditLead,
 }: PipelineCardProps) {
-  const cardRef = useRef<HTMLElement | null>(null);
-
-  const [{ isDragging }, dragRef] = useDrag<
-    DraggedPipelineLead,
-    void,
-    { isDragging: boolean }
-  >({
-    type: PIPELINE_LEAD_TYPE,
-    item: {
-      type: PIPELINE_LEAD_TYPE,
-      leadId: lead.id,
-      sourceStageId: lead.stageId,
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  useEffect(() => {
-    if (!cardRef.current) {
-      return;
-    }
-
-    dragRef(cardRef.current);
-  }, [dragRef]);
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: lead.id,
+      data: { sourceStageId: lead.stageId },
+    });
 
   const handleInteractiveClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
   };
 
-  const progress = Math.min(Math.max(lead.progress, 0), 100);
-
   return (
     <article
-      ref={cardRef}
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform) }}
+      {...listeners}
+      {...attributes}
       onClick={() => onViewLead?.(lead)}
       className={[
         "group rounded-xl border border-gray-100 bg-white shadow-theme-xs transition",
@@ -84,16 +64,6 @@ export default function PipelineCard({
           >
             <button
               type="button"
-              aria-label={`View ${lead.name}`}
-              title={`View ${lead.name}`}
-              onClick={() => onViewLead?.(lead)}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
-            >
-              <EyeIcon />
-            </button>
-
-            <button
-              type="button"
               aria-label={`Edit ${lead.name}`}
               title={`Edit ${lead.name}`}
               onClick={() => onEditLead?.(lead)}
@@ -105,64 +75,10 @@ export default function PipelineCard({
         </div>
 
         {/* Company */}
-        <div className="mt-4">
+        <div className="mt-3">
           <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">
             {lead.company}
           </p>
-
-          <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-            Company
-          </p>
-        </div>
-
-        {/* Contact */}
-        <div className="mt-4 space-y-1.5">
-          <a
-            href={`mailto:${lead.email}`}
-            onClick={handleInteractiveClick}
-            className="flex min-w-0 items-center gap-2 text-sm text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-          >
-            <EmailIcon />
-
-            <span className="truncate">{lead.email}</span>
-          </a>
-
-          <a
-            href={`tel:${normalizePhone(lead.phone)}`}
-            onClick={handleInteractiveClick}
-            className="flex min-w-0 items-center gap-2 text-sm text-gray-500 transition hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400"
-          >
-            <PhoneIcon />
-
-            <span className="truncate">{lead.phone}</span>
-          </a>
-        </div>
-
-        {/* Metadata */}
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <CardMetadata label="Lead Source" value={lead.source} />
-
-          <CardMetadata label="Date Created" value={lead.dateCreated} />
-        </div>
-
-        {/* Progress */}
-        <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-400 dark:text-gray-500">Progress</p>
-
-            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              {progress}%
-            </p>
-          </div>
-
-          <div className="h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div
-              className="h-full rounded-full bg-brand-500 transition-[width]"
-              style={{
-                width: `${progress}%`,
-              }}
-            />
-          </div>
         </div>
       </div>
 
@@ -178,17 +94,13 @@ export default function PipelineCard({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="max-w-24 truncate text-xs text-gray-500 dark:text-gray-400">
+            {lead.owner.name}
+          </span>
           <AvatarMetadata
-            label="Owner"
             name={lead.owner.name}
             avatar={lead.owner.avatar}
-          />
-
-          <AvatarMetadata
-            label="Assigned"
-            name={lead.assignedTo.name}
-            avatar={lead.assignedTo.avatar}
           />
         </div>
       </div>
@@ -196,109 +108,17 @@ export default function PipelineCard({
   );
 }
 
-function CardMetadata({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
-
-      <p
-        title={value}
-        className="mt-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300"
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 function AvatarMetadata({
-  label,
   name,
   avatar,
 }: {
-  label: string;
   name: string;
   avatar: string;
 }) {
   return (
-    <div className="flex flex-col items-center">
-      <p className="mb-1 text-[10px] text-gray-400 dark:text-gray-500">
-        {label}
-      </p>
-
-      <div title={name}>
-        <Avatar src={avatar} alt={name} size="small" />
-      </div>
+    <div title={`Owner: ${name}`}>
+      <Avatar src={avatar} alt={name} size="small" />
     </div>
-  );
-}
-
-function normalizePhone(phone: string) {
-  return phone.replace(/[^\d+]/g, "");
-}
-
-function EmailIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-4 shrink-0"
-    >
-      <path
-        d="M4 6.75h16v10.5H4V6.75Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-
-      <path
-        d="m4.75 7.5 7.25 5 7.25-5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-4 shrink-0"
-    >
-      <path
-        d="M8.4 4.75 10 8.4 8.2 10a14.5 14.5 0 0 0 5.8 5.8l1.6-1.8 3.65 1.6v2.5c0 .64-.49 1.17-1.13 1.22C10.74 19.9 4.1 13.26 4.68 5.88A1.23 1.23 0 0 1 5.9 4.75h2.5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-4">
-      <path
-        d="M2.75 12s3.25-5 9.25-5 9.25 5 9.25 5-3.25 5-9.25 5-9.25-5-9.25-5Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-
-      <circle
-        cx="12"
-        cy="12"
-        r="2.25"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
   );
 }
 

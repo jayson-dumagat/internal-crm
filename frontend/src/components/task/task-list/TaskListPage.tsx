@@ -126,7 +126,7 @@ const initialTasks: Task[] = [
 
 const lanes = ["todo", "in-progress", "completed"];
 
-export default function TaskList() {
+export default function TaskList({ embedded = false }: { embedded?: boolean }) {
   const [tasks, setTasks] = useState<Task[]>(
     initialTasks.map((task) => ({
       ...task,
@@ -189,9 +189,9 @@ export default function TaskList() {
 
   return (
     <>
-      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className={embedded ? "bg-white dark:bg-transparent" : "rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"}>
 
-        <div className="p-4 space-y-8 border-t border-gray-200 mt-7 dark:border-gray-800 sm:mt-0 xl:p-6">
+        <div className={`space-y-8 p-4 xl:p-6 ${embedded ? "" : "mt-7 border-t border-gray-200 sm:mt-0 dark:border-gray-800"}`}>
           {lanes.map((lane) => (
             <TaskLane
               key={lane}

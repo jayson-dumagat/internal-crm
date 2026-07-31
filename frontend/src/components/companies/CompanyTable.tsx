@@ -1,358 +1,342 @@
-"use client";
-
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
-import { PencilIcon, TrashBinIcon } from "../../icons";
-import PaginationWithButton from "../tables/DataTables/TableTwo/PaginationWithButton";
+  ExportIcon,
+  FilterIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashBinIcon,
+} from "../../icons";
+import Badge from "../ui/badge/Badge";
 
-const tableRowData = [
+type CompanyStatus = "Active" | "Prospect" | "Dormant";
+type SortKey =
+  | "name"
+  | "industry"
+  | "location"
+  | "employees"
+  | "revenue"
+  | "website"
+  | "customerSince"
+  | "status"
+  | "lastActivity";
+
+type Company = {
+  id: number;
+  name: string;
+  industry: string;
+  location: string;
+  employees: string;
+  revenue: string;
+  contacts: Array<{ name: string; avatar: string }>;
+  website: string;
+  customerSince: string;
+  tags: string[];
+  status: CompanyStatus;
+  lastActivity: string;
+};
+
+const companies: Company[] = [
   {
     id: 1,
-    name: "Abram Schleifer",
-    position: "Sales Assistant",
-    location: "Edinburgh",
-    age: 57,
-    date: "25 Apr, 2027",
-    salary: "$89,500",
+    name: "Northbridge Capital",
+    industry: "Investment Management",
+    location: "Makati City, Philippines",
+    employees: "51–200",
+    revenue: "₱850M",
+    contacts: [
+      { name: "Abram Schleifer", avatar: "/images/user/user-20.jpg" },
+      { name: "Sarah Lim", avatar: "/images/user/user-21.jpg" },
+    ],
+    website: "northbridgecapital.com",
+    customerSince: "12 Mar 2021",
+    tags: ["VIP", "Institutional"],
+    status: "Active",
+    lastActivity: "28 Jul 2026",
   },
   {
     id: 2,
-    name: "Charlotte Anderson",
-    position: "Marketing Manager",
-    location: "London",
-    age: 42,
-    date: "12 Mar, 2025",
-    salary: "$105,000",
+    name: "Anderson Holdings",
+    industry: "Diversified Holdings",
+    location: "Taguig City, Philippines",
+    employees: "201–500",
+    revenue: "₱2.4B",
+    contacts: [
+      { name: "Charlotte Anderson", avatar: "/images/user/user-23.jpg" },
+      { name: "Mark Santos", avatar: "/images/user/user-24.jpg" },
+      { name: "Mia Cruz", avatar: "/images/user/user-25.jpg" },
+    ],
+    website: "andersonholdings.com",
+    customerSince: "08 Sep 2022",
+    tags: ["High Value", "Corporate"],
+    status: "Active",
+    lastActivity: "30 Jul 2026",
   },
   {
     id: 3,
-    name: "Ethan Brown",
-    position: "Software Engineer",
-    location: "San Francisco",
-    age: 30,
-    date: "01 Jan, 2024",
-    salary: "$120,000",
+    name: "Lumina Ventures",
+    industry: "Venture Capital",
+    location: "Pasig City, Philippines",
+    employees: "11–50",
+    revenue: "₱320M",
+    contacts: [
+      { name: "Ethan Brown", avatar: "/images/user/user-26.jpg" },
+      { name: "Ana Dela Cruz", avatar: "/images/user/user-27.jpg" },
+    ],
+    website: "luminaventures.ph",
+    customerSince: "19 Jan 2024",
+    tags: ["Partner", "Referral"],
+    status: "Prospect",
+    lastActivity: "24 Jul 2026",
   },
   {
     id: 4,
-    name: "Sophia Martinez",
-    position: "Product Manager",
-    location: "New York",
-    age: 35,
-    date: "15 Jun, 2026",
-    salary: "$95,000",
+    name: "Martinez Family Office",
+    industry: "Family Office",
+    location: "Bonifacio Global City",
+    employees: "11–50",
+    revenue: "₱1.1B",
+    contacts: [
+      { name: "Sophia Martinez", avatar: "/images/user/user-28.jpg" },
+      { name: "John Reyes", avatar: "/images/user/user-22.jpg" },
+    ],
+    website: "martinezfamilyoffice.com",
+    customerSince: "15 Jun 2023",
+    tags: ["HNW", "Decision Maker"],
+    status: "Active",
+    lastActivity: "Today",
   },
   {
     id: 5,
-    name: "James Wilson",
-    position: "Data Analyst",
-    location: "Chicago",
-    age: 28,
-    date: "20 Sep, 2025",
-    salary: "$80,000",
+    name: "Pacific Crest Partners",
+    industry: "Financial Services",
+    location: "Cebu City, Philippines",
+    employees: "51–200",
+    revenue: "₱670M",
+    contacts: [{ name: "James Wilson", avatar: "/images/user/user-29.jpg" }],
+    website: "pacificcrestpartners.com",
+    customerSince: "02 Nov 2020",
+    tags: ["Institutional"],
+    status: "Dormant",
+    lastActivity: "03 May 2026",
   },
   {
     id: 6,
-    name: "Olivia Johnson",
-    position: "HR Specialist",
-    location: "Los Angeles",
-    age: 40,
-    date: "08 Nov, 2026",
-    salary: "$75,000",
-  },
-  {
-    id: 7,
-    name: "William Smith",
-    position: "Financial Analyst",
-    location: "Seattle",
-    age: 38,
-    date: "03 Feb, 2026",
-    salary: "$88,000",
-  },
-  {
-    id: 8,
-    name: "Isabella Davis",
-    position: "UI/UX Designer",
-    location: "Austin",
-    age: 29,
-    date: "18 Jul, 2025",
-    salary: "$92,000",
-  },
-  {
-    id: 9,
-    name: "Liam Moore",
-    position: "DevOps Engineer",
-    location: "Boston",
-    age: 33,
-    date: "30 Oct, 2024",
-    salary: "$115,000",
-  },
-  {
-    id: 10,
-    name: "Mia Garcia",
-    position: "Content Strategist",
-    location: "Denver",
-    age: 27,
-    date: "12 Dec, 2027",
-    salary: "$70,000",
+    name: "Meridian Securities",
+    industry: "Brokerage",
+    location: "Mandaluyong City, Philippines",
+    employees: "201–500",
+    revenue: "₱1.8B",
+    contacts: [
+      { name: "Olivia Johnson", avatar: "/images/user/user-30.jpg" },
+      { name: "William Smith", avatar: "/images/user/user-31.jpg" },
+    ],
+    website: "meridiansecurities.ph",
+    customerSince: "21 Feb 2019",
+    tags: ["Strategic", "Institutional"],
+    status: "Active",
+    lastActivity: "29 Jul 2026",
   },
 ];
-type SortKey = "name" | "position" | "location" | "age" | "date" | "salary";
-type SortOrder = "asc" | "desc";
+
+const columns: Array<{ key: SortKey | "contacts" | "tags" | "actions"; label: string; width: number }> = [
+  { key: "industry", label: "Industry", width: 175 },
+  { key: "location", label: "Location", width: 205 },
+  { key: "employees", label: "Employees", width: 115 },
+  { key: "revenue", label: "Revenue", width: 115 },
+  { key: "contacts", label: "Contacts", width: 125 },
+  { key: "website", label: "Website", width: 205 },
+  { key: "customerSince", label: "Customer Since", width: 145 },
+  { key: "tags", label: "Tags", width: 200 },
+  { key: "status", label: "Status", width: 110 },
+  { key: "lastActivity", label: "Last Activity", width: 145 },
+  { key: "actions", label: "Action", width: 100 },
+];
+
+const statusColor = {
+  Active: "success",
+  Prospect: "primary",
+  Dormant: "light",
+} as const;
 
 export default function CompanyTable() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredAndSortedData = useMemo(() => {
-    return tableRowData
-      .filter((item) =>
-        Object.values(item).some(
-          (value) =>
-            typeof value === "string" &&
-            value.toLowerCase().includes(searchTerm.toLowerCase())
+  const [search, setSearch] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
+    key: "name",
+    descending: false,
+  });
+  const rows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const filtered = term
+      ? companies.filter((company) =>
+          [
+            company.name,
+            company.industry,
+            company.location,
+            company.website,
+            company.status,
+            company.tags.join(" "),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(term),
         )
-      )
-      .sort((a, b) => {
-        if (sortKey === "salary") {
-          const salaryA = Number.parseInt(a[sortKey].replace(/\$|,/g, ""));
-          const salaryB = Number.parseInt(b[sortKey].replace(/\$|,/g, ""));
-          return sortOrder === "asc" ? salaryA - salaryB : salaryB - salaryA;
-        }
-        return sortOrder === "asc"
-          ? String(a[sortKey]).localeCompare(String(b[sortKey]))
-          : String(b[sortKey]).localeCompare(String(a[sortKey]));
+      : companies;
+
+    return [...filtered].sort((a, b) => {
+      const result = String(a[sort.key]).localeCompare(String(b[sort.key]), undefined, {
+        numeric: true,
+        sensitivity: "base",
       });
-  }, [sortKey, sortOrder, searchTerm]);
+      return sort.descending ? -result : result;
+    });
+  }, [search, sort]);
 
-  const totalItems = filteredAndSortedData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const visibleRows = rows.slice((page - 1) * pageSize, page * pageSize);
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selected.includes(row.id));
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  const changeSort = (key: SortKey) => {
+    setSort((current) => ({
+      key,
+      descending: current.key === key ? !current.descending : false,
+    }));
   };
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
-    }
+  const togglePage = () => {
+    const ids = visibleRows.map((row) => row.id);
+    setSelected((current) =>
+      allVisibleSelected
+        ? current.filter((id) => !ids.includes(id))
+        : Array.from(new Set([...current, ...ids])),
+    );
   };
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const currentData = filteredAndSortedData.slice(startIndex, endIndex);
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white dark:bg-white/[0.03]">
-      <div className="flex flex-col gap-2 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-gray-500 dark:text-gray-400"> Show </span>
-          <div className="relative z-20 bg-transparent">
-            <select
-              className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-transparent border border-gray-300 rounded-lg appearance-none dark:bg-dark-900 h-9 bg-none shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(Number(e.target.value))}
-            >
-              {[5, 8, 10].map((value) => (
-                <option
-                  key={value}
-                  value={value}
-                  className="text-gray-500 dark:bg-gray-900 dark:text-gray-400"
-                >
-                  {value}
-                </option>
-              ))}
-            </select>
-            <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
-              <svg
-                className="stroke-current"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165"
-                  stroke=""
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          </div>
-          <span className="text-gray-500 dark:text-gray-400"> entries </span>
-        </div>
-
-        <div className="relative">
-          <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none left-4 top-1/2 dark:text-gray-400">
-            <svg
-              className="fill-current"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M3.04199 9.37363C3.04199 5.87693 5.87735 3.04199 9.37533 3.04199C12.8733 3.04199 15.7087 5.87693 15.7087 9.37363C15.7087 12.8703 12.8733 15.7053 9.37533 15.7053C5.87735 15.7053 3.04199 12.8703 3.04199 9.37363ZM9.37533 1.54199C5.04926 1.54199 1.54199 5.04817 1.54199 9.37363C1.54199 13.6991 5.04926 17.2053 9.37533 17.2053C11.2676 17.2053 13.0032 16.5344 14.3572 15.4176L17.1773 18.238C17.4702 18.5309 17.945 18.5309 18.2379 18.238C18.5308 17.9451 18.5309 17.4703 18.238 17.1773L15.4182 14.3573C16.5367 13.0033 17.2087 11.2669 17.2087 9.37363C17.2087 5.04817 13.7014 1.54199 9.37533 1.54199Z"
-                fill=""
-              />
-            </svg>
+    <section className="w-full min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-2.5 sm:pr-5 md:flex-row md:items-center md:justify-between dark:border-white/[0.05]">
+        <div className="relative md:w-[280px]">
+          <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
+            <SearchIcon />
           </span>
           <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
             placeholder="Search..."
-            className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-11 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[300px]"
+            className="h-9 w-full rounded-lg border border-gray-300 bg-transparent pr-3.5 pl-10 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           />
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
+          <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+            <FilterIcon /> Filter
+          </button>
+          <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+            <ExportIcon /> Export
+          </button>
+          <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+            <PlusIcon /> Add Company
+          </button>
         </div>
       </div>
 
-      <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <div>
-          <Table>
-            <TableHeader className="border-t border-gray-100 dark:border-white/[0.05]">
-              <TableRow>
-                {[
-                  { key: "name", label: "User" },
-                  { key: "position", label: "Position" },
-                  { key: "location", label: "Office" },
-                  { key: "age", label: "Age" },
-                  { key: "date", label: "Start Date" },
-                  { key: "salary", label: "Salary" },
-                ].map(({ key, label }) => (
-                  <TableCell
-                    key={key}
-                    isHeader
-                    className="px-4 py-3 border border-gray-100 dark:border-white/[0.05]"
-                  >
-                    <div
-                      className="flex items-center justify-between cursor-pointer"
-                      onClick={() => handleSort(key as SortKey)}
-                    >
-                      <p className="font-medium text-gray-700 text-theme-xs dark:text-gray-400">
-                        {label}
-                      </p>
-                      <button className="flex flex-col gap-0.5">
-                        <svg
-                          className={`text-gray-300 dark:text-gray-700  ${
-                            sortKey === key && sortOrder === "asc"
-                              ? "text-brand-500"
-                              : ""
-                          }`}
-                          width="8"
-                          height="5"
-                          viewBox="0 0 8 5"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M4.40962 0.585167C4.21057 0.300808 3.78943 0.300807 3.59038 0.585166L1.05071 4.21327C0.81874 4.54466 1.05582 5 1.46033 5H6.53967C6.94418 5 7.18126 4.54466 6.94929 4.21327L4.40962 0.585167Z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                        <svg
-                          className={`text-gray-300 dark:text-gray-700  ${
-                            sortKey === key && sortOrder === "desc"
-                              ? "text-brand-500"
-                              : ""
-                          }`}
-                          width="8"
-                          height="5"
-                          viewBox="0 0 8 5"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M4.40962 4.41483C4.21057 4.69919 3.78943 4.69919 3.59038 4.41483L1.05071 0.786732C0.81874 0.455343 1.05582 0 1.46033 0H6.53967C6.94418 0 7.18126 0.455342 6.94929 0.786731L4.40962 4.41483Z"
-                            fill="currentColor"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </TableCell>
-                ))}
-                <TableCell
-                  isHeader
-                  className="px-4 py-3 border border-gray-100 dark:border-white/[0.05]"
-                >
-                  <p className="font-medium text-gray-700 text-theme-xs dark:text-gray-400">
-                    Action
-                  </p>
-                </TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentData.map((item, i) => (
-                <TableRow key={i + 1}>
-                  <TableCell className="px-4 py-4 font-medium text-gray-800 border border-gray-100 dark:border-white/[0.05] dark:text-white text-theme-sm whitespace-nowrap ">
-                    {item.name}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm dark:text-gray-400 whitespace-nowrap ">
-                    {item.position}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm dark:text-gray-400 whitespace-nowrap ">
-                    {item.location}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border dark:border-white/[0.05] border-gray-100 text-theme-sm dark:text-gray-400 whitespace-nowrap ">
-                    {item.age}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border border-gray-100  dark:border-white/[0.05] text-theme-sm dark:text-gray-400 whitespace-nowrap ">
-                    {item.date}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border border-gray-100  dark:border-white/[0.05] text-theme-sm dark:text-gray-400 whitespace-nowrap ">
-                    {item.salary}
-                  </TableCell>
-                  <TableCell className="px-4 py-4 font-normal text-gray-800 border border-gray-100 dark:border-white/[0.05] text-theme-sm dark:text-white/90 whitespace-nowrap ">
-                    <div className="flex items-center w-full gap-2">
-                      <button className="text-gray-500 hover:text-error-500 dark:text-gray-400 dark:hover:text-error-500">
-                        <TrashBinIcon className="size-5" />
-                      </button>
-                      <button className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">
-                        <PencilIcon className="size-5" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+      <div className="w-full min-w-0 overflow-x-auto custom-scrollbar">
+        <table className="w-[1932px] min-w-[1932px] table-fixed border-separate border-spacing-0 [&_td]:px-3.5 [&_td]:py-3 [&_th]:px-3.5 [&_th]:py-2.5">
+          <colgroup>
+            <col style={{ width: 52 }} />
+            <col style={{ width: 240 }} />
+            {columns.map((column) => <col key={column.key} style={{ width: column.width }} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="border border-gray-100 bg-white px-4 py-3 dark:border-white/[0.05] dark:bg-gray-900">
+                <input type="checkbox" checked={allVisibleSelected} onChange={togglePage} className="size-4 rounded border-gray-300 text-brand-500" />
+              </th>
+              <th className="border border-gray-100 bg-white px-4 py-3 text-left dark:border-white/[0.05] dark:bg-gray-900">
+                <button onClick={() => changeSort("name")} className="w-full text-left text-theme-xs font-medium text-gray-700 dark:text-gray-400">Name</button>
+              </th>
+              {columns.map((column) => (
+                <th key={column.key} className="border border-gray-100 px-4 py-3 text-left dark:border-white/[0.05]">
+                  {column.key === "contacts" || column.key === "tags" || column.key === "actions" ? (
+                    <span className="text-theme-xs font-medium text-gray-700 dark:text-gray-400">{column.label}</span>
+                  ) : (
+                    <button onClick={() => changeSort(column.key as SortKey)} className="w-full text-left text-theme-xs font-medium text-gray-700 dark:text-gray-400">{column.label}</button>
+                  )}
+                </th>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((company) => {
+              const isSelected = selected.includes(company.id);
+              return (
+                <tr key={company.id} className={isSelected ? "bg-brand-50/40 dark:bg-brand-500/[0.05]" : ""}>
+                  <td className={`border border-gray-100 px-4 py-4 text-center dark:border-white/[0.05] ${isSelected ? "bg-brand-50 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}`}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => setSelected((current) => current.includes(company.id) ? current.filter((id) => id !== company.id) : [...current, company.id])}
+                      className="size-4 rounded border-gray-300 text-brand-500"
+                    />
+                  </td>
+                  <td className={`border border-gray-100 px-4 py-4 dark:border-white/[0.05] ${isSelected ? "bg-brand-50 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}`}>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-600 dark:bg-brand-500/15">{company.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span>
+                      <span className="truncate text-theme-sm font-medium text-gray-800 dark:text-white">{company.name}</span>
+                    </div>
+                  </td>
+                  <td className="truncate border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.industry}</td>
+                  <td className="truncate border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.location}</td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.employees}</td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.revenue}</td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]">
+                    <div className="flex -space-x-2">{company.contacts.map((contact) => <img key={contact.name} src={contact.avatar} alt={contact.name} title={contact.name} className="size-7 rounded-full border-2 border-white object-cover dark:border-gray-900" />)}</div>
+                  </td>
+                  <td className="truncate border border-gray-100 px-4 py-4 text-theme-sm dark:border-white/[0.05]"><a href={`https://${company.website}`} target="_blank" rel="noreferrer" className="text-brand-500 hover:text-brand-600">{company.website}</a></td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.customerSince}</td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-1.5 overflow-hidden">{company.tags.map((tag) => <Badge key={tag} color="light" size="sm">{tag}</Badge>)}</div></td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><Badge color={statusColor[company.status]} size="sm">{company.status}</Badge></td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.lastActivity}</td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button aria-label={`Delete ${company.name}`} className="text-gray-500 hover:text-error-500"><TrashBinIcon className="size-5" /></button><button aria-label={`Edit ${company.name}`} className="text-gray-500 hover:text-gray-800"><PencilIcon className="size-5" /></button></div></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      <div className="border border-t-0 rounded-b-xl border-gray-100 py-4 pl-[18px] pr-4 dark:border-white/[0.05]">
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between">
-          {/* Left side: Showing entries */}
-
-          <PaginationWithButton
-            totalPages={totalPages}
-            initialPage={currentPage}
-            onPageChange={handlePageChange}
-          />
-          <div className="pt-3 xl:pt-0">
-            <p className="pt-3 text-sm font-medium text-center text-gray-500 border-t border-gray-100 dark:border-gray-800 dark:text-gray-400 xl:border-t-0 xl:pt-0 xl:text-left">
-              Showing {startIndex + 1} to {endIndex} of {totalItems} entries
-            </p>
-          </div>
+      <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.05]">
+        <label className="flex items-center gap-2 text-sm text-gray-500">
+          Show
+          <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700 dark:bg-gray-900">
+            {[5, 8, 10].map((size) => <option key={size}>{size}</option>)}
+          </select>
+          entries
+        </label>
+        <div className="flex items-center gap-2">
+          <button disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="h-10 rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Previous</button>
+          <span className="flex size-10 items-center justify-center rounded-lg bg-brand-500 text-sm text-white">{page}</span>
+          <button disabled={page === pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="h-10 rounded-lg border border-gray-300 px-4 text-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300">Next</button>
         </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="size-4.5">
+      <path
+        d="m14.25 14.25 3 3m-1.5-8.5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

@@ -1,24 +1,21 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import PageMeta from "../../components/common/PageMeta";
 import AuthLayout from "./AuthPageLayout";
 import SignInForm from "../../components/auth/SignInForm";
 import AuthToast from "../../components/auth/AuthToast";
-import { getCurrentSession } from "../../api/auth";
-import { useAuthStore } from "../../stores/authStore";
+import { useSessionQuery } from "../../hooks/auth/useAuthApi";
+import { useAuth } from "../../hooks/auth/useAuth";
 
 export default function SignIn() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const setUser = useAuthStore((state) => state.setUser);
+  const { setUser } = useAuth();
   const isLoginCallback = searchParams.get("login") === "success";
   const callbackError = searchParams.get("message");
 
-  const sessionQuery = useQuery({
-    queryKey: ["auth", "session"],
-    queryFn: getCurrentSession,
+  const sessionQuery = useSessionQuery({
     staleTime: 0,
     refetchOnMount: "always",
   });

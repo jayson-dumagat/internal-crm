@@ -13,12 +13,12 @@ const CrmLayoutContent: React.FC = () => {
       <CrmSidebar />
       <Backdrop />
       <div
-        className={`flex-1 transition-all duration-300 ease-in-out ${
+        className={`min-w-0 flex-1 transition-all duration-300 ease-in-out ${
           isExpanded || isHovered ? "xl:ml-[290px]" : "xl:ml-[90px]"
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <CrmHeader />
-        <main className="flex-1 p-4 md:p-6 pb-20 w-full mx-auto max-w-screen-2xl">
+        <main className="mx-auto w-full min-w-0 max-w-screen-2xl flex-1 overflow-x-hidden p-4 pb-20 md:p-6">
           <Outlet />
         </main>
       </div>

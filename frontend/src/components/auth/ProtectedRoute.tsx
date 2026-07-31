@@ -1,8 +1,7 @@
 import { useEffect, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation } from "react-router";
-import { getCurrentSession } from "../../api/auth";
-import { useAuthStore } from "../../stores/authStore";
+import { useSessionQuery } from "../../hooks/auth/useAuthApi";
+import { useAuth } from "../../hooks/auth/useAuth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,16 +9,10 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-  const setUser = useAuthStore((state) => state.setUser);
-  const clearUser = useAuthStore((state) => state.clearUser);
+  const { setUser, clearUser } = useAuth();
 
-  const sessionQuery = useQuery({
-    queryKey: ["auth", "session"],
-    queryFn: getCurrentSession,
-    staleTime: 30 * 1000,
-    retry: false,
+  const sessionQuery = useSessionQuery({
     refetchOnMount: "always",
-    refetchInterval: 60 * 1000,
   });
 
   useEffect(() => {

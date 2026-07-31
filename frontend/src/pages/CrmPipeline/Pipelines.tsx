@@ -1,5 +1,6 @@
 import PageMeta from "../../components/common/PageMeta";
 import PipelineBoard from "../../components/pipelines/PipelineBoard";
+import AppBreadcrumb from "../../components/common/AppBreadcrumb";
 
 export default function Pipelines() {
   return (
@@ -8,6 +9,7 @@ export default function Pipelines() {
         title="CDEX Pipeline | Caballes-Go Securities, Inc."
         description="This is React.js Task Kanban Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
       />
+      <AppBreadcrumb pageName="Pipelines" />
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <PipelineBoard />
       </div>

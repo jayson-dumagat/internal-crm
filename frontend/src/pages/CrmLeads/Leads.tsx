@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  createColumnHelper,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Link } from "react-router";
 
 import PageMeta from "../../components/common/PageMeta";
+import AppBreadcrumb from "../../components/common/AppBreadcrumb";
 import LeadCards from "../../components/leads/LeadCards";
 import LeadFooter from "../../components/leads/LeadFooter";
-import LeadHeader from "../../components/leads/LeadHeader";
 import LeadTable from "../../components/leads/LeadTable";
 import SearchField from "../../components/ui/search/Search";
 
-import { ExportIcon, FilterIcon } from "../../icons";
+import { ExportIcon, FilterIcon, PlusIcon } from "../../icons";
 import LeadPreview from "../../components/leads/LeadPreview";
 
 export type LeadStatus =
@@ -120,13 +127,26 @@ const leads: Lead[] = [
   },
 ];
 
-const ITEMS_PER_PAGE = 10;
+const leadColumn = createColumnHelper<Lead>();
+const leadColumns = [
+  leadColumn.accessor("name", { id: "name" }),
+  leadColumn.accessor("company", { id: "company" }),
+  leadColumn.accessor("status", { id: "status" }),
+];
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const leadsQuery = useQuery({
+    queryKey: ["crm", "leads"],
+    queryFn: async () => leads,
+    initialData: leads,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const leadData = leadsQuery.data;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -139,7 +159,7 @@ export default function Leads() {
       return leads;
     }
 
-    return leads.filter((lead) => {
+    return leadData.filter((lead) => {
       const searchableValues = [
         lead.name,
         lead.role,
@@ -161,25 +181,32 @@ export default function Leads() {
         .toLowerCase()
         .includes(normalizedSearch);
     });
-  }, [searchTerm]);
+  }, [leadData, searchTerm]);
+
+  const leadTable = useReactTable({
+    data: filteredLeads,
+    columns: leadColumns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   const totalItems = filteredLeads.length;
 
   const totalPages = Math.max(
-    Math.ceil(totalItems / ITEMS_PER_PAGE),
+    Math.ceil(totalItems / itemsPerPage),
     1,
   );
 
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const startIndex = (currentPage - 1) * itemsPerPage;
 
   const endIndex = Math.min(
-    startIndex + ITEMS_PER_PAGE,
+    startIndex + itemsPerPage,
     totalItems,
   );
 
-  const startEntry = totalItems === 0 ? 0 : startIndex + 1;
-
-  const currentData = filteredLeads.slice(startIndex, endIndex);
+  const currentData = leadTable
+    .getRowModel()
+    .rows.slice(startIndex, endIndex)
+    .map((row) => row.original);
 
   const isCurrentPageSelected =
     currentData.length > 0 &&
@@ -228,44 +255,25 @@ export default function Leads() {
         description="Manage and track CRM leads for Caballes-Go Securities, Inc."
       />
 
-      <LeadHeader />
+      <AppBreadcrumb pageName="Leads" />
 
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-5 dark:border-white/[0.05]">
+        <div className="border-b border-gray-100 px-4 py-2.5 sm:pr-5 dark:border-white/[0.05]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <SearchField
-                name="leadSearch"
-                value={searchTerm}
-                onValueChange={setSearchTerm}
-                placeholder="Search leads..."
-                containerClassName="min-w-0 flex-1 sm:w-72 sm:flex-none"
-                autoComplete="off"
-              />
+            <SearchField
+              name="leadSearch"
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+              placeholder="Search leads..."
+              containerClassName="min-w-0 flex-1 md:w-[280px] md:flex-none"
+              className="!h-9 !py-2 !pr-3.5 !pl-10"
+              autoComplete="off"
+            />
 
-              <div className="flex shrink-0 items-center gap-2 md:hidden">
-                <button
-                  type="button"
-                  aria-label="Filter leads"
-                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
-                >
-                  <FilterIcon />
-                </button>
-
-                <button
-                  type="button"
-                  aria-label="Export leads"
-                  className="inline-flex size-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
-                >
-                  <ExportIcon />
-                </button>
-              </div>
-            </div>
-
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
               <button
                 type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
               >
                 <FilterIcon />
                 Filter
@@ -273,11 +281,19 @@ export default function Leads() {
 
               <button
                 type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.05]"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
               >
                 <ExportIcon />
                 Export
               </button>
+
+              <Link
+                to="/leads/new"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              >
+                <PlusIcon />
+                Add Lead
+              </Link>
             </div>
           </div>
         </div>
@@ -297,12 +313,11 @@ export default function Leads() {
         />
 
         <LeadFooter
-          startEntry={startEntry}
-          endIndex={endIndex}
           totalPages={totalPages}
-          totalItems={totalItems}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          setItemsPerPage={setItemsPerPage}
         />
       </div>
 

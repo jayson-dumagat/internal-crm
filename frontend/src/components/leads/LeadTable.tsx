@@ -45,10 +45,10 @@ const interestBadgeColor: Record<Lead["interestLevel"], BadgeColor> = {
 };
 
 const headerCellClass =
-  "border border-gray-100 px-4 py-3 dark:border-white/[0.05]";
+  "border border-gray-100 px-3.5 py-2.5 dark:border-white/[0.05]";
 
 const bodyCellClass =
-  "border border-gray-100 px-4 py-4 text-theme-sm text-gray-800 dark:border-white/[0.05] dark:text-gray-400";
+  "border border-gray-100 px-3.5 py-3 text-theme-sm text-gray-800 dark:border-white/[0.05] dark:text-gray-400";
 
 export default function LeadTable({
   leads,
@@ -74,8 +74,15 @@ export default function LeadTable({
 
   return (
     <div className="custom-scrollbar hidden max-w-full overflow-x-auto md:block">
-      <Table className="min-w-[2220px] table-fixed border-collapse">
-        <TableHeader className="border-t border-gray-100 dark:border-white/[0.05]">
+      <Table className="w-[2227px] min-w-[2227px] table-fixed border-separate border-spacing-0">
+        <colgroup>
+          {[52, 250, 175, 200, 250, 130, 185, 185, 130, 145, 145, 270, 110].map(
+            (width, index) => (
+              <col key={index} style={{ width }} />
+            ),
+          )}
+        </colgroup>
+        <TableHeader>
           <TableRow>
             <TableCell
               isHeader
@@ -91,52 +98,52 @@ export default function LeadTable({
             </TableCell>
 
             <TableHeaderCell
-              className="sticky left-[52px] z-30 w-[260px] min-w-[260px] bg-white dark:bg-gray-900"
+              className="sticky left-[52px] z-30 w-[250px] min-w-[250px] bg-white shadow-[1px_0_0_#f2f4f7] dark:bg-gray-900 dark:shadow-[1px_0_0_rgba(255,255,255,0.05)]"
             >
               Name
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[180px]">
+            <TableHeaderCell className="w-[200px]">
               Role
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[190px]">
+            <TableHeaderCell className="w-[220px]">
               Company
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[240px]">
+            <TableHeaderCell className="w-[280px]">
               Contact
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[140px]">
+            <TableHeaderCell className="w-[150px]">
               Source
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[190px]">
+            <TableHeaderCell className="w-[210px]">
               Owner
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[190px]">
+            <TableHeaderCell className="w-[210px]">
               Assigned To
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[140px]">
+            <TableHeaderCell className="w-[150px]">
               Status
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[150px]">
+            <TableHeaderCell className="w-[170px]">
               Interest Level
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[150px]">
+            <TableHeaderCell className="w-[170px]">
               Date Created
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[280px]">
+            <TableHeaderCell className="w-[300px]">
               Address
             </TableHeaderCell>
 
-            <TableHeaderCell className="w-[130px]">
+            <TableHeaderCell className="w-[140px]">
               Actions
             </TableHeaderCell>
           </TableRow>
@@ -160,7 +167,7 @@ export default function LeadTable({
                     "hover:bg-gray-50 focus-visible:bg-gray-50",
                     "dark:hover:bg-white/[0.03] dark:focus-visible:bg-white/[0.03]",
                     isSelected
-                      ? "bg-brand-50/40 dark:bg-brand-500/[0.05]"
+                      ? "bg-blue-light-50 dark:bg-blue-light-500/[0.08]"
                       : "",
                   ].join(" ")}
                 >
@@ -168,7 +175,7 @@ export default function LeadTable({
                     className={[
                       `sticky left-0 z-20 w-[52px] min-w-[52px] max-w-[52px] text-center ${bodyCellClass}`,
                       isSelected
-                        ? "bg-brand-50 dark:bg-gray-900"
+                        ? "bg-blue-light-50 dark:bg-[#172033]"
                         : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
                     ].join(" ")}
                   >
@@ -184,9 +191,9 @@ export default function LeadTable({
 
                   <TableCell
                     className={[
-                      `sticky left-[52px] z-20 w-[260px] min-w-[260px] ${bodyCellClass}`,
+                      `sticky left-[52px] z-20 w-[250px] min-w-[250px] overflow-hidden shadow-[1px_0_0_#f2f4f7] dark:shadow-[1px_0_0_rgba(255,255,255,0.05)] ${bodyCellClass}`,
                       isSelected
-                        ? "bg-brand-50 dark:bg-gray-900"
+                        ? "bg-blue-light-50 dark:bg-[#172033]"
                         : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
                     ].join(" ")}
                   >
@@ -208,15 +215,15 @@ export default function LeadTable({
                     </div>
                   </TableCell>
 
-                  <LeadBodyCell className="w-[180px]">
+                  <LeadBodyCell className="w-[200px]">
                     <p className="truncate">{lead.role}</p>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[190px]">
+                  <LeadBodyCell className="w-[220px]">
                     <p className="truncate">{lead.company}</p>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[240px]">
+                  <LeadBodyCell className="w-[280px]">
                     <div className="min-w-0">
                       <a
                         href={`mailto:${lead.email}`}
@@ -236,25 +243,25 @@ export default function LeadTable({
                     </div>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[140px]">
+                  <LeadBodyCell className="w-[150px]">
                     <p className="truncate">{lead.source}</p>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[190px]">
+                  <LeadBodyCell className="w-[210px]">
                     <PersonCell
                       avatar={lead.owner.avatar}
                       name={lead.owner.name}
                     />
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[190px]">
+                  <LeadBodyCell className="w-[210px]">
                     <PersonCell
                       avatar={lead.assignedTo.avatar}
                       name={lead.assignedTo.name}
                     />
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[140px]">
+                  <LeadBodyCell className="w-[150px]">
                     <Badge
                       variant="light"
                       color={statusBadgeColor[lead.status]}
@@ -264,7 +271,7 @@ export default function LeadTable({
                     </Badge>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[150px]">
+                  <LeadBodyCell className="w-[170px]">
                     <Badge
                       variant="light"
                       color={
@@ -276,13 +283,13 @@ export default function LeadTable({
                     </Badge>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[150px]">
+                  <LeadBodyCell className="w-[170px]">
                     <p className="whitespace-nowrap">
                       {lead.dateCreated}
                     </p>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[280px]">
+                  <LeadBodyCell className="w-[300px]">
                     <p
                       className="line-clamp-2"
                       title={lead.address}
@@ -291,7 +298,7 @@ export default function LeadTable({
                     </p>
                   </LeadBodyCell>
 
-                  <LeadBodyCell className="w-[130px]">
+                  <LeadBodyCell className="w-[140px]">
                     <div
                       className="flex w-full items-center gap-2"
                       onClick={stopRowClick}
@@ -344,7 +351,7 @@ function TableHeaderCell({
   return (
     <TableCell
       isHeader
-      className={`${headerCellClass} ${className}`}
+      className={`${headerCellClass} overflow-hidden ${className}`}
     >
       <p className="text-left text-theme-xs font-medium text-gray-700 dark:text-gray-400">
         {children}
@@ -362,7 +369,7 @@ function LeadBodyCell({
 }) {
   return (
     <TableCell
-      className={`${bodyCellClass} font-normal ${className}`}
+      className={`${bodyCellClass} overflow-hidden font-normal ${className}`}
     >
       {children}
     </TableCell>

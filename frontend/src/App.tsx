@@ -97,6 +97,8 @@ import Leads from "./pages/CrmLeads/Leads";
 import Companies from "./pages/CrmCompanies/Companies";
 import Contacts from "./pages/CrmContacts/Contacts";
 import Pipelines from "./pages/CrmPipeline/Pipelines";
+import Notes from "./pages/CrmNotes/Notes";
+import Activities from "./pages/CrmActivities/Activities";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
@@ -117,10 +119,12 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/notes" element={<Notes />} />
             <Route path="/inbox" element={<Inbox />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/pipelines" element={<Pipelines />} />
+            <Route path="/activities" element={<Activities />} />
           </Route>
 
           {/* Dashboard Layout */}

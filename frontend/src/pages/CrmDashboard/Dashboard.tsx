@@ -5,6 +5,7 @@ import UpcomingSchedule from "../../components/crm/UpcomingSchedule";
 import SalePieChart from "../../components/crm/SalePieChart";
 import EstimatedRevenue from "../../components/crm/EstimatedRevenue";
 import PageMeta from "../../components/common/PageMeta";
+import AppBreadcrumb from "../../components/common/AppBreadcrumb";
 
 export default function CrmDashboard() {
   return (
@@ -13,6 +14,7 @@ export default function CrmDashboard() {
         title="CDEX Dashboard | Caballes-Go Securities, Inc."
         description="This is CRM Dashboard page for Caballes-Go Securities, Inc."
       />
+      <AppBreadcrumb pageName="Dashboard" />
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         <div className="col-span-12">
           {/* <!-- Metric Group Four --> */}

@@ -1,13 +1,6 @@
-import axios from "axios";
 import { z } from "zod";
-
-const authApi = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/v1/auth`,
-  withCredentials: true,
-  headers: {
-    Accept: "application/json",
-  },
-});
+import { apiClient } from "./client";
+import { getApiErrorMessage } from "./errors";
 
 const authUserSchema = z.object({
   entraObjectId: z.string(),
@@ -38,42 +31,35 @@ const loginUrlResponseSchema = z.object({
 });
 
 export type AuthUser = z.infer<typeof authUserSchema>;
-type SessionResponse = z.infer<typeof sessionResponseSchema>;
+export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
 export async function getCurrentSession(): Promise<SessionResponse> {
   try {
-    const response = await authApi.get("/session");
+    const response = await apiClient.get("/auth/session");
 
     return sessionResponseSchema.parse(response.data);
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      throw new Error("Your sign-in session could not be verified.");
-    }
-
-    throw new Error(
-      error instanceof z.ZodError
-        ? "The server returned an invalid sign-in session."
-        : "Unable to verify your sign-in session.",
-    );
+    throw new Error(getApiErrorMessage(error, "Unable to verify your sign-in session."));
   }
 }
 
 export async function getMicrosoftLoginUrl(): Promise<string> {
   try {
-    const response = await authApi.get("/login-url");
+    const response = await apiClient.get("/auth/login-url");
     const result = loginUrlResponseSchema.parse(response.data);
 
     return result.authorizationUrl;
   } catch (error) {
-    if (axios.isAxiosError<{ message?: string }>(error)) {
-      throw new Error(
-        error.response?.data?.message ??
-          "Unable to start Microsoft authentication.",
-      );
-    }
+    throw new Error(
+      getApiErrorMessage(error, "Unable to start Microsoft authentication."),
+    );
+  }
+}
 
-    throw error instanceof z.ZodError
-      ? new Error(error.issues[0]?.message ?? "Invalid authentication response.")
-      : error;
+export async function logout(): Promise<void> {
+  try {
+    await apiClient.post("/auth/logout");
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Unable to sign out."));
   }
 }

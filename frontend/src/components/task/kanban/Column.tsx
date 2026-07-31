@@ -3,43 +3,22 @@ import TaskItem from "./TaskItem";
 import { HorizontaLDots } from "../../../icons";
 import { Dropdown } from "../../ui/dropdown/Dropdown";
 import { DropdownItem } from "../../ui/dropdown/DropdownItem";
-import { useState, useRef } from "react";
-import { useDrop } from "react-dnd";
+import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
 
 interface ColumnProps {
   title: string;
   tasks: Task[];
   status: string;
-  moveTask: (dragIndex: number, hoverIndex: number) => void;
-  changeTaskStatus: (taskId: string, newStatus: string) => void;
-  isDragging?: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
 }
 
 const Column: React.FC<ColumnProps> = ({
   title,
   tasks,
   status,
-  moveTask,
-  changeTaskStatus,
-  isDragging = false,
-  onDragStart,
-  onDragEnd,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ isOver, canDrop }, drop] = useDrop({
-    accept: "task",
-    drop: () => ({ name: status }),
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop(),
-    }),
-  });
-
-  drop(ref);
+  const { isOver, setNodeRef } = useDroppable({ id: status });
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -50,19 +29,15 @@ const Column: React.FC<ColumnProps> = ({
   }
   return (
     <div
-      ref={ref}
+      ref={setNodeRef}
       className={`flex flex-col gap-5 p-4 swim-lane xl:p-6 transition-all duration-200 relative ${
-        isOver && canDrop
+        isOver
           ? "bg-blue-50/80 dark:bg-blue-500/5"
-          : canDrop && isDragging
-          ? "bg-gray-50/50 dark:bg-gray-500/5"
-          : isDragging
-          ? "opacity-80"
           : ""
       }`}
     >
       {/* Drop zone indicator */}
-      {isOver && canDrop && (
+      {isOver && (
         <div className="absolute inset-2 bg-blue-50/20 dark:bg-blue-500/10 z-10 pointer-events-none rounded-xl" />
       )}
 
@@ -117,15 +92,10 @@ const Column: React.FC<ColumnProps> = ({
           </Dropdown>
         </div>
       </div>
-      {tasks.map((task, index) => (
+      {tasks.map((task) => (
         <TaskItem
           key={task.id}
           task={task}
-          index={index}
-          moveTask={moveTask}
-          changeTaskStatus={changeTaskStatus}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
         />
       ))}
     </div>

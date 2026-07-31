@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import Column from "./Column";
 import { Task } from "./types/types";
 
@@ -115,17 +114,6 @@ const initialTasks: Task[] = [
 
 const KanbanBoard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const moveTask = useCallback((dragIndex: number, hoverIndex: number) => {
-    setTasks((prevTasks) => {
-      const newTasks = [...prevTasks];
-      const draggedTask = newTasks[dragIndex];
-      newTasks.splice(dragIndex, 1);
-      newTasks.splice(hoverIndex, 0, draggedTask);
-      return newTasks;
-    });
-  }, []);
 
   const changeTaskStatus = useCallback((taskId: string, newStatus: string) => {
     setTasks((prevTasks) =>
@@ -135,49 +123,32 @@ const KanbanBoard: React.FC = () => {
     );
   }, []);
 
-  const handleDragStart = useCallback(() => {
-    setIsDragging(true);
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (over) {
+      changeTaskStatus(String(active.id), String(over.id));
+    }
+  };
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndContext onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 border-t border-gray-200 divide-x divide-gray-200 dark:divide-white/[0.05] mt-7 dark:border-white/[0.05] sm:mt-0 sm:grid-cols-2 xl:grid-cols-3">
         <Column
           title="To Do"
           tasks={tasks.filter((task) => task.status === "todo")}
           status="todo"
-          moveTask={moveTask}
-          changeTaskStatus={changeTaskStatus}
-          isDragging={isDragging}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
         />
         <Column
           title="In Progress"
           tasks={tasks.filter((task) => task.status === "inProgress")}
           status="inProgress"
-          moveTask={moveTask}
-          changeTaskStatus={changeTaskStatus}
-          isDragging={isDragging}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
         />
         <Column
           title="Completed"
           tasks={tasks.filter((task) => task.status === "completed")}
           status="completed"
-          moveTask={moveTask}
-          changeTaskStatus={changeTaskStatus}
-          isDragging={isDragging}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
         />
       </div>
-    </DndProvider>
+    </DndContext>
   );
 };
 
