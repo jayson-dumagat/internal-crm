@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import crypto from "node:crypto";
 import { entraConfig } from "../../config/entra";
+import { sessionCookieClearOptions } from "../../config/session";
 import { entraService } from "../../services/entra.service";
 
 const AUTH_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
@@ -42,6 +43,8 @@ export async function handleEntraCallback(
         getQueryString(req.query.error_description) ??
         "Microsoft authentication was cancelled or failed.";
 
+      await clearPendingAuth(req);
+
       res.redirect(
         buildFrontendCallbackUrl({
           success: false,
@@ -70,6 +73,8 @@ export async function handleEntraCallback(
     }
 
     if (!pendingAuth || !returnedState) {
+      await clearPendingAuth(req);
+
       res.redirect(
         buildFrontendCallbackUrl({
           success: false,
@@ -86,7 +91,7 @@ export async function handleEntraCallback(
       Date.now() - pendingAuth.createdAt >
       AUTH_REQUEST_MAX_AGE_MS
     ) {
-      delete req.session.entraAuth;
+      await clearPendingAuth(req);
 
       res.redirect(
         buildFrontendCallbackUrl({
@@ -105,7 +110,7 @@ export async function handleEntraCallback(
     );
 
     if (!stateMatches) {
-      delete req.session.entraAuth;
+      await clearPendingAuth(req);
 
       res.redirect(
         buildFrontendCallbackUrl({
@@ -124,7 +129,6 @@ export async function handleEntraCallback(
         codeVerifier: pendingAuth.codeVerifier,
       });
 
-    req.session.user = result.user;
     delete req.session.entraAuth;
 
     // Regenerate the session ID after authentication to prevent
@@ -143,7 +147,24 @@ export async function handleEntraCallback(
       }),
     );
   } catch (error) {
-    next(error);
+    console.error("Microsoft authentication callback failed", error);
+
+    if (res.headersSent) {
+      next(error);
+      return;
+    }
+
+    await clearPendingAuth(req).catch((cleanupError) => {
+      console.error("Failed to clear pending authentication", cleanupError);
+    });
+
+    res.redirect(
+      buildFrontendCallbackUrl({
+        success: false,
+        error: "authentication_failed",
+        message: "Microsoft authentication could not be completed. Please try again.",
+      }),
+    );
   }
 }
 
@@ -151,6 +172,8 @@ export function getCurrentSession(
   req: Request,
   res: Response,
 ): void {
+  res.setHeader("Cache-Control", "no-store");
+
   if (!req.session.user) {
     res.status(401).json({
       authenticated: false,
@@ -174,11 +197,7 @@ export async function logout(
   try {
     await destroySession(req);
 
-    res.clearCookie("ccrms.sid", {
-      httpOnly: true,
-      secure: entraConfig.redirectUri.startsWith("https://"),
-      sameSite: "lax",
-    });
+    res.clearCookie("ccrms.sid", sessionCookieClearOptions);
 
     res.status(200).json({
       logoutUrl: entraService.createLogoutUrl(),
@@ -271,4 +290,13 @@ function destroySession(req: Request): Promise<void> {
       resolve();
     });
   });
+}
+
+async function clearPendingAuth(req: Request): Promise<void> {
+  if (!req.session.entraAuth) {
+    return;
+  }
+
+  delete req.session.entraAuth;
+  await saveSession(req);
 }

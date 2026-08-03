@@ -4,6 +4,7 @@ import {
   getMicrosoftLoginUrl,
   logout,
 } from "../../api/auth";
+import { useAuth } from "./useAuth";
 
 export const authKeys = {
   all: ["auth"] as const,
@@ -34,10 +35,18 @@ export function useMicrosoftSignIn() {
 
 export function useLogout() {
   const queryClient = useQueryClient();
+  const { clearUser } = useAuth();
 
   return useMutation({
     mutationFn: logout,
-    onSuccess: () => queryClient.removeQueries({ queryKey: authKeys.all }),
+    onSuccess: (logoutUrl) => {
+      clearUser();
+      queryClient.removeQueries({ queryKey: authKeys.all });
+      window.location.assign(logoutUrl);
+    },
+    onError: () => {
+      clearUser();
+      queryClient.removeQueries({ queryKey: authKeys.all });
+    },
   });
 }
-

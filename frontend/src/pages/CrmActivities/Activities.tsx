@@ -128,14 +128,14 @@ const outcomeColor = {
   Denied: "error",
 } as const;
 
-const pageSize = 5;
-
 export default function Activities() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<AuditCategory | "All">("All");
   const [outcome, setOutcome] = useState<AuditOutcome | "All">("All");
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const filteredEvents = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -158,8 +158,14 @@ export default function Activities() {
     );
   }, [category, outcome, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
-  const visibleEvents = filteredEvents.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEvents.length / itemsPerPage),
+  );
+  const visibleEvents = filteredEvents.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage,
+  );
 
   const exportAuditLog = () => {
     const header = ["ID", "Timestamp", "Actor", "Action", "Target", "Category", "Outcome", "IP Address"];
@@ -194,20 +200,52 @@ export default function Activities() {
       />
       <AppBreadcrumb pageName="Activities" />
 
-      <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="border-b border-gray-100 p-4 sm:p-5 dark:border-white/[0.05]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                <FilterIcon /> Filters
-              </span>
+      <section className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+        <div className="border-b border-gray-100 px-4 py-2.5 sm:pr-5 dark:border-white/[0.05]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <SearchField
+              name="activitySearch"
+              value={search}
+              onValueChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              placeholder="Search activities..."
+              containerClassName="min-w-0 flex-1 md:w-[280px] md:flex-none"
+              className="!h-9 !py-2 !pr-3.5 !pl-10"
+              autoComplete="off"
+            />
+
+            <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
+              <button
+                type="button"
+                aria-expanded={showFilters}
+                onClick={() => setShowFilters((current) => !current)}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              >
+                <FilterIcon />
+                Filter
+              </button>
+              <button
+                type="button"
+                onClick={exportAuditLog}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              >
+                <ExportIcon />
+                Export
+              </button>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-white/[0.05]">
               <select
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value as AuditCategory | "All");
                   setPage(1);
                 }}
-                className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
               >
                 <option value="All">All categories</option>
                 {["Authentication", "Client", "KYC", "Pipeline", "Task", "System"].map((value) => (
@@ -220,99 +258,109 @@ export default function Activities() {
                   setOutcome(event.target.value as AuditOutcome | "All");
                   setPage(1);
                 }}
-                className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
               >
                 <option value="All">All outcomes</option>
                 <option>Success</option>
                 <option>Warning</option>
                 <option>Denied</option>
               </select>
+              {(category !== "All" || outcome !== "All") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategory("All");
+                    setOutcome("All");
+                    setPage(1);
+                  }}
+                  className="h-9 rounded-lg px-3 text-sm font-medium text-brand-500 transition hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
-
-            <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto">
-              <SearchField
-                value={search}
-                onValueChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
-                placeholder="Search activity..."
-                containerClassName="w-full sm:w-72"
-              />
-              <button
-                type="button"
-                onClick={exportAuditLog}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-              >
-                <ExportIcon /> Export
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        <div className="p-4 sm:p-6">
-          <div className="relative">
-            <div className="absolute top-6 bottom-6 left-5 w-px bg-gray-200 dark:bg-gray-800" />
-            <div className="space-y-6">
-              {visibleEvents.map((event) => (
-                <article key={event.id} className="relative flex gap-4">
-                  <img
-                    src={event.avatar}
-                    alt={event.actor}
-                    className="z-10 size-10 shrink-0 rounded-full object-cover ring-4 ring-white dark:ring-gray-900"
-                  />
-                  <div className="min-w-0 flex-1 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05] dark:bg-gray-900/50">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge color={outcomeColor[event.outcome]} size="sm">
-                            {event.outcome}
-                          </Badge>
-                          <Badge color="light" size="sm">{event.category}</Badge>
-                          <span className="text-xs text-gray-400">{event.id}</span>
-                        </div>
-                        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-semibold text-gray-800 dark:text-white/90">
-                            {event.actor}
-                          </span>{" "}
-                          {event.action}{" "}
-                          <span className="font-medium text-gray-800 dark:text-white/90">
-                            {event.target}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-left sm:text-right">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          {event.relativeTime}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">{event.timestamp}</p>
-                      </div>
+        <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+          {visibleEvents.length ? (
+            visibleEvents.map((event) => (
+              <article
+                key={event.id}
+                className="group px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5 dark:hover:bg-white/[0.03]"
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <img
+                      src={event.avatar}
+                      alt={event.actor}
+                      className="size-9 shrink-0 rounded-full object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-theme-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-semibold text-gray-800 dark:text-white/90">
+                          {event.actor}
+                        </span>{" "}
+                        {event.action}{" "}
+                        <span className="font-medium text-gray-800 dark:text-white/90">
+                          {event.target}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-400">{event.id}</p>
                     </div>
+                  </div>
 
+                  <div className="flex flex-wrap items-center gap-2 pl-12 lg:justify-end lg:pl-0">
+                    <Badge color="light" size="sm">{event.category}</Badge>
+                    <Badge color={outcomeColor[event.outcome]} size="sm">{event.outcome}</Badge>
+                    <div className="min-w-[145px] text-left lg:text-right">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                        {event.relativeTime}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">{event.timestamp}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setExpandedId(expandedId === event.id ? null : event.id)}
-                      className="mt-3 text-xs font-medium text-brand-500 hover:text-brand-600"
+                      className="text-xs font-medium text-brand-500 hover:text-brand-600"
                     >
                       {expandedId === event.id ? "Hide details" : "View details"}
                     </button>
-                    {expandedId === event.id && (
-                      <div className="mt-3 grid gap-3 rounded-lg bg-gray-50 p-3 text-xs sm:grid-cols-[1fr_auto] dark:bg-white/[0.03]">
-                        <p className="text-gray-600 dark:text-gray-300">{event.details}</p>
-                        <p className="text-gray-500 dark:text-gray-400">IP: {event.ipAddress}</p>
-                      </div>
-                    )}
                   </div>
-                </article>
-              ))}
+                </div>
+
+                {expandedId === event.id && (
+                  <div className="mt-3 ml-12 flex flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between dark:bg-white/[0.03]">
+                    <p className="text-gray-600 dark:text-gray-300">{event.details}</p>
+                    <p className="text-gray-500 dark:text-gray-400">IP: {event.ipAddress}</p>
+                  </div>
+                )}
+              </article>
+            ))
+          ) : (
+            <div className="px-4 py-10 text-center text-sm text-gray-500 sm:px-5 dark:text-gray-400">
+              No activities found.
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.05]">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Showing {visibleEvents.length} of {filteredEvents.length} events
-          </p>
+        <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.05]">
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            Show
+            <select
+              value={itemsPerPage}
+              onChange={(event) => {
+                setItemsPerPage(Number(event.target.value));
+                setPage(1);
+              }}
+              className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700 dark:bg-gray-900"
+            >
+              {[5, 8, 10].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+            entries
+          </label>
           <div className="flex items-center gap-2">
             <button
               type="button"

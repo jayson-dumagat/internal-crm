@@ -1,9 +1,19 @@
 import { app } from "./app";
 import { env } from "./config/env";
+import {
+  connectRedis,
+  disconnectRedis,
+} from "./config/redis";
 import { AppDataSource } from "./database/data-source";
 
 async function bootstrap() {
   try {
+    console.log("Connecting to Redis...");
+
+    await connectRedis();
+
+    console.log("Redis connected.");
+
     console.log("Initializing database...");
 
     await AppDataSource.initialize();
@@ -22,6 +32,8 @@ async function bootstrap() {
           await AppDataSource.destroy();
         }
 
+        await disconnectRedis();
+
         process.exit(0);
       });
     };
@@ -31,6 +43,10 @@ async function bootstrap() {
   } catch (error) {
     console.error("Failed to start application");
     console.error(error);
+
+    await disconnectRedis().catch((shutdownError) => {
+      console.error("Failed to disconnect Redis", shutdownError);
+    });
 
     process.exit(1);
   }

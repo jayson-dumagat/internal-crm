@@ -7,6 +7,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { env } from "./config/env";
+import { sessionStore } from "./config/redis";
+import { sessionCookieOptions } from "./config/session";
 import { handleEntraCallback } from "./modules/auth/auth.controller";
 import { apiRouter } from "./routes";
 
@@ -36,13 +38,12 @@ app.use(
   session({
     name: "ccrms.sid",
     secret: env.JWT_SECRET,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
-      httpOnly: true,
-      secure: env.AZURE_REDIRECT_URI.startsWith("https://"),
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000,
+      ...sessionCookieOptions,
     },
   }),
 );

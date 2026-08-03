@@ -30,6 +30,15 @@ const loginUrlResponseSchema = z.object({
     }, "The backend returned an invalid Microsoft authorization URL."),
 });
 
+const logoutResponseSchema = z.object({
+  logoutUrl: z
+    .url()
+    .refine(
+      (value) => new URL(value).hostname === "login.microsoftonline.com",
+      "The backend returned an invalid Microsoft logout URL.",
+    ),
+});
+
 export type AuthUser = z.infer<typeof authUserSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
@@ -56,9 +65,11 @@ export async function getMicrosoftLoginUrl(): Promise<string> {
   }
 }
 
-export async function logout(): Promise<void> {
+export async function logout(): Promise<string> {
   try {
-    await apiClient.post("/auth/logout");
+    const response = await apiClient.post("/auth/logout");
+
+    return logoutResponseSchema.parse(response.data).logoutUrl;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to sign out."));
   }

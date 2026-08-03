@@ -9,6 +9,32 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().min(1),
 
+  REDIS_URL: z
+    .string()
+    .url()
+    .default("redis://localhost:6379"),
+
+  REDIS_SESSION_PREFIX: z
+    .string()
+    .min(1)
+    .default("ccrms:sess:"),
+
+  SESSION_TTL_SECONDS: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .default(8 * 60 * 60),
+
+  SESSION_COOKIE_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
+  SESSION_COOKIE_SAME_SITE: z
+    .enum(["lax", "strict", "none"])
+    .default("lax"),
+
   FRONTEND_ORIGIN: z.string().url(),
   FRONTEND_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),

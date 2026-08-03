@@ -29,6 +29,29 @@ services:
     networks:
       - crm_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: crm-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
+    expose:
+      - "6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - crm_network
+
   backend:
     container_name: crm-backend
     restart: unless-stopped
@@ -43,6 +66,11 @@ services:
       PORT: 5000
 
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      REDIS_SESSION_PREFIX: ${REDIS_SESSION_PREFIX:-ccrms:sess:}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_COOKIE_SAME_SITE: ${SESSION_COOKIE_SAME_SITE:-lax}
 
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
       JWT_SECRET: ${JWT_SECRET}
@@ -66,6 +94,8 @@ services:
 
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
     healthcheck:
@@ -142,6 +172,8 @@ services:
 volumes:
   postgres_data:
     name: crm_postgres_data
+  redis_data:
+    name: crm_redis_data
 
 networks:
   crm_network:
