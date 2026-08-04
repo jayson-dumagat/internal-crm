@@ -10,9 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
+    "@ark-ui/react": "^5.38.0",
+    "@atlaskit/pragmatic-drag-and-drop": "^2.0.1",
     "@floating-ui/react": "^0.27.16",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",

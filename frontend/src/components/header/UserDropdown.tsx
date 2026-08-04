@@ -51,7 +51,7 @@ export default function UserDropdown() {
           <path
             d="M4.3125 8.65625L9 13.3437L13.6875 8.65625"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.5"  
             strokeLinecap="round"
             strokeLinejoin="round"
           />

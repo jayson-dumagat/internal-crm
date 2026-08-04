@@ -1,6 +1,5 @@
-import { type MouseEvent } from "react";
-import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 import Avatar from "../ui/avatar/Avatar";
 
@@ -17,11 +16,24 @@ export default function PipelineCard({
   onViewLead,
   onEditLead,
 }: PipelineCardProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: lead.id,
-      data: { sourceStageId: lead.stageId },
+  const cardRef = useRef<HTMLElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element) return;
+
+    return draggable({
+      element,
+      getInitialData: () => ({
+        type: "pipeline-lead",
+        leadId: lead.id,
+        sourceStageId: lead.stageId,
+      }),
+      onDragStart: () => setIsDragging(true),
+      onDrop: () => setIsDragging(false),
     });
+  }, [lead.id, lead.stageId]);
 
   const handleInteractiveClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -29,10 +41,7 @@ export default function PipelineCard({
 
   return (
     <article
-      ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform) }}
-      {...listeners}
-      {...attributes}
+      ref={cardRef}
       onClick={() => onViewLead?.(lead)}
       className={[
         "group rounded-xl border border-gray-100 bg-white shadow-theme-xs transition",

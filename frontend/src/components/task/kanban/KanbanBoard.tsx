@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { useState, useCallback, useEffect } from "react";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import Column from "./Column";
 import { Task } from "./types/types";
 
@@ -123,14 +123,23 @@ const KanbanBoard: React.FC = () => {
     );
   }, []);
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (over) {
-      changeTaskStatus(String(active.id), String(over.id));
-    }
-  };
+  useEffect(() => {
+    return monitorForElements({
+      canMonitor: ({ source }) => source.data.type === "task",
+      onDrop({ source, location }) {
+        const target = location.current.dropTargets[0];
+        const sourceData = source.data as { taskId?: string };
+        const targetData = target?.data as { status?: string } | undefined;
+
+        if (sourceData.taskId && targetData?.status) {
+          changeTaskStatus(sourceData.taskId, targetData.status);
+        }
+      },
+    });
+  }, [changeTaskStatus]);
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <>
       <div className="grid grid-cols-1 border-t border-gray-200 divide-x divide-gray-200 dark:divide-white/[0.05] mt-7 dark:border-white/[0.05] sm:mt-0 sm:grid-cols-2 xl:grid-cols-3">
         <Column
           title="To Do"
@@ -148,7 +157,7 @@ const KanbanBoard: React.FC = () => {
           status="completed"
         />
       </div>
-    </DndContext>
+    </>
   );
 };
 

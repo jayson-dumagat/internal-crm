@@ -2,11 +2,17 @@ import { useMemo, useState } from "react";
 import {
   ExportIcon,
   FilterIcon,
+  UploadIcon,
   PencilIcon,
   PlusIcon,
   TrashBinIcon,
+  Building2Icon,
 } from "../../icons";
+import type { CompanyRecord } from "../../api/crm";
 import Badge from "../ui/badge/Badge";
+import AddCompanySheet from "./AddCompanySheet";
+import { useCompaniesQuery, useDeleteCompany } from "../../hooks/crm/useCrmDirectory";
+import { toast } from "sonner";
 
 type CompanyStatus = "Active" | "Prospect" | "Dormant";
 type SortKey =
@@ -21,7 +27,7 @@ type SortKey =
   | "lastActivity";
 
 type Company = {
-  id: number;
+  id: string | number;
   name: string;
   industry: string;
   location: string;
@@ -34,109 +40,6 @@ type Company = {
   status: CompanyStatus;
   lastActivity: string;
 };
-
-const companies: Company[] = [
-  {
-    id: 1,
-    name: "Northbridge Capital",
-    industry: "Investment Management",
-    location: "Makati City, Philippines",
-    employees: "51–200",
-    revenue: "₱850M",
-    contacts: [
-      { name: "Abram Schleifer", avatar: "/images/user/user-20.jpg" },
-      { name: "Sarah Lim", avatar: "/images/user/user-21.jpg" },
-    ],
-    website: "northbridgecapital.com",
-    customerSince: "12 Mar 2021",
-    tags: ["VIP", "Institutional"],
-    status: "Active",
-    lastActivity: "28 Jul 2026",
-  },
-  {
-    id: 2,
-    name: "Anderson Holdings",
-    industry: "Diversified Holdings",
-    location: "Taguig City, Philippines",
-    employees: "201–500",
-    revenue: "₱2.4B",
-    contacts: [
-      { name: "Charlotte Anderson", avatar: "/images/user/user-23.jpg" },
-      { name: "Mark Santos", avatar: "/images/user/user-24.jpg" },
-      { name: "Mia Cruz", avatar: "/images/user/user-25.jpg" },
-    ],
-    website: "andersonholdings.com",
-    customerSince: "08 Sep 2022",
-    tags: ["High Value", "Corporate"],
-    status: "Active",
-    lastActivity: "30 Jul 2026",
-  },
-  {
-    id: 3,
-    name: "Lumina Ventures",
-    industry: "Venture Capital",
-    location: "Pasig City, Philippines",
-    employees: "11–50",
-    revenue: "₱320M",
-    contacts: [
-      { name: "Ethan Brown", avatar: "/images/user/user-26.jpg" },
-      { name: "Ana Dela Cruz", avatar: "/images/user/user-27.jpg" },
-    ],
-    website: "luminaventures.ph",
-    customerSince: "19 Jan 2024",
-    tags: ["Partner", "Referral"],
-    status: "Prospect",
-    lastActivity: "24 Jul 2026",
-  },
-  {
-    id: 4,
-    name: "Martinez Family Office",
-    industry: "Family Office",
-    location: "Bonifacio Global City",
-    employees: "11–50",
-    revenue: "₱1.1B",
-    contacts: [
-      { name: "Sophia Martinez", avatar: "/images/user/user-28.jpg" },
-      { name: "John Reyes", avatar: "/images/user/user-22.jpg" },
-    ],
-    website: "martinezfamilyoffice.com",
-    customerSince: "15 Jun 2023",
-    tags: ["HNW", "Decision Maker"],
-    status: "Active",
-    lastActivity: "Today",
-  },
-  {
-    id: 5,
-    name: "Pacific Crest Partners",
-    industry: "Financial Services",
-    location: "Cebu City, Philippines",
-    employees: "51–200",
-    revenue: "₱670M",
-    contacts: [{ name: "James Wilson", avatar: "/images/user/user-29.jpg" }],
-    website: "pacificcrestpartners.com",
-    customerSince: "02 Nov 2020",
-    tags: ["Institutional"],
-    status: "Dormant",
-    lastActivity: "03 May 2026",
-  },
-  {
-    id: 6,
-    name: "Meridian Securities",
-    industry: "Brokerage",
-    location: "Mandaluyong City, Philippines",
-    employees: "201–500",
-    revenue: "₱1.8B",
-    contacts: [
-      { name: "Olivia Johnson", avatar: "/images/user/user-30.jpg" },
-      { name: "William Smith", avatar: "/images/user/user-31.jpg" },
-    ],
-    website: "meridiansecurities.ph",
-    customerSince: "21 Feb 2019",
-    tags: ["Strategic", "Institutional"],
-    status: "Active",
-    lastActivity: "29 Jul 2026",
-  },
-];
 
 const columns: Array<{ key: SortKey | "contacts" | "tags" | "actions"; label: string; width: number }> = [
   { key: "industry", label: "Industry", width: 175 },
@@ -159,10 +62,16 @@ const statusColor = {
 } as const;
 
 export default function CompanyTable() {
+  const companiesQuery = useCompaniesQuery();
+  const companyData = companiesQuery.data;
+  const hasCompanies = (companyData ?? []).length > 0;
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<Array<Company["id"]>>([]);
+  const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(null);
+  const deleteCompany = useDeleteCompany();
   const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
     key: "name",
     descending: false,
@@ -170,7 +79,7 @@ export default function CompanyTable() {
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = term
-      ? companies.filter((company) =>
+      ? (companyData ?? []).filter((company) =>
           [
             company.name,
             company.industry,
@@ -183,7 +92,7 @@ export default function CompanyTable() {
             .toLowerCase()
             .includes(term),
         )
-      : companies;
+      : companyData ?? [];
 
     return [...filtered].sort((a, b) => {
       const result = String(a[sort.key]).localeCompare(String(b[sort.key]), undefined, {
@@ -192,7 +101,7 @@ export default function CompanyTable() {
       });
       return sort.descending ? -result : result;
     });
-  }, [search, sort]);
+  }, [companyData, search, sort]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const visibleRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -216,6 +125,7 @@ export default function CompanyTable() {
   };
 
   return (
+    <>
     <section className="w-full min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-2.5 sm:pr-5 md:flex-row md:items-center md:justify-between dark:border-white/[0.05]">
         <div className="relative md:w-[280px]">
@@ -236,10 +146,13 @@ export default function CompanyTable() {
           <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <FilterIcon /> Filter
           </button>
-          <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
-            <ExportIcon /> Export
+          <button type="button" aria-label="Import companies" title="Import companies" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+            <UploadIcon />
           </button>
-          <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+          <button type="button" aria-label="Export companies" title="Export companies" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+            <ExportIcon />
+          </button>
+          <button type="button" onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <PlusIcon /> Add Company
           </button>
         </div>
@@ -272,7 +185,32 @@ export default function CompanyTable() {
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((company) => {
+            {companiesQuery.isLoading ? (
+              <tr><td colSpan={columns.length + 2} className="border border-gray-100 px-4 py-10 text-center text-sm text-gray-500 dark:border-white/[0.05] dark:text-gray-400">Loading companies...</td></tr>
+            ) : companiesQuery.isError ? (
+              <tr><td colSpan={columns.length + 2} className="border border-gray-100 px-4 py-10 text-center text-sm text-error-500 dark:border-white/[0.05]">{companiesQuery.error.message}</td></tr>
+            ) : visibleRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length + 2} className="border border-gray-100 px-4 py-10 dark:border-white/[0.05]">
+                  <div className="flex min-h-[180px] flex-col items-center justify-center text-center">
+                    <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+                      <Building2Icon className="size-5" />
+                    </span>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                      {hasCompanies ? "No companies match your search" : "No companies yet"}
+                    </p>
+                    <p className="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+                      {hasCompanies ? "Try adjusting your search to find a company." : "Add your first company to start building your directory."}
+                    </p>
+                    {!hasCompanies && (
+                      <button type="button" onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+                        <PlusIcon className="size-4" /> Add Company
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ) : visibleRows.map((company) => {
               const isSelected = selected.includes(company.id);
               return (
                 <tr key={company.id} className={isSelected ? "bg-brand-50/40 dark:bg-brand-500/[0.05]" : ""}>
@@ -302,7 +240,7 @@ export default function CompanyTable() {
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-1.5 overflow-hidden">{company.tags.map((tag) => <Badge key={tag} color="light" size="sm">{tag}</Badge>)}</div></td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><Badge color={statusColor[company.status]} size="sm">{company.status}</Badge></td>
                   <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.lastActivity}</td>
-                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button aria-label={`Delete ${company.name}`} className="text-gray-500 hover:text-error-500"><TrashBinIcon className="size-5" /></button><button aria-label={`Edit ${company.name}`} className="text-gray-500 hover:text-gray-800"><PencilIcon className="size-5" /></button></div></td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button type="button" aria-label={`Delete ${company.name}`} disabled={deleteCompany.isPending} onClick={async () => { if (!window.confirm(`Delete ${company.name}?`)) return; try { await deleteCompany.mutateAsync(company.id); setSelected((ids) => ids.filter((id) => id !== company.id)); toast.success("Company deleted successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete company."); } }} className="text-gray-500 hover:text-error-500 disabled:opacity-50"><TrashBinIcon className="size-5" /></button><button type="button" aria-label={`Edit ${company.name}`} onClick={() => { setEditingCompany(company); setIsAddCompanyOpen(true); }} className="text-gray-500 hover:text-gray-800"><PencilIcon className="size-5" /></button></div></td>
                 </tr>
               );
             })}
@@ -325,6 +263,8 @@ export default function CompanyTable() {
         </div>
       </div>
     </section>
+    <AddCompanySheet isOpen={isAddCompanyOpen} onClose={() => { setIsAddCompanyOpen(false); setEditingCompany(null); }} company={editingCompany} />
+    </>
   );
 }
 

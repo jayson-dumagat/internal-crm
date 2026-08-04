@@ -20,6 +20,10 @@ async function bootstrap() {
 
     console.log("Database connected.");
 
+    await AppDataSource.runMigrations();
+
+    console.log("Database migrations complete.");
+
     const server = app.listen(env.PORT, "0.0.0.0", () => {
       console.log(`CRM API running on port ${env.PORT}`);
     });

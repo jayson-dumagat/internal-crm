@@ -13,17 +13,23 @@ import Badge from "../ui/badge/Badge";
 import {
   ExportIcon,
   FilterIcon,
+  UploadIcon,
   PencilIcon,
   PlusIcon,
   TrashBinIcon,
+  UsersRoundIcon,
 } from "../../icons";
+import type { ContactRecord } from "../../api/crm";
+import AddContactSheet from "./AddContactSheet";
+import { useCompaniesQuery, useContactsQuery, useDeleteContact } from "../../hooks/crm/useCrmDirectory";
+import { toast } from "sonner";
 
 type ContactStatus = "Customer" | "Prospect" | "KYC Pending" | "Dormant" | "Closed";
 type RelationshipLevel = "High" | "Medium" | "Low";
 type BadgeColor = "primary" | "success" | "error" | "warning" | "info" | "light" | "dark";
 
 type Contact = {
-  id: number;
+  id: string | number;
   user: { image: string; name: string };
   position: string;
   company: { image: string; name: string };
@@ -33,6 +39,11 @@ type Contact = {
   location: string;
   status: ContactStatus;
   last_activity: string;
+  company_id?: string | null;
+  type_of_client?: string | null;
+  risk_profile?: string | null;
+  preferred_contact_method?: string | null;
+  tags?: string[];
 };
 
 const statusBadgeColor: Record<ContactStatus, BadgeColor> = {
@@ -49,83 +60,6 @@ const relationshipBadgeColor: Record<RelationshipLevel, BadgeColor> = {
   Low: "light",
 };
 
-const tableRowData: Contact[] = [
-  {
-    id: 1,
-    user: {
-      image: "/images/user/user-20.jpg",
-      name: "Abram Schleifer",
-    },
-    position: "Sales Assistant",
-    company: {
-      image: "/images/user/user-20.jpg",
-      name: "Northbridge Capital",
-    },
-    relationship_level: "High",
-    contact: {
-      email: "abram@schleifer.com",
-      phone: "+63912887665"
-    },
-    owner: {
-      image: "/images/user/user-20.jpg",
-      name: "Kiko Pangilinan"
-    },
-    location: "Makati, Philippines",
-    status: "Customer",
-    last_activity: "12 July 2026"
-  },
-
-  {
-    id: 2,
-    user: {
-      image: "/images/user/user-21.jpg",
-      name: "Charlotte Anderson",
-    },
-    position: "Managing Director",
-    company: {
-      image: "/images/user/user-23.jpg",
-      name: "Anderson Holdings",
-    },
-    relationship_level: "Medium",
-    contact: {
-      email: "charlotte@andersonholdings.com",
-      phone: "+63 917 555 0182",
-    },
-    owner: {
-      image: "/images/user/user-24.jpg",
-      name: "Mark Santos",
-    },
-    location: "Taguig, Philippines",
-    status: "KYC Pending",
-    last_activity: "18 July 2026",
-  },
-
-  {
-    id: 3,
-    user: {
-      image: "/images/user/user-26.jpg",
-      name: "Ethan Brown",
-    },
-    position: "Investor",
-    company: {
-      image: "/images/user/user-26.jpg",
-      name: "Individual",
-    },
-    relationship_level: "Low",
-    contact: {
-      email: "ethan@email.com",
-      phone: "+63 917 555 0111",
-    },
-    owner: {
-      image: "/images/user/user-27.jpg",
-      name: "Ana Dela Cruz",
-    },
-    location: "Quezon City, Philippines",
-    status: "Prospect",
-    last_activity: "10 July 2026",
-  },
-];
-
 type SortKey =
   | "name"
   | "position"
@@ -139,15 +73,22 @@ type SortKey =
 type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
+  const contactsQuery = useContactsQuery();
+  const companiesQuery = useCompaniesQuery();
+  const contactData = contactsQuery.data;
+  const hasContacts = (contactData ?? []).length > 0;
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Array<Contact["id"]>>([]);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ContactRecord | null>(null);
+  const deleteContact = useDeleteContact();
 
   const filteredData = useMemo(() => {
-    return tableRowData.filter((item) =>
+    return (contactData ?? []).filter((item) =>
         [
           item.user.name,
           item.position,
@@ -163,7 +104,7 @@ export default function ContactTable() {
           .toLowerCase()
           .includes(searchTerm.toLowerCase()),
       );
-  }, [searchTerm]);
+  }, [contactData, searchTerm]);
 
   const sortedData = useMemo(() => {
     const valueFor = (contact: Contact) => {
@@ -187,7 +128,7 @@ export default function ContactTable() {
   }, [filteredData, sortKey, sortOrder]);
 
   const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -209,7 +150,7 @@ export default function ContactTable() {
     currentData.length > 0 &&
     currentData.every((item) => selectedIds.includes(item.id));
 
-  const handleToggleSelected = (id: number) => {
+  const handleToggleSelected = (id: Contact["id"]) => {
     setSelectedIds((currentIds) =>
       currentIds.includes(id)
         ? currentIds.filter((selectedId) => selectedId !== id)
@@ -238,7 +179,10 @@ export default function ContactTable() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search..."
             className="dark:bg-dark-900 h-9 w-full rounded-lg border border-gray-300 bg-transparent py-2 pr-3.5 pl-10 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden xl:w-[280px] dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
           />
@@ -255,15 +199,29 @@ export default function ContactTable() {
 
             <button
               type="button"
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              aria-label="Import contacts"
+              title="Import contacts"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+            >
+              <UploadIcon />
+            </button>
+
+            <button
+              type="button"
+              aria-label="Export contacts"
+              title="Export contacts"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <ExportIcon />
-              <span>Export</span>
             </button>
 
             <button
               type="button"
               aria-label="Add contact"
+              onClick={() => {
+                setEditingContact(null);
+                setIsAddContactOpen(true);
+              }}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <PlusIcon />
@@ -335,7 +293,32 @@ export default function ContactTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentData.map((item) => {
+              {contactsQuery.isLoading ? (
+                <TableRow><TableCell colSpan={10} className="border border-gray-100 px-4 py-10 text-center text-sm text-gray-500 dark:border-white/[0.05] dark:text-gray-400">Loading contacts...</TableCell></TableRow>
+              ) : contactsQuery.isError ? (
+                <TableRow><TableCell colSpan={10} className="border border-gray-100 px-4 py-10 text-center text-sm text-error-500 dark:border-white/[0.05]">{contactsQuery.error.message}</TableCell></TableRow>
+              ) : currentData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="border border-gray-100 px-4 py-10 dark:border-white/[0.05]">
+                    <div className="flex min-h-[180px] flex-col items-center justify-center text-center">
+                      <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
+                        <UsersRoundIcon className="size-5" />
+                      </span>
+                      <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                        {hasContacts ? "No contacts match your search" : "No contacts yet"}
+                      </p>
+                      <p className="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+                        {hasContacts ? "Try adjusting your search to find a contact." : "Add your first contact to start building your directory."}
+                      </p>
+                      {!hasContacts && (
+                        <button type="button" onClick={() => { setEditingContact(null); setIsAddContactOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+                          <PlusIcon className="size-4" /> Add Contact
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : currentData.map((item) => {
                 const isSelected = selectedIds.includes(item.id);
 
                 return (
@@ -424,6 +407,17 @@ export default function ContactTable() {
                       <button
                         type="button"
                         aria-label={`Delete ${item.user.name}`}
+                        onClick={async () => {
+                          if (!window.confirm(`Delete ${item.user.name}?`)) return;
+                          try {
+                            await deleteContact.mutateAsync(item.id);
+                            setSelectedIds((ids) => ids.filter((id) => id !== item.id));
+                            toast.success("Contact deleted successfully.");
+                          } catch (error) {
+                            toast.error(error instanceof Error ? error.message : "Unable to delete contact.");
+                          }
+                        }}
+                        disabled={deleteContact.isPending}
                         className="text-gray-500 hover:text-error-500 dark:text-gray-400"
                       >
                         <TrashBinIcon className="size-5" />
@@ -431,6 +425,10 @@ export default function ContactTable() {
                       <button
                         type="button"
                         aria-label={`Edit ${item.user.name}`}
+                        onClick={() => {
+                          setEditingContact(item);
+                          setIsAddContactOpen(true);
+                        }}
                         className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                       >
                         <PencilIcon className="size-5" />
@@ -482,9 +480,20 @@ export default function ContactTable() {
           >
             Next
           </button>
-        </div>
       </div>
     </div>
+
+    <AddContactSheet
+      isOpen={isAddContactOpen}
+      onClose={() => {
+        setIsAddContactOpen(false);
+        setEditingContact(null);
+      }}
+      companies={companiesQuery.data ?? []}
+      companiesLoading={companiesQuery.isLoading}
+      contact={editingContact}
+    />
+  </div>
   );
 }
 

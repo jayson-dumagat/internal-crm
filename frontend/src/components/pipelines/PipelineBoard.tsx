@@ -1,9 +1,10 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 import PipelineColumn from "./PipelineColumn";
 import PipelineTabs from "./PipelineTabs";
@@ -111,11 +112,20 @@ export default function PipelineBoard() {
     [],
   );
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (over) {
-      moveLead(String(active.id), String(over.id));
-    }
-  };
+  useEffect(() => {
+    return monitorForElements({
+      canMonitor: ({ source }) => source.data.type === "pipeline-lead",
+      onDrop({ source, location }) {
+        const target = location.current.dropTargets[0];
+        const sourceData = source.data as { leadId?: string };
+        const targetData = target?.data as { stageId?: string } | undefined;
+
+        if (sourceData.leadId && targetData?.stageId) {
+          moveLead(sourceData.leadId, targetData.stageId);
+        }
+      },
+    });
+  }, [moveLead]);
 
   const createView = (view: PipelineView) => {
     if (views.length >= 6) {
@@ -379,7 +389,7 @@ export default function PipelineBoard() {
 };
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <>
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <PipelineTabs
           views={views}
@@ -570,7 +580,7 @@ export default function PipelineBoard() {
         onClose={() => setCardStage(null)}
         onSave={addCard}
       />
-    </DndContext>
+    </>
   );
 }
 

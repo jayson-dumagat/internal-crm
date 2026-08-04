@@ -282,61 +282,90 @@ export default function Activities() {
           )}
         </div>
 
-        <div className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+        <div className="p-4 sm:p-5">
           {visibleEvents.length ? (
-            visibleEvents.map((event) => (
-              <article
-                key={event.id}
-                className="group px-4 py-3 transition-colors hover:bg-gray-50 sm:px-5 dark:hover:bg-white/[0.03]"
-              >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
+            <div className="relative">
+              <div className="absolute top-5 bottom-5 left-5 w-px bg-gray-200 dark:bg-gray-800" />
+              {visibleEvents.map((event, index) => (
+                <article
+                  key={event.id}
+                  className={`relative flex gap-4 ${index < visibleEvents.length - 1 ? "mb-5" : ""}`}
+                >
+                  <div className="z-10 shrink-0">
                     <img
                       src={event.avatar}
                       alt={event.actor}
-                      className="size-9 shrink-0 rounded-full object-cover"
+                      className="size-10 rounded-full object-cover ring-4 ring-white dark:ring-gray-900"
                     />
-                    <div className="min-w-0">
-                      <p className="truncate text-theme-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-semibold text-gray-800 dark:text-white/90">
-                          {event.actor}
-                        </span>{" "}
-                        {event.action}{" "}
-                        <span className="font-medium text-gray-800 dark:text-white/90">
-                          {event.target}
-                        </span>
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-gray-400">{event.id}</p>
-                    </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pl-12 lg:justify-end lg:pl-0">
-                    <Badge color="light" size="sm">{event.category}</Badge>
-                    <Badge color={outcomeColor[event.outcome]} size="sm">{event.outcome}</Badge>
-                    <div className="min-w-[145px] text-left lg:text-right">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="flex size-[18px] items-center justify-center text-brand-500">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 18 18"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M9 5.0625H14.0625L12.5827 8.35084C12.4506 8.64443 12.4506 8.98057 12.5827 9.27416L14.0625 12.5625H10.125C9.50368 12.5625 9 12.0588 9 11.4375V10.875M3.9375 10.875H9M3.9375 3.375H7.875C8.49632 3.375 9 3.87868 9 4.5V10.875M3.9375 15.9375V2.0625"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span className="text-theme-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {event.category}
+                      </span>
+                      <Badge color={outcomeColor[event.outcome]} size="sm">
+                        {event.outcome}
+                      </Badge>
+                      <span className="text-xs text-gray-400 lg:ml-auto">
                         {event.relativeTime}
-                      </p>
-                      <p className="mt-0.5 text-xs text-gray-400">{event.timestamp}</p>
+                      </span>
                     </div>
+                    <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                      <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">
+                        {event.actor}
+                      </h3>
+                      <span className="text-theme-sm text-gray-500 dark:text-gray-400">
+                        {event.action}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-theme-sm font-medium text-gray-700 dark:text-gray-300">
+                        {event.target}
+                      </span>
+                      <span className="text-xs text-gray-400">ID {event.id}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {event.timestamp}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setExpandedId(expandedId === event.id ? null : event.id)}
-                      className="text-xs font-medium text-brand-500 hover:text-brand-600"
+                      className="mt-2 inline-flex items-center rounded-md px-1.5 py-1 text-xs font-medium text-brand-500 transition hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
                     >
                       {expandedId === event.id ? "Hide details" : "View details"}
                     </button>
+                    {expandedId === event.id && (
+                      <div className="mt-2 flex flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between dark:border-white/[0.05] dark:bg-white/[0.03]">
+                        <p className="leading-relaxed text-gray-600 dark:text-gray-300">
+                          {event.details}
+                        </p>
+                        <p className="shrink-0 text-gray-500 dark:text-gray-400">
+                          IP: {event.ipAddress}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {expandedId === event.id && (
-                  <div className="mt-3 ml-12 flex flex-col gap-1 rounded-lg bg-gray-50 px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between dark:bg-white/[0.03]">
-                    <p className="text-gray-600 dark:text-gray-300">{event.details}</p>
-                    <p className="text-gray-500 dark:text-gray-400">IP: {event.ipAddress}</p>
-                  </div>
-                )}
-              </article>
-            ))
+                </article>
+              ))}
+            </div>
           ) : (
             <div className="px-4 py-10 text-center text-sm text-gray-500 sm:px-5 dark:text-gray-400">
               No activities found.

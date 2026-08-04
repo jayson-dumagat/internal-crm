@@ -1,5 +1,5 @@
-import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import { useEffect, useRef, useState } from "react";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { Task } from "./types/types";
 
 interface TaskItemProps {
@@ -9,16 +9,30 @@ interface TaskItemProps {
 const TaskItem: React.FC<TaskItemProps> = ({
   task,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: task.id, data: { status: task.status } });
+  const taskRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const element = taskRef.current;
+    if (!element) return;
+
+    return draggable({
+      element,
+      getInitialData: () => ({
+        type: "task",
+        taskId: task.id,
+        status: task.status,
+      }),
+      onDragStart: () => setIsDragging(true),
+      onDrop: () => setIsDragging(false),
+    });
+  }, [task.id, task.status]);
 
   const opacity = isDragging ? 0.3 : 0.8;
   return (
     <div
-      ref={setNodeRef}
-      style={{ opacity, transform: CSS.Translate.toString(transform) }}
-      {...listeners}
-      {...attributes}
+      ref={taskRef}
+      style={{ opacity }}
       className="relative p-5 bg-white border border-gray-200 task rounded-xl shadow-theme-sm dark:border-gray-800 dark:bg-white/5"
     >
       <div className="space-y-4">

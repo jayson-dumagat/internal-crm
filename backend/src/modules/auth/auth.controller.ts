@@ -3,6 +3,10 @@ import crypto from "node:crypto";
 import { entraConfig } from "../../config/entra";
 import { sessionCookieClearOptions } from "../../config/session";
 import { entraService } from "../../services/entra.service";
+import { AppDataSource } from "../../database/data-source";
+import { User } from "../users/user.entity";
+import { UserStatus } from "../users/user.types";
+import type { EntraUser } from "./auth.types";
 
 const AUTH_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -135,6 +139,8 @@ export async function handleEntraCallback(
     // session fixation, while preserving the authenticated user.
     const authenticatedUser = result.user;
 
+    await syncAuthenticatedUser(authenticatedUser);
+
     await regenerateSession(req);
 
     req.session.user = authenticatedUser;
@@ -166,6 +172,35 @@ export async function handleEntraCallback(
       }),
     );
   }
+}
+
+async function syncAuthenticatedUser(authenticatedUser: EntraUser): Promise<void> {
+  const repository = AppDataSource.getRepository(User);
+  const user = await repository.findOne({
+    where: {
+      entraTenantId: authenticatedUser.tenantId,
+      entraObjectId: authenticatedUser.entraObjectId,
+    },
+  });
+
+  const values = {
+    entraTenantId: authenticatedUser.tenantId,
+    entraObjectId: authenticatedUser.entraObjectId,
+    email: authenticatedUser.email || authenticatedUser.username,
+    displayName: authenticatedUser.name,
+    status: UserStatus.ACTIVE,
+    isAccessEnabled: true,
+    lastLoginAt: new Date(),
+    lastSyncedAt: new Date(),
+  };
+
+  if (user) {
+    Object.assign(user, values);
+    await repository.save(user);
+    return;
+  }
+
+  await repository.save(repository.create(values));
 }
 
 export function getCurrentSession(

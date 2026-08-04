@@ -1,4 +1,5 @@
-import { useDroppable } from "@dnd-kit/core";
+import { useEffect, useRef, useState } from "react";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 import Badge from "../ui/badge/Badge";
 
@@ -48,11 +49,26 @@ export default function PipelineColumn({
   onViewLead,
   onEditLead,
 }: PipelineColumnProps) {
-  const { isOver, setNodeRef } = useDroppable({ id: stage.id });
+  const columnRef = useRef<HTMLElement | null>(null);
+  const [isOver, setIsOver] = useState(false);
+
+  useEffect(() => {
+    const element = columnRef.current;
+    if (!element) return;
+
+    return dropTargetForElements({
+      element,
+      canDrop: ({ source }) => source.data.type === "pipeline-lead",
+      getData: () => ({ type: "pipeline-stage", stageId: stage.id }),
+      onDragEnter: () => setIsOver(true),
+      onDragLeave: () => setIsOver(false),
+      onDrop: () => setIsOver(false),
+    });
+  }, [stage.id]);
 
   return (
     <section
-      ref={setNodeRef}
+      ref={columnRef}
       className={[
         "min-h-[520px] min-w-[320px] px-4 py-5 transition-colors sm:px-5",
         isOver

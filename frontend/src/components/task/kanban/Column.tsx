@@ -3,8 +3,8 @@ import TaskItem from "./TaskItem";
 import { HorizontaLDots } from "../../../icons";
 import { Dropdown } from "../../ui/dropdown/Dropdown";
 import { DropdownItem } from "../../ui/dropdown/DropdownItem";
-import { useState } from "react";
-import { useDroppable } from "@dnd-kit/core";
+import { useEffect, useRef, useState } from "react";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 interface ColumnProps {
   title: string;
@@ -18,7 +18,22 @@ const Column: React.FC<ColumnProps> = ({
   status,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isOver, setNodeRef } = useDroppable({ id: status });
+  const columnRef = useRef<HTMLDivElement | null>(null);
+  const [isOver, setIsOver] = useState(false);
+
+  useEffect(() => {
+    const element = columnRef.current;
+    if (!element) return;
+
+    return dropTargetForElements({
+      element,
+      canDrop: ({ source }) => source.data.type === "task",
+      getData: () => ({ type: "task-column", status }),
+      onDragEnter: () => setIsOver(true),
+      onDragLeave: () => setIsOver(false),
+      onDrop: () => setIsOver(false),
+    });
+  }, [status]);
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -29,7 +44,7 @@ const Column: React.FC<ColumnProps> = ({
   }
   return (
     <div
-      ref={setNodeRef}
+      ref={columnRef}
       className={`flex flex-col gap-5 p-4 swim-lane xl:p-6 transition-all duration-200 relative ${
         isOver
           ? "bg-blue-50/80 dark:bg-blue-500/5"
