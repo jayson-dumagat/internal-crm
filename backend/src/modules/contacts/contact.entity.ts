@@ -63,6 +63,9 @@ export class Contact {
   @Column({ name: "avatar_url", type: "text", nullable: true })
   avatarUrl!: string | null;
 
+  @Column({ name: "avatar_content_type", type: "varchar", length: 100, nullable: true })
+  avatarContentType!: string | null;
+
   @Column({ name: "last_activity_at", type: "timestamptz", nullable: true })
   lastActivityAt!: Date | null;
 

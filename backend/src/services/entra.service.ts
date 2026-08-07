@@ -130,6 +130,28 @@ class EntraService {
     };
   }
 
+  async getProfilePhoto(accessToken?: string): Promise<{
+    data: Buffer;
+    contentType: string;
+  } | null> {
+    if (!accessToken) return null;
+
+    const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      console.warn(`Microsoft Graph profile photo request failed (${response.status}).`);
+      return null;
+    }
+
+    return {
+      data: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get("content-type") ?? "image/jpeg",
+    };
+  }
+
   /**
    * Builds the Microsoft logout endpoint.
    */
@@ -182,6 +204,7 @@ class EntraService {
       name: claims.name ?? accountName ?? username,
       email: claims.email ?? username,
       username,
+      avatarUrl: null,
       roles: Array.isArray(claims.roles) ? claims.roles : [],
       homeAccountId,
     };

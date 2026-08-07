@@ -44,9 +44,13 @@ export enum TaskType {
 @Index("idx_tasks_assignee_id", ["assigneeId"])
 @Index("idx_tasks_lead_id", ["leadId"])
 @Index("idx_tasks_organization_id", ["organizationId"])
+@Index("idx_tasks_tenant_id", ["tenantId"])
 export class Task {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
+
+  @Column({ name: "tenant_id", type: "uuid" })
+  tenantId!: string;
 
   @Column({
     type: "varchar",

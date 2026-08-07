@@ -25,7 +25,7 @@ export const entraConfig = {
 
   frontendUrl: requireEnvironmentVariable("FRONTEND_URL"),
 
-  scopes: ["openid", "profile", "email"],
+  scopes: ["openid", "profile", "email", "User.Read"],
 
   postLogoutRedirectUri:
     process.env.FRONTEND_URL ?? "http://localhost:5173",

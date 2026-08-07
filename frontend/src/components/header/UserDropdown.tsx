@@ -3,6 +3,8 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useLogout } from "../../hooks/auth/useAuthApi";
 import { useAuth } from "../../hooks/auth/useAuth";
+import Avatar from "../ui/avatar/Avatar";
+import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +24,7 @@ export default function UserDropdown() {
     logoutMutation.mutate();
   }
 
-  const displayName = user?.name ?? "Account";
+  const displayName = formatUserDisplayName(user?.name) || "Account";
   const displayEmail = user?.email ?? "";
 
   return (
@@ -31,11 +33,15 @@ export default function UserDropdown() {
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <img src="/images/user/owner.png" alt="User" />
+        <span className="mr-3">
+          <Avatar
+            src={user?.avatarUrl ?? CURRENT_USER_AVATAR}
+            alt={displayName}
+            size="medium"
+          />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">
+        <span className="hidden mr-1 font-medium text-theme-sm lg:block">
           {displayName}
         </span>
         <svg

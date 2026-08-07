@@ -6,6 +6,9 @@ import Sheet from "../ui/sheet/Sheet";
 
 import type { Lead } from "../../pages/CrmLeads/Leads";
 import { EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon } from "../../icons";
+import { formatDisplayDate } from "../../utils/date";
+import { useActivitiesQuery, useCreateNote, useNotesQuery } from "../../hooks/crm/useCrmDirectory";
+import { toast } from "sonner";
 
 type BadgeColor =
   | "primary"
@@ -230,7 +233,7 @@ function LeadSummary({
 
         <SummaryField
           label="Last Activity"
-          value={lead.lastActivity}
+          value={formatDisplayDate(lead.lastActivity)}
           className="lg:text-right"
           valueClassName="lg:text-right"
         />
@@ -335,26 +338,8 @@ function LeadTabs({
 }
 
 function ActivityTab({ lead }: { lead: Lead }) {
-  const activities = [
-    {
-      id: 1,
-      title: "Lead viewed",
-      description: `${lead.name}'s record was opened.`,
-      date: "Just now",
-    },
-    {
-      id: 2,
-      title: "Lead assigned",
-      description: `Assigned to ${lead.assignedTo.name}.`,
-      date: lead.lastActivity,
-    },
-    {
-      id: 3,
-      title: "Lead created",
-      description: `Created through ${lead.source}.`,
-      date: lead.dateCreated,
-    },
-  ];
+  const activitiesQuery = useActivitiesQuery();
+  const activities = (activitiesQuery.data ?? []).filter((activity) => activity.target === lead.name || activity.target === lead.company);
 
   return (
     <div>
@@ -373,7 +358,7 @@ function ActivityTab({ lead }: { lead: Lead }) {
       </div>
 
       <div className="mt-4">
-        {activities.map((activity, index) => (
+        {activities.length > 0 ? activities.map((activity, index) => (
           <div
             key={activity.id}
             className="relative flex gap-3 pb-5 last:pb-0"
@@ -387,20 +372,20 @@ function ActivityTab({ lead }: { lead: Lead }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  {activity.title}
+                {activity.action}
                 </p>
 
                 <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">
-                  {activity.date}
+                  {formatDisplayDate(activity.timestamp)}
                 </span>
               </div>
 
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {activity.description}
+                {activity.details || `${activity.action} for ${activity.target}.`}
               </p>
             </div>
           </div>
-        ))}
+        )) : <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">{activitiesQuery.isLoading ? "Loading activity..." : "No activity recorded for this lead yet."}</p>}
       </div>
     </div>
   );
@@ -534,20 +519,24 @@ function EmptyTab({
 
 function NotesTab({ lead }: { lead: Lead }) {
   const [note, setNote] = useState("");
+  const notesQuery = useNotesQuery();
+  const createNote = useCreateNote();
+  const previousNotes = (notesQuery.data ?? []).filter((item) => item.relatedTo === lead.name || item.relatedTo === lead.company);
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     const trimmedNote = note.trim();
 
     if (!trimmedNote) {
       return;
     }
 
-    console.log("Save note:", {
-      leadId: lead.id,
-      note: trimmedNote,
-    });
-
-    setNote("");
+    try {
+      await createNote.mutateAsync({ title: `Note about ${lead.name}`, content: trimmedNote, category: "Client", relatedTo: lead.name });
+      toast.success("Note added successfully.");
+      setNote("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save note.");
+    }
   };
 
   return (
@@ -564,11 +553,11 @@ function NotesTab({ lead }: { lead: Lead }) {
         <div className="mt-3 flex items-center justify-end gap-3">
           <button
             type="button"
-            disabled={!note.trim()}
+            disabled={!note.trim() || createNote.isPending}
             onClick={handleSaveNote}
             className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save Note
+            {createNote.isPending ? "Saving..." : "Save Note"}
           </button>
         </div>
       </div>
@@ -578,11 +567,7 @@ function NotesTab({ lead }: { lead: Lead }) {
           Previous Notes
         </p>
 
-        <div className="mt-4 py-6 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            No notes have been added yet.
-          </p>
-        </div>
+        {previousNotes.length > 0 ? <div className="mt-4 space-y-3">{previousNotes.map((item) => <article key={item.id} className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.05]"><p className="text-sm text-gray-700 dark:text-gray-300">{item.content}</p><p className="mt-2 text-xs text-gray-400">{formatDisplayDate(item.updatedAt)} · {item.author}</p></article>)}</div> : <div className="mt-4 py-6 text-center"><p className="text-sm text-gray-500 dark:text-gray-400">{notesQuery.isLoading ? "Loading notes..." : "No notes have been added yet."}</p></div>}
       </div>
     </div>
   );

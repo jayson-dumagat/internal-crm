@@ -1,13 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import type { CompanyRecord, ContactRecord } from "../../api/crm";
 import { useAuth } from "../../hooks/auth/useAuth";
-import { useCreateContact, useUpdateContact, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
+import { useCreateContact, useUpdateContact, useUploadContactAvatar, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
+import Avatar from "../ui/avatar/Avatar";
+import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
+import { InfoIcon } from "../../icons";
 
 const contactFormSchema = z.object({
   name: z.string().trim().min(1, "Contact name is required.").max(255),
@@ -28,6 +32,22 @@ const contactFormSchema = z.object({
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 const inputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
+const emptyContactFormValues = (relationshipOwnerId = ""): ContactFormValues => ({
+  name: "",
+  role: "",
+  companyId: "",
+  email: "",
+  phone: "",
+  relationshipLevel: "Medium",
+  relationshipOwnerId,
+  location: "",
+  typeOfClient: "",
+  riskProfile: "",
+  preferredContactMethod: "",
+  status: "Prospect",
+  tags: "",
+});
+
 export default function AddContactSheet({
   isOpen,
   onClose,
@@ -44,10 +64,13 @@ export default function AddContactSheet({
   const { user: currentUser } = useAuth();
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
+  const uploadAvatar = useUploadContactAvatar();
   const usersQuery = useUsersQuery();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: { name: "", role: "", companyId: "", email: "", phone: "", relationshipLevel: "Medium", relationshipOwnerId: "", location: "", typeOfClient: "", riskProfile: "", preferredContactMethod: "", status: "Prospect", tags: "" },
+    defaultValues: emptyContactFormValues(currentUser?.entraObjectId),
   });
 
   useEffect(() => {
@@ -70,16 +93,32 @@ export default function AddContactSheet({
       preferredContactMethod: contact.preferred_contact_method ?? "",
       status: contact.status,
       tags: contact.tags?.join(", ") ?? "",
-    } : undefined);
-  }, [contact, form, isOpen]);
+    } : emptyContactFormValues(currentUser?.entraObjectId));
+  }, [contact, currentUser?.entraObjectId, form, isOpen]);
 
-  const ownerOptions = [...(usersQuery.data ?? [])];
-  if (currentUser && !ownerOptions.some((owner) => owner.name === currentUser.name)) {
+  useEffect(() => {
+    return () => {
+      if (avatarPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
+  const ownerOptions = (usersQuery.data ?? []).map((owner) => ({
+    ...owner,
+    name: formatUserDisplayName(owner.name),
+    avatarUrl: owner.avatarUrl ?? (
+      owner.id === currentUser?.entraObjectId
+        ? currentUser.avatarUrl ?? CURRENT_USER_AVATAR
+        : null
+    ),
+  }));
+  if (currentUser && !ownerOptions.some((owner) => owner.id === currentUser.entraObjectId)) {
     ownerOptions.unshift({
       id: currentUser.entraObjectId,
-      name: currentUser.name,
+      name: formatUserDisplayName(currentUser.name),
       email: currentUser.email,
-      avatarUrl: null,
+      avatarUrl: currentUser.avatarUrl ?? CURRENT_USER_AVATAR,
       isCurrentUser: true,
     });
   }
@@ -90,7 +129,7 @@ export default function AddContactSheet({
   ) {
     ownerOptions.push({
       id: `legacy:${contact.owner.name}`,
-      name: contact.owner.name,
+      name: formatUserDisplayName(contact.owner.name),
       email: "",
       avatarUrl: null,
       isCurrentUser: false,
@@ -99,6 +138,30 @@ export default function AddContactSheet({
 
   const selectedOwnerId = useWatch({ control: form.control, name: "relationshipOwnerId" });
   const selectedOwner = ownerOptions.find((owner) => owner.id === selectedOwnerId);
+  const contactName = useWatch({ control: form.control, name: "name" });
+  const displayedAvatar = avatarFile ? avatarPreview : contact?.user.image ?? null;
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { "image/*": [] },
+    maxSize: 5 * 1024 * 1024,
+    multiple: false,
+    onDrop: ([file]) => {
+      if (!file) return;
+      setAvatarFile(file);
+      setAvatarPreview((previousPreview) => {
+        if (previousPreview?.startsWith("blob:")) {
+          URL.revokeObjectURL(previousPreview);
+        }
+        return URL.createObjectURL(file);
+      });
+    },
+    onDropRejected: () => toast.error("Please choose an image smaller than 5 MB."),
+  });
+
+  const closeSheet = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    onClose();
+  };
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -108,27 +171,43 @@ export default function AddContactSheet({
         ...values,
         companyId: values.companyId || null,
         relationshipOwnerId: isLegacyOwner ? null : selectedOwner || null,
-        relationshipOwner: isLegacyOwner ? selectedOwner.slice("legacy:".length) : undefined,
+        relationshipOwner: isLegacyOwner
+          ? formatUserDisplayName(selectedOwner.slice("legacy:".length))
+          : undefined,
         tags: values.tags?.split(",").map((tag) => tag.trim()).filter(Boolean) ?? [],
       };
+      const savedContact = contact
+        ? await updateContact.mutateAsync({ id: contact.id, input })
+        : await createContact.mutateAsync(input);
+
+      if (avatarFile) {
+        await uploadAvatar.mutateAsync({ id: savedContact.id, file: avatarFile });
+      }
+
       if (contact) {
-        await updateContact.mutateAsync({ id: contact.id, input });
         toast.success("Contact updated successfully.");
       } else {
-        await createContact.mutateAsync(input);
         toast.success("Contact added successfully.");
       }
-      onClose();
+      closeSheet();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Unable to ${contact ? "update" : "add"} contact.`);
     }
   });
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose} title={contact ? "Edit Contact" : "Add Contact"} description={contact ? "Update this client or relationship details." : "Add a client or relationship to your directory."} side="right" className="w-full sm:max-w-2xl">
+    <Sheet isOpen={isOpen} onClose={closeSheet} title={contact ? "Edit Contact" : "Add Contact"} description={contact ? "Update this client or relationship details." : "Add a client or relationship to your directory."} side="right" className="w-full sm:max-w-2xl">
       <form onSubmit={submit} className="space-y-6">
         <FormSection title="Basic information" description="Identify the contact and their organization.">
           <FormField label="Name" error={form.formState.errors.name?.message}><input {...form.register("name")} className={inputClassName} placeholder="Full name" autoFocus /></FormField>
+          <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
+            <input {...getInputProps()} />
+            <Avatar src={displayedAvatar} alt={contactName || "Contact"} colorKey="contact-avatar" size="large" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">{isDragActive ? "Drop image here" : "Add profile image"}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WEBP up to 5 MB. If omitted, initials will be shown.</p>
+            </div>
+          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Role / Job Title"><input {...form.register("role")} className={inputClassName} placeholder="Managing Director" /></FormField>
             <FormField label="Company"><select {...form.register("companyId")} disabled={companiesLoading} className={inputClassName}><option value="">Individual / not linked</option>{companiesLoading ? <option disabled>Loading companies...</option> : companies.map((company) => <option key={company.id} value={String(company.id)}>{company.name}</option>)}</select></FormField>
@@ -146,16 +225,13 @@ export default function AddContactSheet({
         <FormSection title="Relationship management" description="Assign ownership and track the current relationship state.">
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Relationship Owner">
-              <select {...form.register("relationshipOwnerId")} disabled={usersQuery.isLoading} className={inputClassName}>
-                <option value="">Unassigned</option>
-                {usersQuery.isLoading ? <option disabled>Loading users...</option> : ownerOptions.map((owner) => <option key={owner.id} value={owner.id}>{owner.name}{owner.isCurrentUser ? " (Me)" : owner.email ? ` — ${owner.email}` : ""}</option>)}
-              </select>
-              {selectedOwner && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <img src={selectedOwner.avatarUrl ?? "/images/user/user-01.jpg"} alt="" className="size-6 rounded-full object-cover" />
-                  <span>Assigned to <strong className="font-medium text-gray-700 dark:text-gray-300">{selectedOwner.name}</strong></span>
-                </div>
-              )}
+              <div className="relative">
+                {selectedOwner && <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center"><Avatar src={selectedOwner.avatarUrl} alt={selectedOwner.name} size="xsmall" colorKey={`owner-${selectedOwner.id}`} /></span>}
+                <select {...form.register("relationshipOwnerId")} disabled={usersQuery.isLoading} className={`${inputClassName} ${selectedOwner ? "pl-11" : ""}`}>
+                  <option value="">Unassigned</option>
+                  {usersQuery.isLoading ? <option disabled>Loading users...</option> : ownerOptions.map((owner) => <option key={owner.id} value={owner.id}>{owner.id === currentUser?.entraObjectId ? "Me" : owner.name}{owner.id !== currentUser?.entraObjectId && owner.email ? ` — ${owner.email}` : ""}</option>)}
+                </select>
+              </div>
             </FormField>
             <FormField label="Relationship Level"><select {...form.register("relationshipLevel")} className={inputClassName}><option>High</option><option>Medium</option><option>Low</option></select></FormField>
           </div>
@@ -174,7 +250,7 @@ export default function AddContactSheet({
           <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Decision Maker" /><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Separate tags with commas.</p></FormField>
         </FormSection>
 
-        <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]"><button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button><button type="submit" disabled={createContact.isPending || updateContact.isPending} className={primaryButtonClassName}>{createContact.isPending || updateContact.isPending ? "Saving..." : contact ? "Save Changes" : "Add Contact"}</button></div>
+        <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]"><button type="button" onClick={closeSheet} className={secondaryButtonClassName}>Cancel</button><button type="submit" disabled={createContact.isPending || updateContact.isPending || uploadAvatar.isPending} className={primaryButtonClassName}>{createContact.isPending || updateContact.isPending || uploadAvatar.isPending ? "Saving..." : contact ? "Save Changes" : "Add Contact"}</button></div>
       </form>
     </Sheet>
   );
@@ -185,7 +261,7 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 }
 
 function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <section className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><div><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p></div>{children}</section>;
+  return <section className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><span title={description} aria-label={description} className="inline-flex cursor-help text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400"><InfoIcon className="size-4" /></span></div>{children}</section>;
 }
 
 const secondaryButtonClassName = "inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]";

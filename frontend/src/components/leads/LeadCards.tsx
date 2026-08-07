@@ -1,6 +1,7 @@
 import Badge from "../ui/badge/Badge";
 import Avatar from "../ui/avatar/Avatar";
 import type { Lead } from "../../pages/CrmLeads/Leads";
+import { formatDisplayDate } from "../../utils/date";
 
 type BadgeColor =
   | "primary"
@@ -61,7 +62,7 @@ export default function LeadCards({ leads, onSelectLead }: LeadCardsProps) {
 
                 <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                   {lead.role} <span className="px-1">●</span>{" "}
-                  {lead.lastActivity}
+                  {formatDisplayDate(lead.lastActivity)}
                 </p>
 
                 <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-gray-100 pt-3 dark:border-white/[0.05]">
@@ -106,7 +107,7 @@ function LeadPersonField({
   name,
 }: {
   label: string;
-  avatar: string;
+  avatar: string | null;
   name: string;
 }) {
   return (

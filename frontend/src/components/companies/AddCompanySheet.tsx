@@ -1,12 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import type { CompanyRecord } from "../../api/crm";
 import Sheet from "../ui/sheet/Sheet";
-import { useCreateCompany, useUpdateCompany } from "../../hooks/crm/useCrmDirectory";
+import { useCreateCompany, useUpdateCompany, useUploadCompanyLogo } from "../../hooks/crm/useCrmDirectory";
+import Avatar from "../ui/avatar/Avatar";
 
 const companyFormSchema = z.object({
   name: z.string().trim().min(1, "Company name is required.").max(255),
@@ -36,6 +38,9 @@ export default function AddCompanySheet({
 }) {
   const createCompany = useCreateCompany();
   const updateCompany = useUpdateCompany();
+  const uploadLogo = useUploadCompanyLogo();
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companyFormSchema),
     defaultValues: {
@@ -60,11 +65,41 @@ export default function AddCompanySheet({
       employees: company.employees === "—" ? "" : company.employees,
       revenue: company.revenue === "—" ? "" : company.revenue,
       website: company.website === "—" ? "" : company.website,
-      customerSince: company.customerSince === "—" ? "" : company.customerSince,
+      customerSince: company.customerSince && company.customerSince !== "—" ? company.customerSince : "",
       tags: company.tags.join(", "),
       status: company.status,
     } : undefined);
   }, [company, form, isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { "image/*": [] },
+    maxSize: 5 * 1024 * 1024,
+    multiple: false,
+    onDrop: ([file]) => {
+      if (!file) return;
+      setLogoFile(file);
+      setLogoPreview((previousPreview) => {
+        if (previousPreview?.startsWith("blob:")) URL.revokeObjectURL(previousPreview);
+        return URL.createObjectURL(file);
+      });
+    },
+    onDropRejected: () => toast.error("Please choose an image smaller than 5 MB."),
+  });
+
+  const displayedLogo = logoFile ? logoPreview : company?.logoUrl ?? null;
+  const closeSheet = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    onClose();
+  };
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -75,14 +110,20 @@ export default function AddCompanySheet({
           .map((tag) => tag.trim())
           .filter(Boolean) ?? [],
       };
+      const savedCompany = company
+        ? await updateCompany.mutateAsync({ id: company.id, input })
+        : await createCompany.mutateAsync(input);
+
+      if (logoFile) {
+        await uploadLogo.mutateAsync({ id: savedCompany.id, file: logoFile });
+      }
+
       if (company) {
-        await updateCompany.mutateAsync({ id: company.id, input });
         toast.success("Company updated successfully.");
       } else {
-        await createCompany.mutateAsync(input);
         toast.success("Company added successfully.");
       }
-      onClose();
+      closeSheet();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Unable to ${company ? "update" : "add"} company.`);
     }
@@ -91,7 +132,7 @@ export default function AddCompanySheet({
   return (
     <Sheet
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={closeSheet}
       title={company ? "Edit Company" : "Add Company"}
       description={company ? "Update this company’s relationship details." : "Add a company to your relationship directory."}
       side="right"
@@ -101,6 +142,14 @@ export default function AddCompanySheet({
         <FormField label="Company Name" error={form.formState.errors.name?.message}>
           <input {...form.register("name")} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
         </FormField>
+        <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
+          <input {...getInputProps()} />
+          <Avatar src={displayedLogo} alt={company?.name || "Company"} colorKey="company-logo" size="large" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{isDragActive ? "Drop logo here" : "Add company logo"}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WEBP up to 5 MB. If omitted, initials will be shown.</p>
+          </div>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField label="Industry"><input {...form.register("industry")} className={inputClassName} placeholder="Investment Management" /></FormField>
           <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Active</option><option>Dormant</option></select></FormField>
@@ -116,8 +165,8 @@ export default function AddCompanySheet({
         <FormField label="Website"><input {...form.register("website")} className={inputClassName} placeholder="northbridgecapital.com" /></FormField>
         <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Institutional" /><p className="mt-1 text-xs text-gray-500">Separate tags with commas.</p></FormField>
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
-          <button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button>
-          <button type="submit" disabled={createCompany.isPending || updateCompany.isPending} className={primaryButtonClassName}>{createCompany.isPending || updateCompany.isPending ? "Saving..." : company ? "Save Changes" : "Add Company"}</button>
+          <button type="button" onClick={closeSheet} className={secondaryButtonClassName}>Cancel</button>
+          <button type="submit" disabled={createCompany.isPending || updateCompany.isPending || uploadLogo.isPending} className={primaryButtonClassName}>{createCompany.isPending || updateCompany.isPending || uploadLogo.isPending ? "Saving..." : company ? "Save Changes" : "Add Company"}</button>
         </div>
       </form>
     </Sheet>

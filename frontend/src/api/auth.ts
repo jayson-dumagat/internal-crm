@@ -8,6 +8,7 @@ const authUserSchema = z.object({
   name: z.string(),
   email: z.string(),
   username: z.string(),
+  avatarUrl: z.string().nullable().optional(),
   roles: z.array(z.string()),
   homeAccountId: z.string(),
 });

@@ -5,6 +5,7 @@ import {
   disconnectRedis,
 } from "./config/redis";
 import { AppDataSource } from "./database/data-source";
+import { ensureObjectStorageBucket } from "./config/storage";
 
 async function bootstrap() {
   try {
@@ -23,6 +24,10 @@ async function bootstrap() {
     await AppDataSource.runMigrations();
 
     console.log("Database migrations complete.");
+
+    console.log("Initializing object storage...");
+    await ensureObjectStorageBucket();
+    console.log("Object storage ready.");
 
     const server = app.listen(env.PORT, "0.0.0.0", () => {
       console.log(`CRM API running on port ${env.PORT}`);

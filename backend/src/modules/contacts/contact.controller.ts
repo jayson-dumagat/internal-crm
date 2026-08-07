@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import { AppDataSource } from "../../database/data-source";
+import { getObject, putObject, removeObject } from "../../config/storage";
 import { Company } from "../companies/company.entity";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
@@ -30,7 +33,12 @@ export async function listContacts(
     ]);
     const companiesById = new Map(companies.map((company) => [company.id, company]));
     const ownersById = new Map(users.map((user) => [user.entraObjectId, user]));
-    const ownersByName = new Map(users.map((user) => [user.displayName.toLowerCase(), user]));
+    const ownersByName = new Map(
+      users.flatMap((user) => [
+        [user.displayName.toLowerCase(), user] as const,
+        [normalizeUserName(user.displayName).toLowerCase(), user] as const,
+      ]),
+    );
 
     res.status(200).json({
       data: contacts.map((contact) =>
@@ -88,7 +96,9 @@ export async function createContact(
     const contact = contactRepository().create({
       ...parsed.data,
       companyName,
-      relationshipOwner: owner?.displayName ?? parsed.data.relationshipOwner,
+      relationshipOwner: owner
+        ? normalizeUserName(owner.displayName)
+        : parsed.data.relationshipOwner,
       lastActivityAt: parsed.data.lastActivityAt
         ? new Date(parsed.data.lastActivityAt)
         : new Date(),
@@ -156,7 +166,7 @@ export async function updateContact(
           res.status(400).json({ success: false, message: "The selected relationship owner was not found." });
           return;
         }
-        contact.relationshipOwner = owner.displayName;
+        contact.relationshipOwner = normalizeUserName(owner.displayName);
       } else {
         contact.relationshipOwner = parsed.data.relationshipOwner ?? null;
       }
@@ -184,13 +194,96 @@ export async function deleteContact(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const result = await contactRepository().delete(String(req.params.id));
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!contact) {
+      res.status(404).json({ success: false, message: "Contact not found." });
+      return;
+    }
+
+    const result = await contactRepository().delete(contact.id);
     if (!result.affected) {
       res.status(404).json({ success: false, message: "Contact not found." });
       return;
     }
 
+    if (contact.avatarUrl) {
+      await removeObject(contact.avatarUrl).catch((error) => {
+        console.error("Failed to remove contact avatar from object storage", error);
+      });
+    }
+
     res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadContactAvatar(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!contact) {
+      res.status(404).json({ success: false, message: "Contact not found." });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ success: false, message: "Please select an image to upload." });
+      return;
+    }
+
+    const contentType = resolveImageContentType(req.file);
+    const extension = mimeExtension(contentType);
+    const objectKey = `contacts/${contact.id}/${randomUUID()}${extension}`;
+    await putObject(objectKey, req.file.buffer, contentType);
+
+    const previousObjectKey = contact.avatarUrl;
+    contact.avatarUrl = objectKey;
+    contact.avatarContentType = contentType;
+    const savedContact = await contactRepository().save(contact);
+
+    if (previousObjectKey) {
+      await removeObject(previousObjectKey).catch((error) => {
+        console.error("Failed to remove previous contact avatar from object storage", error);
+      });
+    }
+
+    const company = savedContact.companyId
+      ? await companyRepository().findOneBy({ id: savedContact.companyId })
+      : undefined;
+
+    res.status(200).json({ data: toContactDto(savedContact, company ?? undefined) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getContactAvatar(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!contact?.avatarUrl) {
+      res.status(404).json({ success: false, message: "Contact avatar not found." });
+      return;
+    }
+
+    const objectStream = await getObject(contact.avatarUrl);
+    res.setHeader("Content-Type", contact.avatarContentType ?? "application/octet-stream");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    objectStream.on("error", (error) => {
+      if (res.headersSent) {
+        res.destroy(error);
+      } else {
+        next(error);
+      }
+    });
+    objectStream.pipe(res);
   } catch (error) {
     next(error);
   }
@@ -209,16 +302,16 @@ async function findRelationshipOwner(req: Request, ownerId: string): Promise<Use
 }
 
 function toContactDto(contact: Contact, company?: Company, owner?: User) {
-  return {
+  const dto = {
     id: contact.id,
     company_id: contact.companyId,
     user: {
-      image: contact.avatarUrl ?? "/images/user/user-01.jpg",
+      image: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
       name: contact.name,
     },
     position: contact.role ?? "—",
     company: {
-      image: company?.logoUrl ?? "/images/user/user-01.jpg",
+      image: company?.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
       name: company?.name ?? contact.companyName ?? "Individual",
     },
     relationship_level: contact.relationshipLevel,
@@ -227,8 +320,10 @@ function toContactDto(contact: Contact, company?: Company, owner?: User) {
       phone: contact.phone ?? "—",
     },
     owner: {
-      image: owner?.avatarUrl ?? "/images/user/user-01.jpg",
-      name: owner?.displayName ?? contact.relationshipOwner ?? "Unassigned",
+      image: owner?.avatarUrl
+        ? `/api/v1/users/${owner.entraObjectId}/avatar`
+        : null,
+      name: normalizeUserName(owner?.displayName ?? contact.relationshipOwner ?? "Unassigned"),
     },
     relationship_owner_id: contact.relationshipOwnerId,
     location: contact.location ?? "—",
@@ -241,4 +336,34 @@ function toContactDto(contact: Contact, company?: Company, owner?: User) {
     preferred_contact_method: contact.preferredContactMethod,
     tags: contact.tags ?? [],
   };
+
+  return {
+    ...dto,
+    last_activity: contact.lastActivityAt?.toISOString() ?? null,
+  };
+}
+
+function mimeExtension(mimeType: string): string {
+  const extension = mimeType.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return extension ? `.${extension}` : ".bin";
+}
+
+function resolveImageContentType(file: Express.Multer.File): string {
+  if (file.mimetype.startsWith("image/")) {
+    return file.mimetype;
+  }
+
+  switch (path.extname(file.originalname).toLowerCase()) {
+    case ".gif": return "image/gif";
+    case ".jpeg":
+    case ".jpg": return "image/jpeg";
+    case ".png": return "image/png";
+    case ".svg": return "image/svg+xml";
+    case ".webp": return "image/webp";
+    default: return "application/octet-stream";
+  }
+}
+
+function normalizeUserName(name: string): string {
+  return name.replace(/\s*\(CGSI\)\s*$/i, "").trim() || name.trim();
 }

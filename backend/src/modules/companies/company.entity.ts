@@ -44,6 +44,9 @@ export class Company {
   @Column({ name: "logo_url", type: "text", nullable: true })
   logoUrl!: string | null;
 
+  @Column({ name: "logo_content_type", type: "varchar", length: 100, nullable: true })
+  logoContentType!: string | null;
+
   @Column({ name: "created_by_id", type: "varchar", length: 150, nullable: true })
   createdById!: string | null;
 

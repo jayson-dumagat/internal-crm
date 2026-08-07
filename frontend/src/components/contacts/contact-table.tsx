@@ -10,19 +10,23 @@ import {
 } from "../ui/table";
 
 import Badge from "../ui/badge/Badge";
+import Avatar from "../ui/avatar/Avatar";
 import {
   ExportIcon,
   FilterIcon,
-  UploadIcon,
   PencilIcon,
   PlusIcon,
   TrashBinIcon,
   UsersRoundIcon,
+  DownloadIcon,
 } from "../../icons";
 import type { ContactRecord } from "../../api/crm";
 import AddContactSheet from "./AddContactSheet";
 import { useCompaniesQuery, useContactsQuery, useDeleteContact } from "../../hooks/crm/useCrmDirectory";
 import { toast } from "sonner";
+import { formatDisplayDate } from "../../utils/date";
+import { useAuth } from "../../hooks/auth/useAuth";
+import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
 
 type ContactStatus = "Customer" | "Prospect" | "KYC Pending" | "Dormant" | "Closed";
 type RelationshipLevel = "High" | "Medium" | "Low";
@@ -30,15 +34,15 @@ type BadgeColor = "primary" | "success" | "error" | "warning" | "info" | "light"
 
 type Contact = {
   id: string | number;
-  user: { image: string; name: string };
+  user: { image: string | null; name: string };
   position: string;
-  company: { image: string; name: string };
+  company: { image: string | null; name: string };
   relationship_level: RelationshipLevel;
   contact: { email: string; phone: string };
-  owner: { image: string; name: string };
+  owner: { image: string | null; name: string };
   location: string;
   status: ContactStatus;
-  last_activity: string;
+  last_activity: string | null;
   company_id?: string | null;
   type_of_client?: string | null;
   risk_profile?: string | null;
@@ -73,6 +77,7 @@ type SortKey =
 type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
+  const { user: currentUser } = useAuth();
   const contactsQuery = useContactsQuery();
   const companiesQuery = useCompaniesQuery();
   const contactData = contactsQuery.data;
@@ -203,7 +208,7 @@ export default function ContactTable() {
               title="Import contacts"
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
-              <UploadIcon />
+              <DownloadIcon />
             </button>
 
             <button
@@ -245,7 +250,7 @@ export default function ContactTable() {
               <TableRow>
                 <TableCell
                   isHeader
-                  className="sticky left-0 z-30 w-[52px] min-w-[52px] max-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900"
+                  className="w-[52px] min-w-[52px] max-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900"
                 >
                   <input
                     type="checkbox"
@@ -269,11 +274,7 @@ export default function ContactTable() {
                   <TableCell
                     key={`${key}-${label}`}
                     isHeader
-                    className={`overflow-hidden border border-gray-100 px-4 py-3 dark:border-white/[0.05] ${width} ${
-                      key === "name"
-                        ? "sticky left-[52px] z-30 min-w-[250px] bg-white shadow-[1px_0_0_#f2f4f7] dark:bg-gray-900 dark:shadow-[1px_0_0_rgba(255,255,255,0.05)]"
-                        : ""
-                    }`}
+                    className={`overflow-hidden border border-gray-100 px-4 py-3 dark:border-white/[0.05] ${width} ${key === "name" ? "min-w-[250px] bg-white dark:bg-gray-900" : ""}`}
                   >
                     <button
                       type="button"
@@ -327,7 +328,7 @@ export default function ContactTable() {
                   className={isSelected ? "bg-brand-50/40 dark:bg-brand-500/[0.05]" : ""}
                 >
                   <TableCell
-                    className={`sticky left-0 z-20 w-[52px] min-w-[52px] max-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900 ${
+                    className={`w-[52px] min-w-[52px] max-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900 ${
                       isSelected ? "bg-brand-50 dark:bg-gray-900" : ""
                     }`}
                   >
@@ -340,18 +341,12 @@ export default function ContactTable() {
                     />
                   </TableCell>
                   <TableCell
-                    className={`sticky left-[52px] z-20 w-[250px] min-w-[250px] border border-gray-100 bg-white px-4 py-3 whitespace-nowrap shadow-[1px_0_0_#f2f4f7] dark:border-white/[0.05] dark:bg-gray-900 dark:shadow-[1px_0_0_rgba(255,255,255,0.05)] ${
+                    className={`w-[250px] min-w-[250px] border border-gray-100 bg-white px-4 py-3 whitespace-nowrap dark:border-white/[0.05] dark:bg-gray-900 ${
                       isSelected ? "bg-brand-50 dark:bg-gray-900" : ""
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="size-9 overflow-hidden rounded-full">
-                        <img
-                          src={item.user.image}
-                          className="size-9"
-                          alt="user"
-                        />
-                      </div>
+                      <Avatar src={item.user.image} alt={item.user.name} size="medium" />
                       <div className="min-w-0">
                         <span className="block truncate text-theme-sm font-medium text-gray-800 dark:text-white/90">
                           {item.user.name}
@@ -364,7 +359,7 @@ export default function ContactTable() {
                   </TableCell>
                   <TableCell className="w-[215px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     <div className="flex min-w-0 items-center gap-2">
-                      <img src={item.company.image} alt="" className="size-7 shrink-0 rounded-full object-cover" />
+                      <Avatar src={item.company.image} alt={item.company.name} size="xsmall" colorKey={`company-${item.company.name}`} />
                       <span className="truncate">{item.company.name}</span>
                     </div>
                   </TableCell>
@@ -387,8 +382,14 @@ export default function ContactTable() {
                   </TableCell>
                   <TableCell className="w-[215px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     <div className="flex min-w-0 items-center gap-2">
-                      <img src={item.owner.image} alt="" className="size-7 shrink-0 rounded-full object-cover" />
-                      <span className="truncate">{item.owner.name}</span>
+                      <Avatar
+                        src={item.relationship_owner_id === currentUser?.entraObjectId
+                          ? currentUser?.avatarUrl ?? CURRENT_USER_AVATAR
+                          : item.owner.image}
+                        alt={formatUserDisplayName(item.owner.name)}
+                        size="small"
+                      />
+                      <span className="truncate">{item.relationship_owner_id === currentUser?.entraObjectId ? "Me" : formatUserDisplayName(item.owner.name)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="w-[225px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
@@ -400,7 +401,7 @@ export default function ContactTable() {
                     </Badge>
                   </TableCell>
                   <TableCell className="w-[155px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                    {item.last_activity}
+                    {formatDisplayDate(item.last_activity)}
                   </TableCell>
                   <TableCell className="w-[110px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
                     <div className="flex items-center gap-2">

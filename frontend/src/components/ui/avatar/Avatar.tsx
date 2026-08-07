@@ -1,6 +1,11 @@
+import { useState } from "react";
+
+import AvatarText from "./AvatarText";
+
 interface AvatarProps {
-  src: string; // URL of the avatar image
+  src?: string | null; // URL of the avatar image
   alt?: string; // Alt text for the avatar
+  colorKey?: string; // Stable fallback color seed when the display name changes
   size?: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"; // Avatar size
   status?: "online" | "offline" | "busy" | "none"; // Status indicator
 }
@@ -32,13 +37,20 @@ const statusColorClasses = {
 const Avatar: React.FC<AvatarProps> = ({
   src,
   alt = "User Avatar",
+  colorKey,
   size = "medium",
   status = "none",
 }) => {
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const showInitials = !src || failedSource === src;
+
   return (
     <div className={`relative  rounded-full ${sizeClasses[size]}`}>
-      {/* Avatar Image */}
-      <img src={src} alt={alt} className="object-cover rounded-full" />
+      {showInitials ? (
+        <AvatarText name={alt} colorKey={colorKey} size={size} className="!h-full !w-full" />
+      ) : (
+        <img src={src} alt={alt} onError={() => setFailedSource(src)} className="h-full w-full rounded-full object-cover" />
+      )}
 
       {/* Status Indicator */}
       {status !== "none" && (

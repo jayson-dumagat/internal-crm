@@ -9,6 +9,13 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().min(1),
 
+  MINIO_ENDPOINT: z.string().min(1).default("minio"),
+  MINIO_PORT: z.coerce.number().int().positive().default(9000),
+  MINIO_USE_SSL: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  MINIO_ACCESS_KEY: z.string().min(3).default("cdex-minio"),
+  MINIO_SECRET_KEY: z.string().min(8).default("cdex-minio-secret"),
+  MINIO_BUCKET: z.string().min(1).default("crm-files"),
+
   REDIS_URL: z
     .string()
     .url()

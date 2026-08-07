@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { getObject, statObject } from "../../config/storage";
 import { AppDataSource } from "../../database/data-source";
 import { User } from "./user.entity";
 import { UserStatus } from "./user.types";
@@ -46,9 +47,9 @@ export async function listUsers(
     if (!currentUserExists) {
       records.unshift({
         id: currentUser.entraObjectId,
-        name: currentUser.name,
+        name: normalizeUserName(currentUser.name),
         email: currentUser.email,
-        avatarUrl: null,
+        avatarUrl: currentUser.avatarUrl ? "/api/v1/users/me/avatar" : null,
         isCurrentUser: true,
       });
     } else {
@@ -63,12 +64,61 @@ export async function listUsers(
   }
 }
 
+export async function getUserAvatar(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const currentUser = req.session.user;
+    if (!currentUser) {
+      res.status(401).json({ success: false, message: "Authentication is required." });
+      return;
+    }
+
+    const requestedUserId = String(req.params.id ?? "me");
+    const user = await userRepository().findOne({
+      where: {
+        entraTenantId: currentUser.tenantId,
+        entraObjectId: requestedUserId === "me" ? currentUser.entraObjectId : requestedUserId,
+        status: UserStatus.ACTIVE,
+        isAccessEnabled: true,
+      },
+    });
+
+    if (!user?.avatarUrl) {
+      res.status(404).json({ success: false, message: "User avatar not found." });
+      return;
+    }
+
+    const [objectStream, objectInfo] = await Promise.all([
+      getObject(user.avatarUrl),
+      statObject(user.avatarUrl),
+    ]);
+    res.setHeader(
+      "Content-Type",
+      user.avatarContentType ?? objectInfo.metaData["content-type"] ?? "image/jpeg",
+    );
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    objectStream.on("error", next);
+    objectStream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+}
+
 function toUserDto(user: User) {
   return {
     id: user.entraObjectId,
-    name: user.displayName,
+    name: normalizeUserName(user.displayName),
     email: user.email ?? "",
-    avatarUrl: user.avatarUrl,
+    avatarUrl: user.avatarUrl
+      ? `/api/v1/users/${user.entraObjectId}/avatar`
+      : null,
     isCurrentUser: false,
   };
+}
+
+function normalizeUserName(name: string): string {
+  return name.replace(/\s*\(CGSI\)\s*$/i, "").trim() || name.trim();
 }

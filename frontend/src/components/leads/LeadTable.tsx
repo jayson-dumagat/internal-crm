@@ -10,7 +10,8 @@ import {
 import Badge from "../ui/badge/Badge";
 import Avatar from "../ui/avatar/Avatar";
 import type { Lead } from "../../pages/CrmLeads/Leads";
-import { EyeIcon, SquarePenIcon } from "../../icons";
+import { EyeIcon, SquarePenIcon, TrashBinIcon } from "../../icons";
+import { formatDisplayDate } from "../../utils/date";
 
 type BadgeColor =
   | "primary"
@@ -23,11 +24,13 @@ type BadgeColor =
 
 type LeadTableProps = {
   leads: Lead[];
-  selectedIds: number[];
+  selectedIds: string[];
   isCurrentPageSelected: boolean;
-  onToggleSelected: (id: number) => void;
+  onToggleSelected: (id: string) => void;
   onToggleCurrentPage: () => void;
   onSelectLead: (lead: Lead) => void;
+  onEditLead: (lead: Lead) => void;
+  onDeleteLead: (lead: Lead) => void;
 };
 
 const statusBadgeColor: Record<Lead["status"], BadgeColor> = {
@@ -57,6 +60,8 @@ export default function LeadTable({
   onToggleSelected,
   onToggleCurrentPage,
   onSelectLead,
+  onEditLead,
+  onDeleteLead,
 }: LeadTableProps) {
   const stopRowClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -209,7 +214,7 @@ export default function LeadTable({
                         </p>
 
                         <p className="mt-0.5 truncate text-sm font-normal text-gray-500 dark:text-gray-400">
-                          {lead.lastActivity}
+                          {formatDisplayDate(lead.lastActivity)}
                         </p>
                       </div>
                     </div>
@@ -285,7 +290,7 @@ export default function LeadTable({
 
                   <LeadBodyCell className="w-[170px]">
                     <p className="whitespace-nowrap">
-                      {lead.dateCreated}
+                      {formatDisplayDate(lead.dateCreated)}
                     </p>
                   </LeadBodyCell>
 
@@ -315,10 +320,18 @@ export default function LeadTable({
                       <button
                         type="button"
                         aria-label={`Edit ${lead.name}`}
-                        onClick={stopRowClick}
+                        onClick={() => onEditLead(lead)}
                         className="text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
                       >
                         <SquarePenIcon className="size-5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${lead.name}`}
+                        onClick={() => onDeleteLead(lead)}
+                        className="text-gray-500 transition hover:text-error-500 dark:text-gray-400"
+                      >
+                        <TrashBinIcon className="size-5" />
                       </button>
                     </div>
                   </LeadBodyCell>
@@ -380,7 +393,7 @@ function PersonCell({
   avatar,
   name,
 }: {
-  avatar: string;
+  avatar: string | null;
   name: string;
 }) {
   return (

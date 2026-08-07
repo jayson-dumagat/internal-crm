@@ -9,6 +9,30 @@ import {
   getContacts,
   updateCompany,
   updateContact,
+  uploadContactAvatar,
+  uploadCompanyLogo,
+  getLeads,
+  createLead,
+  updateLead,
+  deleteLead,
+  getActivities,
+  createActivity,
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  type CreateLeadInput,
+  type UpdateLeadInput,
+  type CreateNoteInput,
+  type UpdateNoteInput,
+  type CreateActivityInput,
+  getTasks,
+  createTask,
+  updateTask,
+  updateTaskStatus,
+  deleteTask,
+  type CreateTaskInput,
+  type UpdateTaskInput,
   type CreateCompanyInput,
   type CreateContactInput,
   type UpdateCompanyInput,
@@ -21,6 +45,10 @@ export const crmDirectoryKeys = {
   companies: () => [...crmDirectoryKeys.all, "companies"] as const,
   contacts: () => [...crmDirectoryKeys.all, "contacts"] as const,
   users: () => [...crmDirectoryKeys.all, "users"] as const,
+  leads: () => [...crmDirectoryKeys.all, "leads"] as const,
+  activities: () => [...crmDirectoryKeys.all, "activities"] as const,
+  notes: () => [...crmDirectoryKeys.all, "notes"] as const,
+  tasks: () => [...crmDirectoryKeys.all, "tasks"] as const,
 };
 
 export function useCompaniesQuery() {
@@ -105,6 +133,156 @@ export function useDeleteContact() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.contacts() });
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.companies() });
+    },
+  });
+}
+
+export function useUploadContactAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string | number; file: File }) => uploadContactAvatar(id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.companies() });
+    },
+  });
+}
+
+export function useUploadCompanyLogo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string | number; file: File }) => uploadCompanyLogo(id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.companies() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.contacts() });
+    },
+  });
+}
+
+export function useLeadsQuery() {
+  return useQuery({ queryKey: crmDirectoryKeys.leads(), queryFn: getLeads });
+}
+
+export function useCreateLead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateLeadInput) => createLead(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useUpdateLead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string | number; input: UpdateLeadInput }) => updateLead(String(id), input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useDeleteLead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string | number) => deleteLead(String(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useActivitiesQuery() {
+  return useQuery({ queryKey: crmDirectoryKeys.activities(), queryFn: getActivities });
+}
+
+export function useCreateActivity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateActivityInput) => createActivity(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() }),
+  });
+}
+
+export function useNotesQuery() {
+  return useQuery({ queryKey: crmDirectoryKeys.notes(), queryFn: getNotes });
+}
+
+export function useCreateNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateNoteInput) => createNote(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.notes() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useUpdateNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string | number; input: UpdateNoteInput }) => updateNote(String(id), input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.notes() }),
+  });
+}
+
+export function useDeleteNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string | number) => deleteNote(String(id)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.notes() }),
+  });
+}
+
+export function useTasksQuery() {
+  return useQuery({ queryKey: crmDirectoryKeys.tasks(), queryFn: getTasks });
+}
+
+export function useCreateTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateTaskInput) => createTask(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateTaskInput }) => updateTask(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useUpdateTaskStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "todo" | "in-progress" | "completed" | "cancelled" }) => updateTaskStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
     },
   });
 }

@@ -98,6 +98,14 @@ export class User {
   avatarUrl!: string | null;
 
   @Column({
+    name: "avatar_content_type",
+    type: "varchar",
+    length: 100,
+    nullable: true,
+  })
+  avatarContentType!: string | null;
+
+  @Column({
     type: "enum",
     enum: UserStatus,
     enumName: "user_status_enum",

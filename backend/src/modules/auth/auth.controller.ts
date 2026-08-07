@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import crypto from "node:crypto";
+import { putObject } from "../../config/storage";
 import { entraConfig } from "../../config/entra";
 import { sessionCookieClearOptions } from "../../config/session";
 import { entraService } from "../../services/entra.service";
@@ -139,7 +140,13 @@ export async function handleEntraCallback(
     // session fixation, while preserving the authenticated user.
     const authenticatedUser = result.user;
 
-    await syncAuthenticatedUser(authenticatedUser);
+    let profilePhoto: { data: Buffer; contentType: string } | null = null;
+    try {
+      profilePhoto = await entraService.getProfilePhoto(result.accessToken);
+    } catch (error) {
+      console.warn("Microsoft Graph profile photo could not be loaded.", error);
+    }
+    await syncAuthenticatedUser(authenticatedUser, profilePhoto);
 
     await regenerateSession(req);
 
@@ -174,9 +181,12 @@ export async function handleEntraCallback(
   }
 }
 
-async function syncAuthenticatedUser(authenticatedUser: EntraUser): Promise<void> {
+async function syncAuthenticatedUser(
+  authenticatedUser: EntraUser,
+  profilePhoto: { data: Buffer; contentType: string } | null,
+): Promise<void> {
   const repository = AppDataSource.getRepository(User);
-  const user = await repository.findOne({
+  let user = await repository.findOne({
     where: {
       entraTenantId: authenticatedUser.tenantId,
       entraObjectId: authenticatedUser.entraObjectId,
@@ -196,17 +206,24 @@ async function syncAuthenticatedUser(authenticatedUser: EntraUser): Promise<void
 
   if (user) {
     Object.assign(user, values);
-    await repository.save(user);
-    return;
+  } else {
+    user = repository.create(values);
   }
 
-  await repository.save(repository.create(values));
+  if (profilePhoto) {
+    const objectKey = `users/${authenticatedUser.entraObjectId}/avatar`;
+    await putObject(objectKey, profilePhoto.data, profilePhoto.contentType);
+    user.avatarUrl = objectKey;
+    user.avatarContentType = profilePhoto.contentType;
+  }
+
+  await repository.save(user);
 }
 
-export function getCurrentSession(
+export async function getCurrentSession(
   req: Request,
   res: Response,
-): void {
+): Promise<void> {
   res.setHeader("Cache-Control", "no-store");
 
   if (!req.session.user) {
@@ -218,9 +235,22 @@ export function getCurrentSession(
     return;
   }
 
+  const storedUser = await AppDataSource.getRepository(User).findOne({
+    where: {
+      entraTenantId: req.session.user.tenantId,
+      entraObjectId: req.session.user.entraObjectId,
+    },
+    select: { avatarUrl: true },
+  });
+
   res.status(200).json({
     authenticated: true,
-    user: req.session.user,
+    user: {
+      ...req.session.user,
+      avatarUrl: storedUser?.avatarUrl
+        ? "/api/v1/users/me/avatar"
+        : null,
+    },
   });
 }
 

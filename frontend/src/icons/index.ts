@@ -135,8 +135,12 @@ import { ReactComponent as EmailIcon } from "./email-icon.svg?react";
 import { ReactComponent as EllipsisIcon } from "./ellipsis-icon.svg?react";
 import { ReactComponent as NetworkIcon } from "./network-icon.svg?react"
 import { ReactComponent as MicrosoftIcon } from "./micrososft-icon.svg?react"
+import { ReactComponent as PanelLeftOpenIcon } from "./panel-left-open.svg?react";
+import { ReactComponent as PanelLeftCloseIcon } from "./panel-left-close.svg?react";
 
 export {
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   MicrosoftIcon,
   NetworkIcon,
   EllipsisIcon,

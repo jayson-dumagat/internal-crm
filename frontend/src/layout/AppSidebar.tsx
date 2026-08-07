@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-
-// Assume these icons are imported from an icon library
 import { useSidebar } from "../context/SidebarContext";
 import {
   AiIcon,
@@ -26,21 +24,7 @@ import {
 } from "../icons";
 import { cn } from "../utils";
 import SidebarWidget from "./SidebarWidget";
-
-type NavItem = {
-  name: string;
-  icon: React.ReactNode;
-  path?: string;
-  new?: boolean;
-  target?: string;
-  subItems?: {
-    name: string;
-    path: string;
-    pro?: boolean;
-    new?: boolean;
-    target?: string;
-  }[];
-};
+import { NavItem } from "../types/Navigation";
 
 const navItems: NavItem[] = [
   {
@@ -257,7 +241,6 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Auto-close sidebar on mobile after route change
   useEffect(() => {
     if (isMobileOpen) {
       setIsMobileOpen(false);

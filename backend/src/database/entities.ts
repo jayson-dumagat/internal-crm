@@ -5,6 +5,8 @@ import { Organization } from "../modules/organizations/organization.entity.js";
 import { Pipeline } from "../modules/pipelines/pipeline.entity.js";
 import { Task } from "../modules/tasks/task.entity.js";
 import { User } from "../modules/users/user.entity.js";
+import { Activity } from "../modules/activities/activity.entity.js";
+import { Note } from "../modules/notes/note.entity.js";
 
 export const entities = [
   User,
@@ -14,4 +16,6 @@ export const entities = [
   Task,
   Company,
   Contact,
+  Activity,
+  Note,
 ];

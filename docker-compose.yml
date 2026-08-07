@@ -52,6 +52,34 @@ services:
     networks:
       - crm_network
 
+  minio:
+    image: minio/minio:latest
+    container_name: crm-minio
+    restart: unless-stopped
+
+    command: server /data --console-address ":9001"
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-cdex-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-cdex-minio-secret}
+
+    volumes:
+      - minio_data:/data
+
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - crm_network
+
   backend:
     container_name: crm-backend
     restart: unless-stopped
@@ -67,6 +95,12 @@ services:
 
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-cdex-minio}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-cdex-minio-secret}
+      MINIO_BUCKET: ${MINIO_BUCKET:-crm-files}
       REDIS_SESSION_PREFIX: ${REDIS_SESSION_PREFIX:-ccrms:sess:}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
@@ -96,6 +130,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
     healthcheck:
@@ -174,6 +210,8 @@ volumes:
     name: crm_postgres_data
   redis_data:
     name: crm_redis_data
+  minio_data:
+    name: crm_minio_data
 
 networks:
   crm_network:

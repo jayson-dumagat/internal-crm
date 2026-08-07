@@ -8,11 +8,16 @@ import {
   TrashBinIcon,
   Building2Icon,
 } from "../../icons";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useSearch } from "../../context/SearchContext";
 import type { CompanyRecord } from "../../api/crm";
 import Badge from "../ui/badge/Badge";
+import Avatar from "../ui/avatar/Avatar";
 import AddCompanySheet from "./AddCompanySheet";
 import { useCompaniesQuery, useDeleteCompany } from "../../hooks/crm/useCrmDirectory";
 import { toast } from "sonner";
+import { formatDisplayDate } from "../../utils/date";
+import SearchField from "../search/SearchField";
 
 type CompanyStatus = "Active" | "Prospect" | "Dormant";
 type SortKey =
@@ -29,16 +34,17 @@ type SortKey =
 type Company = {
   id: string | number;
   name: string;
+  logoUrl?: string | null;
   industry: string;
   location: string;
   employees: string;
   revenue: string;
-  contacts: Array<{ name: string; avatar: string }>;
+  contacts: Array<{ name: string; avatar: string | null }>;
   website: string;
-  customerSince: string;
+  customerSince: string | null;
   tags: string[];
   status: CompanyStatus;
-  lastActivity: string;
+  lastActivity: string | null;
 };
 
 const columns: Array<{ key: SortKey | "contacts" | "tags" | "actions"; label: string; width: number }> = [
@@ -65,7 +71,7 @@ export default function CompanyTable() {
   const companiesQuery = useCompaniesQuery();
   const companyData = companiesQuery.data;
   const hasCompanies = (companyData ?? []).length > 0;
-  const [search, setSearch] = useState("");
+  const { search } = useSearch();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Array<Company["id"]>>([]);
@@ -76,8 +82,11 @@ export default function CompanyTable() {
     key: "name",
     descending: false,
   });
+
+  const debouncedSearch = useDebounce(search, 400);
+
   const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = debouncedSearch.trim().toLowerCase();
     const filtered = term
       ? (companyData ?? []).filter((company) =>
           [
@@ -101,7 +110,7 @@ export default function CompanyTable() {
       });
       return sort.descending ? -result : result;
     });
-  }, [companyData, search, sort]);
+  }, [companyData, debouncedSearch, sort.descending, sort.key]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const visibleRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -128,20 +137,7 @@ export default function CompanyTable() {
     <>
     <section className="w-full min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-2.5 sm:pr-5 md:flex-row md:items-center md:justify-between dark:border-white/[0.05]">
-        <div className="relative md:w-[280px]">
-          <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-gray-400">
-            <SearchIcon />
-          </span>
-          <input
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search..."
-            className="h-9 w-full rounded-lg border border-gray-300 bg-transparent pr-3.5 pl-10 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-          />
-        </div>
+        <SearchField/>
         <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
           <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <FilterIcon /> Filter
@@ -224,7 +220,7 @@ export default function CompanyTable() {
                   </td>
                   <td className={`border border-gray-100 px-4 py-4 dark:border-white/[0.05] ${isSelected ? "bg-brand-50 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}`}>
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-semibold text-brand-600 dark:bg-brand-500/15">{company.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span>
+                      <Avatar src={company.logoUrl} alt={company.name} colorKey={`company-${company.id}`} size="small" />
                       <span className="truncate text-theme-sm font-medium text-gray-800 dark:text-white">{company.name}</span>
                     </div>
                   </td>
@@ -233,13 +229,13 @@ export default function CompanyTable() {
                   <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.employees}</td>
                   <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.revenue}</td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]">
-                    <div className="flex -space-x-2">{company.contacts.map((contact) => <img key={contact.name} src={contact.avatar} alt={contact.name} title={contact.name} className="size-7 rounded-full border-2 border-white object-cover dark:border-gray-900" />)}</div>
+                    <div className="flex -space-x-2">{company.contacts.map((contact) => <span key={contact.name} title={contact.name} className="rounded-full border-2 border-white dark:border-gray-900"><Avatar src={contact.avatar} alt={contact.name} size="small" /></span>)}</div>
                   </td>
                   <td className="truncate border border-gray-100 px-4 py-4 text-theme-sm dark:border-white/[0.05]"><a href={`https://${company.website}`} target="_blank" rel="noreferrer" className="text-brand-500 hover:text-brand-600">{company.website}</a></td>
-                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.customerSince}</td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{formatDisplayDate(company.customerSince)}</td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-1.5 overflow-hidden">{company.tags.map((tag) => <Badge key={tag} color="light" size="sm">{tag}</Badge>)}</div></td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><Badge color={statusColor[company.status]} size="sm">{company.status}</Badge></td>
-                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{company.lastActivity}</td>
+                  <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{formatDisplayDate(company.lastActivity)}</td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button type="button" aria-label={`Delete ${company.name}`} disabled={deleteCompany.isPending} onClick={async () => { if (!window.confirm(`Delete ${company.name}?`)) return; try { await deleteCompany.mutateAsync(company.id); setSelected((ids) => ids.filter((id) => id !== company.id)); toast.success("Company deleted successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete company."); } }} className="text-gray-500 hover:text-error-500 disabled:opacity-50"><TrashBinIcon className="size-5" /></button><button type="button" aria-label={`Edit ${company.name}`} onClick={() => { setEditingCompany(company); setIsAddCompanyOpen(true); }} className="text-gray-500 hover:text-gray-800"><PencilIcon className="size-5" /></button></div></td>
                 </tr>
               );
@@ -265,18 +261,5 @@ export default function CompanyTable() {
     </section>
     <AddCompanySheet isOpen={isAddCompanyOpen} onClose={() => { setIsAddCompanyOpen(false); setEditingCompany(null); }} company={editingCompany} />
     </>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="size-4.5">
-      <path
-        d="m14.25 14.25 3 3m-1.5-8.5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }
