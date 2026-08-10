@@ -9,6 +9,7 @@ import type { CompanyRecord } from "../../api/crm";
 import Sheet from "../ui/sheet/Sheet";
 import { useCreateCompany, useUpdateCompany, useUploadCompanyLogo } from "../../hooks/crm/useCrmDirectory";
 import Avatar from "../ui/avatar/Avatar";
+import { InfoIcon } from "../../icons";
 
 const companyFormSchema = z.object({
   name: z.string().trim().min(1, "Company name is required.").max(255),
@@ -138,32 +139,40 @@ export default function AddCompanySheet({
       side="right"
       className="w-full sm:max-w-lg"
     >
-      <form onSubmit={submit} className="space-y-5">
-        <FormField label="Company Name" error={form.formState.errors.name?.message}>
-          <input {...form.register("name")} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
-        </FormField>
-        <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
-          <input {...getInputProps()} />
-          <Avatar src={displayedLogo} alt={company?.name || "Company"} colorKey="company-logo" size="large" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-800 dark:text-white/90">{isDragActive ? "Drop logo here" : "Add company logo"}</p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WEBP up to 5 MB. If omitted, initials will be shown.</p>
+      <form onSubmit={submit} className="space-y-6">
+        <FormSection title="Company identity" description="Identify the organization and its relationship status.">
+          <FormField label="Company Name" error={form.formState.errors.name?.message}>
+            <input {...form.register("name")} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
+          </FormField>
+          <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
+            <input {...getInputProps()} />
+            <Avatar src={displayedLogo} alt={company?.name || "Company"} colorKey="company-logo" size="large" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">{isDragActive ? "Drop logo here" : "Add company logo"}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG, JPG, or WEBP up to 5 MB. If omitted, initials will be shown.</p>
+            </div>
           </div>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Industry"><input {...form.register("industry")} className={inputClassName} placeholder="Investment Management" /></FormField>
-          <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Active</option><option>Dormant</option></select></FormField>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Location"><input {...form.register("location")} className={inputClassName} placeholder="Makati City, Philippines" /></FormField>
-          <FormField label="Employees"><input {...form.register("employees")} className={inputClassName} placeholder="51-200" /></FormField>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Revenue"><input {...form.register("revenue")} className={inputClassName} placeholder="PHP 850M" /></FormField>
-          <FormField label="Customer Since"><input type="date" {...form.register("customerSince")} className={inputClassName} /></FormField>
-        </div>
-        <FormField label="Website"><input {...form.register("website")} className={inputClassName} placeholder="northbridgecapital.com" /></FormField>
-        <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Institutional" /><p className="mt-1 text-xs text-gray-500">Separate tags with commas.</p></FormField>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Industry"><input {...form.register("industry")} className={inputClassName} placeholder="Investment Management" /></FormField>
+            <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Active</option><option>Dormant</option></select></FormField>
+          </div>
+        </FormSection>
+
+        <FormSection title="Business profile" description="Capture the organization’s location, size, value, and relationship timeline.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Location"><input {...form.register("location")} className={inputClassName} placeholder="Makati City, Philippines" /></FormField>
+            <FormField label="Employees"><input {...form.register("employees")} className={inputClassName} placeholder="51-200" /></FormField>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Revenue"><input {...form.register("revenue")} className={inputClassName} placeholder="PHP 850M" /></FormField>
+            <FormField label="Customer Since"><input type="date" {...form.register("customerSince")} className={inputClassName} /></FormField>
+          </div>
+        </FormSection>
+
+        <FormSection title="Digital presence and tags" description="Add online details and labels for searching and segmentation.">
+          <FormField label="Website"><input {...form.register("website")} className={inputClassName} placeholder="northbridgecapital.com" /></FormField>
+          <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Institutional" /><p className="mt-1 text-xs text-gray-500">Separate tags with commas.</p></FormField>
+        </FormSection>
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
           <button type="button" onClick={closeSheet} className={secondaryButtonClassName}>Cancel</button>
           <button type="submit" disabled={createCompany.isPending || updateCompany.isPending || uploadLogo.isPending} className={primaryButtonClassName}>{createCompany.isPending || updateCompany.isPending || uploadLogo.isPending ? "Saving..." : company ? "Save Changes" : "Add Company"}</button>
@@ -175,6 +184,10 @@ export default function AddCompanySheet({
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error-500">{error}</span>}</label>;
+}
+
+function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return <section className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><span title={description} aria-label={description} className="inline-flex cursor-help text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400"><InfoIcon className="size-4" /></span></div>{children}</section>;
 }
 
 const secondaryButtonClassName = "inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]";

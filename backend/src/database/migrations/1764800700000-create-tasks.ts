@@ -11,7 +11,7 @@ export class CreateTasks1764800700000 implements MigrationInterface {
         title varchar(255) NOT NULL,
         description text,
         type varchar(30) NOT NULL DEFAULT 'general',
-        status varchar(30) NOT NULL DEFAULT 'todo',
+        status varchar(30) NOT NULL DEFAULT 'not_started',
         priority varchar(20) NOT NULL DEFAULT 'medium',
         start_at timestamptz,
         due_at timestamptz,

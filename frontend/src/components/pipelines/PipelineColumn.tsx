@@ -27,6 +27,7 @@ interface PipelineColumnProps {
   onAddCard: (stage: PipelineStage) => void;
   onViewLead?: (lead: PipelineLead) => void;
   onEditLead?: (lead: PipelineLead) => void;
+  canManage?: boolean;
 }
 
 const stageBadgeColor: Record<
@@ -48,6 +49,7 @@ export default function PipelineColumn({
   onAddCard,
   onViewLead,
   onEditLead,
+  canManage = true,
 }: PipelineColumnProps) {
   const columnRef = useRef<HTMLElement | null>(null);
   const [isOver, setIsOver] = useState(false);
@@ -93,10 +95,11 @@ export default function PipelineColumn({
 
         <button
           type="button"
+          disabled={!canManage}
           aria-label={`Edit ${stage.name}`}
           title={`Edit ${stage.name}`}
           onClick={() => onEditStage(stage)}
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
         >
           <MoreIcon />
         </button>
@@ -122,8 +125,9 @@ export default function PipelineColumn({
 
         <button
           type="button"
+          disabled={!canManage}
           onClick={() => onAddCard(stage)}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 text-sm font-medium text-gray-500 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-500 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-800 dark:hover:bg-brand-500/[0.06] dark:hover:text-brand-400"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 text-sm font-medium text-gray-500 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-800 dark:hover:bg-brand-500/[0.06] dark:hover:text-brand-400"
         >
           <PlusIcon />
           Add card

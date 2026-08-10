@@ -4,13 +4,84 @@ import Avatar from "../ui/avatar/Avatar";
 import { formatDisplayDate } from "../../utils/date";
 import { PencilIcon, TrashBinIcon } from "../../icons";
 
-const statusColor = { todo: "light", "in-progress": "warning", completed: "success", cancelled: "error" } as const;
+const statusColor = {
+  "not-started": "light",
+  "in-progress": "warning",
+  completed: "success",
+  overdue: "error",
+  blocked: "error",
+} as const;
 
-export default function TaskTableView({ tasks, onEdit, onDelete, onStatusChange }: {
+const priorityColor = {
+  low: "success",
+  medium: "info",
+  high: "warning",
+  urgent: "error",
+} as const;
+
+const statusLabel: Record<TaskRecord["status"], string> = {
+  "not-started": "Not started",
+  "in-progress": "In progress",
+  completed: "Completed",
+  overdue: "Overdue / Delayed",
+  blocked: "Blocked",
+};
+
+export default function TaskTableView({
+  tasks,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  canUpdate,
+  canDelete,
+  canUpdateStatus,
+}: {
   tasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => void;
   onStatusChange: (task: TaskRecord, status: TaskRecord["status"]) => void;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canUpdateStatus: boolean;
 }) {
-  return <div className="overflow-x-auto"><table className="w-full min-w-[760px] table-fixed border-separate border-spacing-0"><thead><tr><th className="w-[34%] border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400">Task</th><th className="w-[16%] border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400">Due</th><th className="w-[17%] border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400">Assignee</th><th className="w-[15%] border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400">Status</th><th className="w-[18%] border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400">Actions</th></tr></thead><tbody>{tasks.length ? tasks.map((task) => <tr key={task.id}><td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">{task.title}</p>{task.description && <p className="mt-1 truncate text-xs text-gray-500">{task.description}</p>}</td><td className="border border-gray-100 px-4 py-4 text-sm text-gray-600 dark:border-white/[0.05] dark:text-gray-400">{formatDisplayDate(task.dueAt)}</td><td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><Avatar src={task.assignee?.avatar} alt={task.assignee?.name ?? "Unassigned"} size="xsmall" /><span className="truncate">{task.assignee?.name ?? "Unassigned"}</span></div></td><td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><select value={task.status} onChange={(event) => onStatusChange(task, event.target.value as TaskRecord["status"])} className="rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900"><option value="todo">To Do</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><Badge color={statusColor[task.status]} size="sm">{task.priority}</Badge></td><td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex items-center gap-3"><button type="button" onClick={() => onEdit(task)} className="text-gray-500 hover:text-gray-800 dark:text-gray-400" aria-label={`Edit ${task.title}`}><PencilIcon className="size-5" /></button><button type="button" onClick={() => onDelete(task)} className="text-gray-500 hover:text-error-500 dark:text-gray-400" aria-label={`Delete ${task.title}`}><TrashBinIcon className="size-5" /></button></div></td></tr>) : <tr><td colSpan={5} className="border border-gray-100 px-4 py-12 text-center text-sm text-gray-500 dark:border-white/[0.05]">No tasks found.</td></tr>}</tbody></table></div>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1160px] table-fixed border-separate border-spacing-0">
+        <thead>
+          <tr>
+            {[
+              ["w-[20%]", "Task"],
+              ["w-[22%]", "Description"],
+              ["w-[9%]", "Type"],
+              ["w-[12%]", "Due"],
+              ["w-[14%]", "Assignee"],
+              ["w-[11%]", "Lead"],
+              ["w-[8%]", "Priority"],
+              ["w-[12%]", "Status"],
+              ["w-[8%]", "Actions"],
+            ].map(([width, label]) => (
+              <th key={label} className={`${width} border border-gray-100 px-4 py-3 text-left text-theme-xs font-medium text-gray-700 dark:border-white/[0.05] dark:text-gray-400`}>
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.length ? tasks.map((task) => (
+            <tr key={task.id} className="transition-colors hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">{task.title}</p></td>
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><p className="line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{task.description || "—"}</p></td>
+              <td className="border border-gray-100 px-4 py-4 align-top text-xs capitalize text-gray-600 dark:border-white/[0.05] dark:text-gray-400">{task.type.replace(/_/g, " ")}</td>
+              <td className="border border-gray-100 px-4 py-4 align-top text-sm text-gray-600 dark:border-white/[0.05] dark:text-gray-400">{formatDisplayDate(task.dueAt) || "—"}</td>
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><div className="flex min-w-0 items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><Avatar src={task.assignee?.avatar} alt={task.assignee?.name ?? "Unassigned"} colorKey={task.assignee?.name ?? "unassigned"} size="xsmall" /><span className="truncate">{task.assignee?.name ?? "Unassigned"}</span></div></td>
+              <td className="border border-gray-100 px-4 py-4 align-top text-xs text-gray-600 dark:border-white/[0.05] dark:text-gray-400"><span className="line-clamp-2">{task.lead?.name ?? "—"}</span></td>
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><Badge color={priorityColor[task.priority]} size="sm">{task.priority}</Badge></td>
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><select value={task.status} disabled={!canUpdateStatus} title={canUpdateStatus ? "Update task status" : "Read-only access"} onChange={(event) => onStatusChange(task, event.target.value as TaskRecord["status"])} className="h-8 max-w-full rounded-lg border border-gray-300 bg-transparent px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"><option value="not-started">{statusLabel["not-started"]}</option><option value="in-progress">{statusLabel["in-progress"]}</option><option value="completed">{statusLabel.completed}</option><option value="overdue">{statusLabel.overdue}</option><option value="blocked">{statusLabel.blocked}</option></select><div className="mt-1"><Badge color={statusColor[task.status]} size="sm">{statusLabel[task.status]}</Badge></div></td>
+              <td className="border border-gray-100 px-4 py-4 align-top dark:border-white/[0.05]"><div className="flex items-center gap-2"><button type="button" disabled={!canUpdate} title={canUpdate ? `Edit ${task.title}` : "Read-only access"} onClick={() => onEdit(task)} className="inline-flex size-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-white/[0.05]" aria-label={`Edit ${task.title}`}><PencilIcon className="size-4" /></button><button type="button" disabled={!canDelete} title={canDelete ? `Delete ${task.title}` : "Read-only access"} onClick={() => onDelete(task)} className="inline-flex size-8 items-center justify-center rounded-lg text-gray-500 hover:bg-error-50 hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-error-500/10" aria-label={`Delete ${task.title}`}><TrashBinIcon className="size-4" /></button></div></td>
+            </tr>
+          )) : <tr><td colSpan={9} className="border border-gray-100 px-4 py-12 text-center text-sm text-gray-500 dark:border-white/[0.05]">No tasks found.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
 }

@@ -2,12 +2,20 @@ import { useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 import { useSessionQuery } from "../../hooks/auth/useAuthApi";
 import { useAuth } from "../../hooks/auth/useAuth";
+import AccessDenied from "./AccessDenied";
+import { hasAnyPermission, hasPermission, type AccessPermission } from "../../config/rbac";
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  requireCrmAccess?: boolean;
+  requiredPermission?: AccessPermission;
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requireCrmAccess = false,
+  requiredPermission,
+}: ProtectedRouteProps) {
   const location = useLocation();
   const { setUser, clearUser } = useAuth();
 
@@ -55,6 +63,17 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         state={{ returnTo: `${location.pathname}${location.search}` }}
       />
     );
+  }
+
+  if (requireCrmAccess && !hasAnyPermission(sessionQuery.data?.user)) {
+    return <AccessDenied />;
+  }
+
+  if (
+    requiredPermission &&
+    !hasPermission(sessionQuery.data?.user, requiredPermission)
+  ) {
+    return <AccessDenied />;
   }
 
   return children;

@@ -4,8 +4,9 @@ const taskFields = {
   title: z.string().trim().min(1).max(255),
   description: z.string().trim().max(10000).optional().nullable(),
   type: z.enum(["general", "call", "email", "meeting", "follow_up", "document", "review"]).optional(),
-  status: z.enum(["todo", "in-progress", "completed", "cancelled"]).optional(),
+  status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value.").optional().nullable(),
   startAt: z.string().datetime().optional().nullable(),
   dueAt: z.string().datetime().optional().nullable(),
   reminderAt: z.string().datetime().optional().nullable(),
@@ -15,4 +16,4 @@ const taskFields = {
 
 export const createTaskSchema = z.object(taskFields);
 export const updateTaskSchema = createTaskSchema.partial();
-export const updateTaskStatusSchema = z.object({ status: z.enum(["todo", "in-progress", "completed", "cancelled"]) });
+export const updateTaskStatusSchema = z.object({ status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]) });

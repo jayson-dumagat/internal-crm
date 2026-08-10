@@ -17,6 +17,7 @@ export interface EntraUser {
   username: string;
   avatarUrl?: string | null;
   roles: string[];
+  permissions: string[];
   homeAccountId: string;
 }
 

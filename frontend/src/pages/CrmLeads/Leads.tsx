@@ -3,7 +3,7 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/re
 import { toast } from "sonner";
 
 import type { CreateLeadInput, LeadRecord } from "../../api/crm";
-import { useCreateLead, useDeleteLead, useLeadsQuery, useUpdateLead } from "../../hooks/crm/useCrmDirectory";
+import { useContactsQuery, useCreateLead, useDeleteLead, useLeadsQuery, useUpdateLead } from "../../hooks/crm/useCrmDirectory";
 import { ExportIcon, FilterIcon, PlusIcon } from "../../icons";
 import AppBreadcrumb from "../../components/common/AppBreadcrumb";
 import LeadCards from "../../components/leads/LeadCards";
@@ -13,6 +13,7 @@ import LeadPreview from "../../components/leads/LeadPreview";
 import LeadTable from "../../components/leads/LeadTable";
 import PageMeta from "../../components/common/PageMeta";
 import SearchField from "../../components/ui/search/Search";
+import { useCan } from "../../hooks/auth/useCan";
 
 export type LeadStatus = LeadRecord["status"];
 export type InterestLevel = LeadRecord["interestLevel"];
@@ -39,7 +40,20 @@ export default function Leads() {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
-  const leadData = leadsQuery.data ?? [];
+  const contactsQuery = useContactsQuery();
+  const canCreate = useCan("leads.create");
+  const canUpdate = useCan("leads.update");
+  const canDelete = useCan("leads.delete");
+  const leadData = useMemo(() => {
+    const contactsByEmail = new Map(
+      (contactsQuery.data ?? []).map((contact) => [contact.contact.email.trim().toLowerCase(), contact.user.image]),
+    );
+
+    return (leadsQuery.data ?? []).map((lead) => ({
+      ...lead,
+      avatar: lead.avatar ?? contactsByEmail.get(lead.email.trim().toLowerCase()) ?? null,
+    }));
+  }, [contactsQuery.data, leadsQuery.data]);
 
   useEffect(() => setCurrentPage(1), [searchTerm, statusFilter]);
 
@@ -67,20 +81,11 @@ export default function Leads() {
   const openAddLead = () => { setEditingLead(null); setSelectedLead(null); setIsLeadFormOpen(true); };
   const openEditLead = (lead: Lead) => { setEditingLead(lead); setSelectedLead(null); setIsLeadFormOpen(true); };
 
-  const saveLead = async (input: CreateLeadInput, editing?: Lead) => {
-    try {
-      if (editing) {
-        await updateLead.mutateAsync({ id: editing.id, input });
-        toast.success("Lead updated successfully.");
-      } else {
-        await createLead.mutateAsync(input);
-        toast.success("Lead added successfully.");
-      }
-      setIsLeadFormOpen(false);
-      setEditingLead(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to save lead.");
-    }
+  const saveLead = async (input: CreateLeadInput, editing?: Lead): Promise<LeadRecord> => {
+    const savedLead = editing
+      ? await updateLead.mutateAsync({ id: editing.id, input })
+      : await createLead.mutateAsync(input);
+    return savedLead;
   };
 
   const removeLead = async (lead: Lead) => {
@@ -111,14 +116,14 @@ export default function Leads() {
           <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
             <button type="button" aria-expanded={showFilters} onClick={() => setShowFilters((value) => !value)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"><FilterIcon /> Filter</button>
             <button type="button" onClick={exportLeads} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"><ExportIcon /> Export</button>
-            <button type="button" onClick={openAddLead} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"><PlusIcon /> Add Lead</button>
+            <button type="button" disabled={!canCreate} title={canCreate ? "Add Lead" : "Read-only access"} onClick={openAddLead} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40"><PlusIcon /> Add Lead</button>
           </div>
         </div>
         {showFilters && <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/[0.05]"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as LeadStatus | "All")} className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="All">All statuses</option><option>New</option><option>Contacted</option><option>Qualified</option><option>Converted</option><option>Lost</option></select></div>}
       </div>
       {leadsQuery.isLoading && <p className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-white/[0.05]">Loading leads...</p>}
       {leadsQuery.isError && <p className="border-b border-gray-100 px-4 py-3 text-sm text-error-500 dark:border-white/[0.05]">{leadsQuery.error.message}</p>}
-      <LeadTable leads={currentData} selectedIds={selectedIds} isCurrentPageSelected={isCurrentPageSelected} onToggleSelected={toggleSelected} onToggleCurrentPage={toggleCurrentPage} onSelectLead={setSelectedLead} onEditLead={openEditLead} onDeleteLead={removeLead} />
+      <LeadTable leads={currentData} selectedIds={selectedIds} isCurrentPageSelected={isCurrentPageSelected} onToggleSelected={toggleSelected} onToggleCurrentPage={toggleCurrentPage} onSelectLead={setSelectedLead} onEditLead={openEditLead} onDeleteLead={removeLead} canUpdate={canUpdate} canDelete={canDelete} />
       <LeadCards leads={currentData} onSelectLead={setSelectedLead} />
       <LeadFooter totalPages={totalPages} currentPage={safePage} setCurrentPage={setCurrentPage} itemsPerPage={itemsPerPage} setItemsPerPage={setItemsPerPage} />
     </div>

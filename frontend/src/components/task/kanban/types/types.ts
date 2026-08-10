@@ -5,7 +5,9 @@ export interface Task {
   comments?: number;
   links?: number;
   assignee: string;
+  assigneeName?: string;
   status: string;
+  priority?: "low" | "medium" | "high" | "urgent";
   projectDesc?: string;
   projectImg?: string;
   category: {

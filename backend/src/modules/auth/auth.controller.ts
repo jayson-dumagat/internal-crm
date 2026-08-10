@@ -8,6 +8,7 @@ import { AppDataSource } from "../../database/data-source";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import type { EntraUser } from "./auth.types";
+import { getPermissionsForRoles } from "../access/access-control";
 
 const AUTH_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -198,16 +199,21 @@ async function syncAuthenticatedUser(
     entraObjectId: authenticatedUser.entraObjectId,
     email: authenticatedUser.email || authenticatedUser.username,
     displayName: authenticatedUser.name,
-    status: UserStatus.ACTIVE,
-    isAccessEnabled: true,
     lastLoginAt: new Date(),
     lastSyncedAt: new Date(),
   };
 
   if (user) {
+    if (user.status !== UserStatus.ACTIVE || !user.isAccessEnabled) {
+      throw new Error("Your CDEX account is not enabled for access.");
+    }
     Object.assign(user, values);
   } else {
-    user = repository.create(values);
+    user = repository.create({
+      ...values,
+      status: UserStatus.ACTIVE,
+      isAccessEnabled: true,
+    });
   }
 
   if (profilePhoto) {
@@ -247,6 +253,7 @@ export async function getCurrentSession(
     authenticated: true,
     user: {
       ...req.session.user,
+      permissions: getPermissionsForRoles(req.session.user.roles),
       avatarUrl: storedUser?.avatarUrl
         ? "/api/v1/users/me/avatar"
         : null,

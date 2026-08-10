@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import { AppDataSource } from "../../database/data-source";
+import { getObject, putObject, removeObject } from "../../config/storage";
 import { recordActivity } from "../activities/activity.service";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
@@ -186,7 +189,74 @@ export async function deleteLead(req: Request, res: Response, next: NextFunction
       return;
     }
     await leadRepository().delete(lead.id);
+    if (lead.avatarUrl) {
+      await removeObject(lead.avatarUrl).catch((error) => console.error("Failed to remove lead avatar from object storage", error));
+    }
     res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadLeadAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const sessionUser = req.session.user;
+    if (!sessionUser) {
+      res.status(401).json({ success: false, message: "Authentication is required." });
+      return;
+    }
+
+    const lead = await leadRepository().findOne({
+      where: { id: String(req.params.id), owner: { entraTenantId: sessionUser.tenantId } },
+      relations: { owner: true, assignedTo: true },
+    });
+    if (!lead) {
+      res.status(404).json({ success: false, message: "Lead not found." });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ success: false, message: "Please select an image to upload." });
+      return;
+    }
+
+    const contentType = resolveImageContentType(req.file);
+    const objectKey = `leads/${lead.id}/${randomUUID()}${mimeExtension(contentType)}`;
+    await putObject(objectKey, req.file.buffer, contentType);
+
+    const previousObjectKey = lead.avatarUrl;
+    lead.avatarUrl = objectKey;
+    const savedLead = await leadRepository().save(lead);
+    if (previousObjectKey) {
+      await removeObject(previousObjectKey).catch((error) => console.error("Failed to remove previous lead avatar", error));
+    }
+
+    res.status(200).json({ data: toLeadDto(savedLead) });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getLeadAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const sessionUser = req.session.user;
+    if (!sessionUser) {
+      res.status(401).json({ success: false, message: "Authentication is required." });
+      return;
+    }
+    const lead = await leadRepository().findOne({ where: { id: String(req.params.id), owner: { entraTenantId: sessionUser.tenantId } } });
+    if (!lead?.avatarUrl) {
+      res.status(404).json({ success: false, message: "Lead avatar not found." });
+      return;
+    }
+
+    const objectStream = await getObject(lead.avatarUrl);
+    res.setHeader("Content-Type", inferAvatarContentType(lead.avatarUrl));
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    objectStream.on("error", (error) => {
+      if (res.headersSent) res.destroy(error);
+      else next(error);
+    });
+    objectStream.pipe(res);
   } catch (error) {
     next(error);
   }
@@ -196,7 +266,7 @@ function toLeadDto(lead: Lead) {
   return {
     id: lead.id,
     name: formatLeadName(lead),
-    avatar: lead.avatarUrl,
+    avatar: lead.avatarUrl ? `/api/v1/leads/${lead.id}/avatar` : null,
     role: lead.jobTitle ?? "—",
     lastActivity: lead.lastActivityAt?.toISOString() ?? lead.updatedAt.toISOString(),
     email: lead.email,
@@ -218,6 +288,36 @@ function toUserDto(user: User | null | undefined) {
     name: user?.displayName?.replace(/\s*\(CGSI\)\s*$/i, "").trim() || "Unassigned",
     avatar: user?.avatarUrl ? `/api/v1/users/${user.entraObjectId}/avatar` : null,
   };
+}
+
+function mimeExtension(mimeType: string): string {
+  const extension = mimeType.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return extension ? `.${extension}` : ".bin";
+}
+
+function resolveImageContentType(file: Express.Multer.File): string {
+  if (file.mimetype.startsWith("image/")) return file.mimetype;
+  switch (path.extname(file.originalname).toLowerCase()) {
+    case ".gif": return "image/gif";
+    case ".jpeg":
+    case ".jpg": return "image/jpeg";
+    case ".png": return "image/png";
+    case ".svg": return "image/svg+xml";
+    case ".webp": return "image/webp";
+    default: return "application/octet-stream";
+  }
+}
+
+function inferAvatarContentType(objectKey: string): string {
+  switch (path.extname(objectKey).toLowerCase()) {
+    case ".gif": return "image/gif";
+    case ".jpeg":
+    case ".jpg": return "image/jpeg";
+    case ".png": return "image/png";
+    case ".svg": return "image/svg+xml";
+    case ".webp": return "image/webp";
+    default: return "application/octet-stream";
+  }
 }
 
 function splitName(name: string) {

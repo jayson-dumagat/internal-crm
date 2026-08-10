@@ -31,6 +31,8 @@ type LeadTableProps = {
   onSelectLead: (lead: Lead) => void;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 };
 
 const statusBadgeColor: Record<Lead["status"], BadgeColor> = {
@@ -62,6 +64,8 @@ export default function LeadTable({
   onSelectLead,
   onEditLead,
   onDeleteLead,
+  canUpdate,
+  canDelete,
 }: LeadTableProps) {
   const stopRowClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -91,7 +95,7 @@ export default function LeadTable({
           <TableRow>
             <TableCell
               isHeader
-              className={`sticky left-0 z-30 w-[52px] min-w-[52px] max-w-[52px] bg-white text-center dark:bg-gray-900 ${headerCellClass}`}
+              className={`w-[52px] min-w-[52px] max-w-[52px] bg-white text-center dark:bg-gray-900 ${headerCellClass}`}
             >
               <input
                 type="checkbox"
@@ -103,7 +107,7 @@ export default function LeadTable({
             </TableCell>
 
             <TableHeaderCell
-              className="sticky left-[52px] z-30 w-[250px] min-w-[250px] bg-white shadow-[1px_0_0_#f2f4f7] dark:bg-gray-900 dark:shadow-[1px_0_0_rgba(255,255,255,0.05)]"
+              className="w-[250px] min-w-[250px] bg-white dark:bg-gray-900"
             >
               Name
             </TableHeaderCell>
@@ -178,7 +182,7 @@ export default function LeadTable({
                 >
                   <TableCell
                     className={[
-                      `sticky left-0 z-20 w-[52px] min-w-[52px] max-w-[52px] text-center ${bodyCellClass}`,
+                      `w-[52px] min-w-[52px] max-w-[52px] text-center ${bodyCellClass}`,
                       isSelected
                         ? "bg-blue-light-50 dark:bg-[#172033]"
                         : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
@@ -196,7 +200,7 @@ export default function LeadTable({
 
                   <TableCell
                     className={[
-                      `sticky left-[52px] z-20 w-[250px] min-w-[250px] overflow-hidden shadow-[1px_0_0_#f2f4f7] dark:shadow-[1px_0_0_rgba(255,255,255,0.05)] ${bodyCellClass}`,
+                      `w-[250px] min-w-[250px] overflow-hidden ${bodyCellClass}`,
                       isSelected
                         ? "bg-blue-light-50 dark:bg-[#172033]"
                         : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
@@ -320,16 +324,20 @@ export default function LeadTable({
                       <button
                         type="button"
                         aria-label={`Edit ${lead.name}`}
+                        title={canUpdate ? `Edit ${lead.name}` : "Read-only access"}
+                        disabled={!canUpdate}
                         onClick={() => onEditLead(lead)}
-                        className="text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
+                        className="text-gray-500 transition hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:text-white/90"
                       >
                         <SquarePenIcon className="size-5" />
                       </button>
                       <button
                         type="button"
                         aria-label={`Delete ${lead.name}`}
+                        title={canDelete ? `Delete ${lead.name}` : "Read-only access"}
+                        disabled={!canDelete}
                         onClick={() => onDeleteLead(lead)}
-                        className="text-gray-500 transition hover:text-error-500 dark:text-gray-400"
+                        className="text-gray-500 transition hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400"
                       >
                         <TrashBinIcon className="size-5" />
                       </button>

@@ -27,8 +27,10 @@ import type {
   PipelineStage,
   PipelineView,
 } from "./types";
+import { useCan } from "../../hooks/auth/useCan";
 
 export default function PipelineBoard() {
+  const canManage = useCan("pipelines.manage");
   const [views, setViews] = useState<PipelineView[]>(
     initialPipelineViews,
   );
@@ -97,6 +99,8 @@ export default function PipelineBoard() {
       leadId: string,
       destinationStageId: string,
     ) => {
+      if (!canManage) return;
+
       setLeads((currentLeads) =>
         currentLeads.map((lead) =>
           lead.id === leadId
@@ -109,7 +113,7 @@ export default function PipelineBoard() {
         ),
       );
     },
-    [],
+    [canManage],
   );
 
   useEffect(() => {
@@ -395,24 +399,27 @@ export default function PipelineBoard() {
           views={views}
           activeViewId={activeViewId}
           onChange={setActiveViewId}
-          onCreateView={() => setIsCreateViewOpen(true)}
+          onCreateView={() => { if (canManage) setIsCreateViewOpen(true); }}
           onCloseView={closeView}
-          canCreateView={views.length < 6}
+          canCreateView={views.length < 6 && canManage}
           actions={
             <>
               <button
                 type="button"
+                disabled={!canManage}
+                title={canManage ? "Edit Pipeline" : "Read-only access"}
                 onClick={() => {
                   setViewNameDraft(activeView.name);
                   setIsEditViewOpen(true);
                 }}
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
               >
                 <EditIcon />
                 Edit Pipeline
               </button>
               <button
                 type="button"
+                title="Filter"
                 onClick={() => setIsFilterOpen(true)}
                 className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
               >
@@ -421,8 +428,10 @@ export default function PipelineBoard() {
               </button>
               <button
                 type="button"
+                disabled={!canManage}
+                title={canManage ? "Add Stage" : "Read-only access"}
                 onClick={() => setIsAddStageOpen(true)}
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
               >
                 <PlusIcon />
                 Add Stage
@@ -451,8 +460,9 @@ export default function PipelineBoard() {
                 )}
                 onEditStage={setSelectedStage}
                 onAddCard={setCardStage}
+                canManage={canManage}
                 onViewLead={handleViewLead}
-                onEditLead={handleEditLead}
+                onEditLead={canManage ? handleEditLead : undefined}
               />
             ))}
           </div>

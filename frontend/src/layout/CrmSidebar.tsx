@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../hooks/auth/useAuth";
+import { hasPermission, type AccessPermission } from "../config/rbac";
 import {
   DashboardAltIcon,
   CalenderIcon,
@@ -11,7 +13,7 @@ import {
   ChevronDownIcon,
   IdCardIcon,
   ListTodoIcon,
-  InboxIcon,
+  //InboxIcon,
   Building2Icon,
   NoteIcon,
   UsersRoundIcon,
@@ -24,6 +26,7 @@ type SubItem = {
   label: string;
   path: string;
   enabled?: boolean;
+  permission?: AccessPermission;
   badges?: NavBadge[];
 };
 
@@ -32,6 +35,7 @@ type NavItem = {
   label: string;
   path: string;
   enabled?: boolean;
+  permission?: AccessPermission;
   icon?: React.ReactNode;
   children?: SubItem[];
   badges?: NavBadge[];
@@ -90,18 +94,21 @@ const navGroups: NavGroup[] = [
         id: "dashboard",
         label: "Dashboard",
         path: "/dashboard",
+        permission: "dashboard.read",
         icon: <DashboardAltIcon />,
       },
       {
         id: "calendar",
         label: "Calendar",
         path: "/calendar",
+        permission: "calendar.read",
         icon: <CalenderIcon />,
       },
       {
         id: "tasks",
         label: "Tasks",
         path: "/tasks",
+        permission: "tasks.read",
         icon: <ListTodoIcon />,
         //badges: [{ label: "New", enabled: true, variant: "brand" }],
       },
@@ -109,19 +116,21 @@ const navGroups: NavGroup[] = [
         id: "notes",
         label: "Notes",
         path: "/notes",
+        permission: "notes.read",
         icon: <NoteIcon />,
       },
-      {
-        id: "inbox",
-        label: "Inbox",
-        path: "/inbox",
-        icon: <InboxIcon />,
+      //{
+        //id: "inbox",
+        //label: "Inbox",
+        //path: "/inbox",
+        //icon: <InboxIcon />,
         //badges: [{ label: "3", enabled: true, variant: "warning" }],
-      },
+      //},
       {
         id: "activities",
         label: "Activities",
         path: "/activities",
+        permission: "activities.read",
         icon: <ListTodoIcon />,
       },
     ],
@@ -133,12 +142,14 @@ const navGroups: NavGroup[] = [
         id: "leads",
         label: "Leads",
         path: "/leads",
+        permission: "leads.read",
         icon: <TrophyIcon />,
       },
       {
         id: "pipelines",
         label: "Pipelines",
         path: "/pipelines",
+        permission: "pipelines.read",
         icon: <NetworkIcon />,
         badges: [{ label: "New", enabled: false, variant: "success" }],
       },
@@ -146,12 +157,14 @@ const navGroups: NavGroup[] = [
         id: "contacts",
         label: "Contacts",
         path: "/contacts",
+        permission: "contacts.read",
         icon: <UsersRoundIcon />,
       },
       {
         id: "companies",
         label: "Companies",
         path: "/companies",
+        permission: "companies.read",
         icon: <Building2Icon />,
       },
     ],
@@ -228,6 +241,7 @@ const navGroups: NavGroup[] = [
 
 export default function CrmSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { user } = useAuth();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -242,16 +256,22 @@ export default function CrmSidebar() {
         .map((group) => ({
           ...group,
           items: group.items
-            .filter((item) => item.enabled !== false)
+            .filter(
+              (item) =>
+                item.enabled !== false &&
+                (!item.permission || hasPermission(user, item.permission)),
+            )
             .map((item) => ({
               ...item,
               children: item.children?.filter(
-                (child) => child.enabled !== false,
+                (child) =>
+                  child.enabled !== false &&
+                  (!child.permission || hasPermission(user, child.permission)),
               ),
             })),
         }))
         .filter((group) => group.items.length > 0),
-    [],
+    [user],
   );
 
   useEffect(() => {

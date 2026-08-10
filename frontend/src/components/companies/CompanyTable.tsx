@@ -18,6 +18,7 @@ import { useCompaniesQuery, useDeleteCompany } from "../../hooks/crm/useCrmDirec
 import { toast } from "sonner";
 import { formatDisplayDate } from "../../utils/date";
 import SearchField from "../search/SearchField";
+import { useCan } from "../../hooks/auth/useCan";
 
 type CompanyStatus = "Active" | "Prospect" | "Dormant";
 type SortKey =
@@ -78,6 +79,9 @@ export default function CompanyTable() {
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(null);
   const deleteCompany = useDeleteCompany();
+  const canCreate = useCan("companies.create");
+  const canUpdate = useCan("companies.update");
+  const canDelete = useCan("companies.delete");
   const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
     key: "name",
     descending: false,
@@ -142,13 +146,13 @@ export default function CompanyTable() {
           <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <FilterIcon /> Filter
           </button>
-          <button type="button" aria-label="Import companies" title="Import companies" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+          <button type="button" disabled={!canCreate} aria-label="Import companies" title={canCreate ? "Import companies" : "Read-only access"} className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <UploadIcon />
           </button>
           <button type="button" aria-label="Export companies" title="Export companies" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <ExportIcon />
           </button>
-          <button type="button" onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
+          <button type="button" disabled={!canCreate} title={canCreate ? "Add Company" : "Read-only access"} onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
             <PlusIcon /> Add Company
           </button>
         </div>
@@ -199,7 +203,7 @@ export default function CompanyTable() {
                       {hasCompanies ? "Try adjusting your search to find a company." : "Add your first company to start building your directory."}
                     </p>
                     {!hasCompanies && (
-                      <button type="button" onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+                      <button type="button" disabled={!canCreate} title={canCreate ? "Add Company" : "Read-only access"} onClick={() => { setEditingCompany(null); setIsAddCompanyOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40">
                         <PlusIcon className="size-4" /> Add Company
                       </button>
                     )}
@@ -236,7 +240,7 @@ export default function CompanyTable() {
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-1.5 overflow-hidden">{company.tags.map((tag) => <Badge key={tag} color="light" size="sm">{tag}</Badge>)}</div></td>
                   <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><Badge color={statusColor[company.status]} size="sm">{company.status}</Badge></td>
                   <td className="border border-gray-100 px-4 py-4 text-theme-sm text-gray-700 dark:border-white/[0.05] dark:text-gray-400">{formatDisplayDate(company.lastActivity)}</td>
-                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button type="button" aria-label={`Delete ${company.name}`} disabled={deleteCompany.isPending} onClick={async () => { if (!window.confirm(`Delete ${company.name}?`)) return; try { await deleteCompany.mutateAsync(company.id); setSelected((ids) => ids.filter((id) => id !== company.id)); toast.success("Company deleted successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete company."); } }} className="text-gray-500 hover:text-error-500 disabled:opacity-50"><TrashBinIcon className="size-5" /></button><button type="button" aria-label={`Edit ${company.name}`} onClick={() => { setEditingCompany(company); setIsAddCompanyOpen(true); }} className="text-gray-500 hover:text-gray-800"><PencilIcon className="size-5" /></button></div></td>
+                  <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"><div className="flex gap-2"><button type="button" aria-label={`Delete ${company.name}`} title={canDelete ? `Delete ${company.name}` : "Read-only access"} disabled={!canDelete || deleteCompany.isPending} onClick={async () => { if (!window.confirm(`Delete ${company.name}?`)) return; try { await deleteCompany.mutateAsync(company.id); setSelected((ids) => ids.filter((id) => id !== company.id)); toast.success("Company deleted successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to delete company."); } }} className="text-gray-500 hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40"><TrashBinIcon className="size-5" /></button><button type="button" aria-label={`Edit ${company.name}`} title={canUpdate ? `Edit ${company.name}` : "Read-only access"} disabled={!canUpdate} onClick={() => { setEditingCompany(company); setIsAddCompanyOpen(true); }} className="text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40"><PencilIcon className="size-5" /></button></div></td>
                 </tr>
               );
             })}

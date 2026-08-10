@@ -1,24 +1,29 @@
-import { Task } from "./types/types";
-import TaskItem from "./TaskItem";
-import { HorizontaLDots } from "../../../icons";
-import { Dropdown } from "../../ui/dropdown/Dropdown";
-import { DropdownItem } from "../../ui/dropdown/DropdownItem";
 import { useEffect, useRef, useState } from "react";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+
+import Badge from "../../ui/badge/Badge";
+import TaskItem from "./TaskItem";
+import type { Task } from "./types/types";
+import type { TaskKanbanStatus } from "./KanbanBoard";
 
 interface ColumnProps {
   title: string;
   tasks: Task[];
-  status: string;
+  status: TaskKanbanStatus;
+  badgeColor: "light" | "warning" | "success" | "error";
+  onEditTask?: (taskId: string) => void;
+  onAddTask?: (status: TaskKanbanStatus) => void;
 }
 
-const Column: React.FC<ColumnProps> = ({
+export default function Column({
   title,
   tasks,
   status,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const columnRef = useRef<HTMLDivElement | null>(null);
+  badgeColor,
+  onEditTask,
+  onAddTask,
+}: ColumnProps) {
+  const columnRef = useRef<HTMLElement | null>(null);
   const [isOver, setIsOver] = useState(false);
 
   useEffect(() => {
@@ -35,86 +40,62 @@ const Column: React.FC<ColumnProps> = ({
     });
   }, [status]);
 
-  function toggleDropdown() {
-    setIsOpen(!isOpen);
-  }
-
-  function closeDropdown() {
-    setIsOpen(false);
-  }
   return (
-    <div
+    <section
       ref={columnRef}
-      className={`flex flex-col gap-5 p-4 swim-lane xl:p-6 transition-all duration-200 relative ${
-        isOver
-          ? "bg-blue-50/80 dark:bg-blue-500/5"
-          : ""
-      }`}
+      className={[
+        "min-h-[520px] min-w-[320px] px-4 py-5 transition-colors sm:px-5",
+        isOver ? "bg-brand-50/50 dark:bg-brand-500/[0.04]" : "",
+      ].join(" ")}
     >
-      {/* Drop zone indicator */}
-      {isOver && (
-        <div className="absolute inset-2 bg-blue-50/20 dark:bg-blue-500/10 z-10 pointer-events-none rounded-xl" />
-      )}
-
-      {/* Column header stays the same */}
-      <div className="flex items-center justify-between mb-1">
-        <h3 className="flex items-center gap-3 text-base font-medium text-gray-800 dark:text-white/90">
-          {title}
-          <span
-            className={`
-    inline-flex rounded-full px-2 py-0.5 text-theme-xs font-medium 
-    ${
-      status === "todo"
-        ? "bg-gray-100 text-gray-700 dark:bg-white/[0.03] dark:text-white/80 "
-        : status === "inProgress"
-        ? "text-warning-700 bg-warning-50 dark:bg-warning-500/15 dark:text-orange-400"
-        : status === "completed"
-        ? "bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-500"
-        : ""
-    }
-  `}
-          >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+            {title}
+          </h3>
+          <Badge variant="light" color={badgeColor} size="sm">
             {tasks.length}
-          </span>
-        </h3>
-        <div className="relative">
-          <button onClick={toggleDropdown} className="dropdown-toggle">
-            <HorizontaLDots className="text-gray-400 hover:text-gray-700 size-6 dark:hover:text-gray-300" />
-          </button>
-          <Dropdown
-            isOpen={isOpen}
-            onClose={closeDropdown}
-            className="absolute right-0 top-full z-40 w-[140px] space-y-1 rounded-2xl border border-gray-200 bg-white p-2 shadow-theme-md dark:border-gray-800 dark:bg-gray-dark"
-          >
-            <DropdownItem
-              onItemClick={closeDropdown}
-              className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-            >
-              Edit
-            </DropdownItem>
-            <DropdownItem
-              onItemClick={closeDropdown}
-              className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-            >
-              Delete
-            </DropdownItem>
-            <DropdownItem
-              onItemClick={closeDropdown}
-              className="flex w-full font-normal text-left text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-            >
-              Clear All
-            </DropdownItem>
-          </Dropdown>
+          </Badge>
         </div>
       </div>
-      {tasks.map((task) => (
-        <TaskItem
-          key={task.id}
-          task={task}
-        />
-      ))}
-    </div>
-  );
-};
 
-export default Column;
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <TaskItem key={task.id} task={task} onEdit={onEditTask} />
+        ))}
+
+        {tasks.length === 0 && (
+          <div className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-gray-200 px-5 py-8 text-center dark:border-gray-800">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              Drop tasks here
+            </p>
+          </div>
+        )}
+
+        {onAddTask && (
+          <button
+            type="button"
+            onClick={() => onAddTask(status)}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 text-sm font-medium text-gray-500 transition hover:border-brand-300 hover:bg-brand-50/50 hover:text-brand-500 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-800 dark:hover:bg-brand-500/[0.06] dark:hover:text-brand-400"
+          >
+            <PlusIcon />
+            Add task
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-4">
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

@@ -1,4 +1,5 @@
-import { $generateHtmlFromNodes } from "@lexical/html";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
+import { useEffect } from "react";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -6,14 +7,12 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import {
-  $getRoot,
-  FORMAT_TEXT_COMMAND,
-  type TextFormatType,
-} from "lexical";
+import { $getRoot, FORMAT_TEXT_COMMAND, type TextFormatType } from "lexical";
 
 type LexicalNoteEditorProps = {
   onChange: (plainText: string, html: string) => void;
+  initialContentHtml?: string | null;
+  readOnly?: boolean;
 };
 
 const editorConfig = {
@@ -34,16 +33,20 @@ const editorConfig = {
 
 export default function LexicalNoteEditor({
   onChange,
+  initialContentHtml,
+  readOnly = false,
 }: LexicalNoteEditorProps) {
   return (
-    <LexicalComposer initialConfig={editorConfig}>
+    <LexicalComposer initialConfig={{ ...editorConfig, editable: !readOnly }}>
       <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-theme-xs transition focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:focus-within:border-brand-800">
-        <Toolbar />
+        {!readOnly && <Toolbar />}
+        <InitialContentPlugin html={initialContentHtml} />
         <div className="relative">
           <RichTextPlugin
             contentEditable={
               <ContentEditable
                 aria-label="Note content"
+                contentEditable={!readOnly}
                 className="custom-scrollbar min-h-40 max-h-72 overflow-y-auto px-4 py-3 text-sm leading-6 text-gray-800 outline-none dark:text-white/90"
               />
             }
@@ -69,6 +72,23 @@ export default function LexicalNoteEditor({
       </div>
     </LexicalComposer>
   );
+}
+
+function InitialContentPlugin({ html }: { html?: string | null }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    if (!html) return;
+    editor.update(() => {
+      const dom = new DOMParser().parseFromString(html, "text/html");
+      const nodes = $generateNodesFromDOM(editor, dom);
+      const root = $getRoot();
+      root.clear();
+      root.append(...nodes);
+    });
+  }, [editor, html]);
+
+  return null;
 }
 
 function Toolbar() {

@@ -99,7 +99,11 @@ export default function PipelineTabs({
         <button
           type="button"
           aria-label="Add pipeline view"
-          title={canCreateView ? "Add pipeline view" : "Maximum of 6 pipeline views reached"}
+          title={canCreateView
+            ? "Add pipeline view"
+            : views.length >= 6
+              ? "Maximum of 6 pipeline views reached"
+              : "Read-only access"}
           onClick={onCreateView}
           disabled={!canCreateView}
           className="inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-2.5 py-3 text-sm font-medium text-gray-500 transition hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:text-brand-400"

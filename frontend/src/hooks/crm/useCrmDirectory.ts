@@ -11,6 +11,7 @@ import {
   updateContact,
   uploadContactAvatar,
   uploadCompanyLogo,
+  uploadLeadAvatar,
   getLeads,
   createLead,
   updateLead,
@@ -159,6 +160,17 @@ export function useUploadCompanyLogo() {
   });
 }
 
+export function useUploadLeadAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string | number; file: File }) => uploadLeadAvatar(String(id), file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
 export function useLeadsQuery() {
   return useQuery({ queryKey: crmDirectoryKeys.leads(), queryFn: getLeads });
 }
@@ -268,7 +280,7 @@ export function useUpdateTask() {
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "todo" | "in-progress" | "completed" | "cancelled" }) => updateTaskStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: "not-started" | "in-progress" | "completed" | "overdue" | "blocked" }) => updateTaskStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });

@@ -9,6 +9,7 @@ import { EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
 import { useActivitiesQuery, useCreateNote, useNotesQuery } from "../../hooks/crm/useCrmDirectory";
 import { toast } from "sonner";
+import { useCan } from "../../hooks/auth/useCan";
 
 type BadgeColor =
   | "primary"
@@ -69,6 +70,7 @@ export default function LeadPreview({
   onClose,
   onEdit,
 }: LeadPreviewProps) {
+  const canUpdate = useCan("leads.update");
   const [activeTab, setActiveTab] = useState<LeadPreviewTab>("activity");
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function LeadPreview({
     >
       {lead && (
         <div>
-          <LeadSummary lead={lead} onEdit={onEdit} />
+          <LeadSummary lead={lead} onEdit={onEdit} canUpdate={canUpdate} />
 
           <LeadTabs activeTab={activeTab} onChange={setActiveTab} />
 
@@ -122,9 +124,11 @@ export default function LeadPreview({
 function LeadSummary({
   lead,
   onEdit,
+  canUpdate,
 }: {
   lead: Lead;
   onEdit?: (lead: Lead) => void;
+  canUpdate: boolean;
 }) {
   return (
     <div className="border-b border-gray-100 dark:border-white/[0.05]">
@@ -180,7 +184,7 @@ function LeadSummary({
             <PhoneIcon />
           </QuickAction>
 
-          <QuickAction label="Edit" onClick={() => onEdit?.(lead)}>
+          <QuickAction label="Edit" disabled={!canUpdate} onClick={() => onEdit?.(lead)}>
             <SquarePenIcon />
           </QuickAction>
 

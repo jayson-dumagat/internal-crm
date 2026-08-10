@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import { Task } from "./types/types";
+
+import Avatar from "../../ui/avatar/Avatar";
+import Badge from "../../ui/badge/Badge";
+import type { Task } from "./types/types";
 
 interface TaskItemProps {
   task: Task;
+  onEdit?: (taskId: string) => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({
-  task,
-}) => {
-  const taskRef = useRef<HTMLDivElement | null>(null);
+export default function TaskItem({ task, onEdit }: TaskItemProps) {
+  const taskRef = useRef<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -28,121 +30,99 @@ const TaskItem: React.FC<TaskItemProps> = ({
     });
   }, [task.id, task.status]);
 
-  const opacity = isDragging ? 0.3 : 0.8;
+  const handleInteractiveClick = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
   return (
-    <div
+    <article
       ref={taskRef}
-      style={{ opacity }}
-      className="relative p-5 bg-white border border-gray-200 task rounded-xl shadow-theme-sm dark:border-gray-800 dark:bg-white/5"
+      className={[
+        "group rounded-xl border border-gray-100 bg-white shadow-theme-xs transition",
+        "hover:border-gray-200 hover:shadow-theme-sm",
+        "dark:border-white/[0.05] dark:bg-gray-900 dark:hover:border-white/[0.08]",
+        isDragging ? "cursor-grabbing opacity-40" : "cursor-grab",
+      ].join(" ")}
     >
-      <div className="space-y-4">
-        <div>
-          <h4 className="mb-5 mr-10 text-base text-gray-800 dark:text-white/90">
-            {task.title}
-          </h4>
-          {task.projectDesc && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {task.projectDesc}
-            </p>
-          )}
-          {task.projectImg && (
-            <div className="my-4">
-              <img
-                src={task.projectImg}
-                alt="task"
-                className="overflow-hidden rounded-xl border-[0.5px] border-gray-200 dark:border-gray-800"
-              />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar
+              src={task.assignee}
+              alt={task.assigneeName || "Unassigned"}
+              colorKey={task.assigneeName || task.title}
+              size="medium"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-theme-sm font-medium text-gray-800 dark:text-white/90">
+                {task.title}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                {task.projectDesc || task.category.name}
+              </p>
             </div>
-          )}
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-sm text-gray-500 cursor-pointer dark:text-gray-400">
-              <svg
-                className="fill-current"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M5.33329 1.0835C5.74751 1.0835 6.08329 1.41928 6.08329 1.8335V2.25016L9.91663 2.25016V1.8335C9.91663 1.41928 10.2524 1.0835 10.6666 1.0835C11.0808 1.0835 11.4166 1.41928 11.4166 1.8335V2.25016L12.3333 2.25016C13.2998 2.25016 14.0833 3.03366 14.0833 4.00016V6.00016L14.0833 12.6668C14.0833 13.6333 13.2998 14.4168 12.3333 14.4168L3.66663 14.4168C2.70013 14.4168 1.91663 13.6333 1.91663 12.6668L1.91663 6.00016L1.91663 4.00016C1.91663 3.03366 2.70013 2.25016 3.66663 2.25016L4.58329 2.25016V1.8335C4.58329 1.41928 4.91908 1.0835 5.33329 1.0835ZM5.33329 3.75016L3.66663 3.75016C3.52855 3.75016 3.41663 3.86209 3.41663 4.00016V5.25016L12.5833 5.25016V4.00016C12.5833 3.86209 12.4714 3.75016 12.3333 3.75016L10.6666 3.75016L5.33329 3.75016ZM12.5833 6.75016L3.41663 6.75016L3.41663 12.6668C3.41663 12.8049 3.52855 12.9168 3.66663 12.9168L12.3333 12.9168C12.4714 12.9168 12.5833 12.8049 12.5833 12.6668L12.5833 6.75016Z"
-                  fill=""
-                />
-              </svg>
-              {task.dueDate}
-            </span>
-            <span className="flex items-center gap-1 text-sm text-gray-500 cursor-pointer dark:text-gray-400">
-              <svg
-                className="stroke-current"
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M9 15.6343C12.6244 15.6343 15.5625 12.6961 15.5625 9.07178C15.5625 5.44741 12.6244 2.50928 9 2.50928C5.37563 2.50928 2.4375 5.44741 2.4375 9.07178C2.4375 10.884 3.17203 12.5246 4.35961 13.7122L2.4375 15.6343H9Z"
-                  stroke=""
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {task.comments}
-            </span>
-            {task.links && (
-              <span className="flex items-center gap-1 text-sm text-gray-500 cursor-pointer dark:text-gray-400">
-                <svg
-                  className="fill-current"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M6.88066 3.10905C8.54039 1.44932 11.2313 1.44933 12.8911 3.10906C14.5508 4.76878 14.5508 7.45973 12.8911 9.11946L12.0657 9.94479L11.0051 8.88413L11.8304 8.0588C12.9043 6.98486 12.9043 5.24366 11.8304 4.16972C10.7565 3.09577 9.01526 3.09577 7.94132 4.16971L7.11599 4.99504L6.05533 3.93438L6.88066 3.10905ZM8.88376 11.0055L9.94442 12.0661L9.11983 12.8907C7.4601 14.5504 4.76915 14.5504 3.10942 12.8907C1.44969 11.231 1.44969 8.54002 3.10942 6.88029L3.93401 6.0557L4.99467 7.11636L4.17008 7.94095C3.09614 9.01489 3.09614 10.7561 4.17008 11.83C5.24402 12.904 6.98522 12.904 8.05917 11.83L8.88376 11.0055ZM9.94458 7.11599C10.2375 6.8231 10.2375 6.34823 9.94458 6.05533C9.65169 5.76244 9.17682 5.76244 8.88392 6.05533L6.0555 8.88376C5.7626 9.17665 5.7626 9.65153 6.0555 9.94442C6.34839 10.2373 6.82326 10.2373 7.11616 9.94442L9.94458 7.11599Z"
-                    fill=""
-                  />
-                </svg>
-                {task.links}
-              </span>
-            )}
           </div>
-          <span
-            className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-theme-xs font-medium ${getCategoryStyles(
-              task.category.color
-            )}`}
-          >
+
+          {onEdit && (
+            <button
+              type="button"
+              aria-label={`Edit ${task.title}`}
+              title={`Edit ${task.title}`}
+              onClick={(event) => {
+                handleInteractiveClick(event);
+                onEdit(task.id);
+              }}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/[0.05] dark:hover:text-gray-300"
+            >
+              <EditIcon />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Badge variant="light" color="primary" size="sm">
             {task.category.name}
-          </span>
+          </Badge>
+          {task.priority && (
+            <Badge variant="light" color={priorityColor(task.priority)} size="sm">
+              {task.priority}
+            </Badge>
+          )}
         </div>
       </div>
-      <div className="h-6 absolute top-5 right-5 top w-full max-w-6 overflow-hidden rounded-full border-[0.5px] border-gray-200 dark:border-gray-800">
-        <img src={task.assignee} alt="user" />
+
+      <div className="flex items-center justify-between gap-4 border-t border-gray-100 px-4 py-3 dark:border-white/[0.05]">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-400 dark:text-gray-500">Due date</p>
+          <p className="mt-0.5 truncate text-xs font-medium text-gray-600 dark:text-gray-300">
+            {task.dueDate || "No due date"}
+          </p>
+        </div>
+        <span className="max-w-32 truncate text-right text-xs text-gray-500 dark:text-gray-400">
+          {task.assigneeName || "Unassigned"}
+        </span>
       </div>
-    </div>
+    </article>
   );
-};
+}
 
-const getCategoryStyles = (color: string) => {
-  switch (color) {
-    case "error":
-      return "bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400";
-    case "success":
-      return "bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400";
-    case "brand":
-      return "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-400";
-    case "orange":
-      return "bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400";
-    case "purple":
-      return "bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400";
-    default:
-      return "bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-400";
-  }
-};
+function priorityColor(priority: NonNullable<Task["priority"]>) {
+  if (priority === "urgent") return "error" as const;
+  if (priority === "high") return "warning" as const;
+  if (priority === "low") return "success" as const;
+  return "info" as const;
+}
 
-export default TaskItem;
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-4">
+      <path
+        d="M14.5 5.5 18.5 9.5M6 18l2.75-.55L18 8.2a1.75 1.75 0 0 0 0-2.48l-.72-.72a1.75 1.75 0 0 0-2.48 0l-9.25 9.25L5 17v1h1Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

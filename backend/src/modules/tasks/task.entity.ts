@@ -14,10 +14,11 @@ import { Organization } from "../organizations/organization.entity";
 import { User } from "../users/user.entity";
 
 export enum TaskStatus {
-  TODO = "todo",
+  NOT_STARTED = "not_started",
   IN_PROGRESS = "in_progress",
   COMPLETED = "completed",
-  CANCELLED = "cancelled",
+  OVERDUE = "overdue",
+  BLOCKED = "blocked",
 }
 
 export enum TaskPriority {
@@ -76,7 +77,7 @@ export class Task {
     type: "enum",
     enum: TaskStatus,
     enumName: "task_status_enum",
-    default: TaskStatus.TODO,
+    default: TaskStatus.NOT_STARTED,
   })
   status!: TaskStatus;
 
@@ -87,6 +88,13 @@ export class Task {
     default: TaskPriority.MEDIUM,
   })
   priority!: TaskPriority;
+
+  @Column({
+    type: "varchar",
+    length: 20,
+    nullable: true,
+  })
+  color!: string | null;
 
   @Column({
     name: "start_at",

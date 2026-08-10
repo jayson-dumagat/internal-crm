@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { formatDisplayDate } from "../../utils/date";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
+import { useCan } from "../../hooks/auth/useCan";
 
 type ContactStatus = "Customer" | "Prospect" | "KYC Pending" | "Dormant" | "Closed";
 type RelationshipLevel = "High" | "Medium" | "Low";
@@ -78,6 +79,9 @@ type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
   const { user: currentUser } = useAuth();
+  const canCreate = useCan("contacts.create");
+  const canUpdate = useCan("contacts.update");
+  const canDelete = useCan("contacts.delete");
   const contactsQuery = useContactsQuery();
   const companiesQuery = useCompaniesQuery();
   const contactData = contactsQuery.data;
@@ -205,8 +209,9 @@ export default function ContactTable() {
             <button
               type="button"
               aria-label="Import contacts"
-              title="Import contacts"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              title={canCreate ? "Import contacts" : "Read-only access"}
+              disabled={!canCreate}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <DownloadIcon />
             </button>
@@ -223,11 +228,13 @@ export default function ContactTable() {
             <button
               type="button"
               aria-label="Add contact"
+              title={canCreate ? "Add contact" : "Read-only access"}
+              disabled={!canCreate}
               onClick={() => {
                 setEditingContact(null);
                 setIsAddContactOpen(true);
               }}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <PlusIcon />
               <span>Add Contact</span>
@@ -312,7 +319,7 @@ export default function ContactTable() {
                         {hasContacts ? "Try adjusting your search to find a contact." : "Add your first contact to start building your directory."}
                       </p>
                       {!hasContacts && (
-                        <button type="button" onClick={() => { setEditingContact(null); setIsAddContactOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+                        <button type="button" disabled={!canCreate} title={canCreate ? "Add Contact" : "Read-only access"} onClick={() => { setEditingContact(null); setIsAddContactOpen(true); }} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40">
                           <PlusIcon className="size-4" /> Add Contact
                         </button>
                       )}
@@ -418,19 +425,22 @@ export default function ContactTable() {
                             toast.error(error instanceof Error ? error.message : "Unable to delete contact.");
                           }
                         }}
-                        disabled={deleteContact.isPending}
-                        className="text-gray-500 hover:text-error-500 dark:text-gray-400"
+                        disabled={!canDelete || deleteContact.isPending}
+                        title={canDelete ? `Delete ${item.user.name}` : "Read-only access"}
+                        className="text-gray-500 hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400"
                       >
                         <TrashBinIcon className="size-5" />
                       </button>
                       <button
                         type="button"
                         aria-label={`Edit ${item.user.name}`}
+                        disabled={!canUpdate}
+                        title={canUpdate ? `Edit ${item.user.name}` : "Read-only access"}
                         onClick={() => {
                           setEditingContact(item);
                           setIsAddContactOpen(true);
                         }}
-                        className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
+                        className="text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:text-white/90"
                       >
                         <PencilIcon className="size-5" />
                       </button>

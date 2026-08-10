@@ -9,6 +9,7 @@ import {
 } from "@azure/msal-node";
 
 import { entraConfig } from "../config/entra";
+import { getPermissionsForRoles } from "../modules/access/access-control";
 import type {
   EntraAuthenticationResult,
   EntraAuthorizationResult,
@@ -198,6 +199,8 @@ class EntraService {
       accountUsername ??
       "";
 
+    const roles = Array.isArray(claims.roles) ? claims.roles : [];
+
     return {
       entraObjectId: claims.oid,
       tenantId: claims.tid,
@@ -205,7 +208,8 @@ class EntraService {
       email: claims.email ?? username,
       username,
       avatarUrl: null,
-      roles: Array.isArray(claims.roles) ? claims.roles : [],
+      roles,
+      permissions: getPermissionsForRoles(roles),
       homeAccountId,
     };
   }

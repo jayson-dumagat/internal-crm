@@ -1,29 +1,244 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import dayjs from "dayjs";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import type { CreateTaskInput, TaskRecord } from "../../api/crm";
+import { useLeadsQuery, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
 
-const schema = z.object({
-  title: z.string().trim().min(1, "Task title is required."),
-  description: z.string().optional(),
-  type: z.string(),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
-  status: z.enum(["todo", "in-progress", "completed", "cancelled"]),
-  startAt: z.string().optional(),
-  dueAt: z.string().optional(),
-});
-type Values = z.infer<typeof schema>;
-const inputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
-const toInputDate = (value: string | null) => value ? value.slice(0, 16) : "";
+const schema = z
+  .object({
+    title: z.string().trim().min(1, "Task title is required."),
+    description: z.string().optional(),
+    type: z.string(),
+    priority: z.enum(["low", "medium", "high", "urgent"]),
+    status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Choose a valid color."),
+    startAt: z.string().optional(),
+    dueAt: z.string().optional(),
+    reminderAt: z.string().optional(),
+    assigneeId: z.string().optional(),
+    leadId: z.string().optional(),
+  })
+  .superRefine((values, context) => {
+    if (values.startAt && values.dueAt && dayjs(values.dueAt).isBefore(dayjs(values.startAt))) {
+      context.addIssue({ code: "custom", path: ["dueAt"], message: "Due date must be after the start date." });
+    }
+  });
 
-export default function TaskFormSheet({ isOpen, task, onClose, onSubmit, isPending }: { isOpen: boolean; task: TaskRecord | null; onClose: () => void; onSubmit: (input: CreateTaskInput, task?: TaskRecord) => Promise<void>; isPending: boolean }) {
-  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { title: "", description: "", type: "general", priority: "medium", status: "todo", startAt: "", dueAt: "" } });
-  useEffect(() => { if (isOpen) form.reset(task ? { title: task.title, description: task.description ?? "", type: task.type, priority: task.priority, status: task.status, startAt: toInputDate(task.startAt), dueAt: toInputDate(task.dueAt) } : undefined); }, [form, isOpen, task]);
-  const submit = form.handleSubmit(async (values) => onSubmit({ ...values, description: values.description || null, startAt: values.startAt ? new Date(values.startAt).toISOString() : null, dueAt: values.dueAt ? new Date(values.dueAt).toISOString() : null }, task ?? undefined));
-  return <Sheet isOpen={isOpen} onClose={onClose} title={task ? "Edit Task" : "Add Task"} description="Plan follow-ups and relationship work." side="right" className="w-full sm:max-w-lg"><form onSubmit={submit} className="space-y-5"><Field label="Title" error={form.formState.errors.title?.message}><input {...form.register("title")} className={inputClassName} placeholder="Follow up with client" autoFocus /></Field><Field label="Description"><textarea {...form.register("description")} rows={3} className={`${inputClassName} h-auto py-2`} placeholder="Add context for the task" /></Field><div className="grid gap-5 sm:grid-cols-2"><Field label="Type"><select {...form.register("type")} className={inputClassName}><option value="general">General</option><option value="call">Call</option><option value="email">Email</option><option value="meeting">Meeting</option><option value="follow_up">Follow-up</option><option value="document">Document</option><option value="review">Review</option></select></Field><Field label="Priority"><select {...form.register("priority")} className={inputClassName}><option>low</option><option>medium</option><option>high</option><option>urgent</option></select></Field></div><div className="grid gap-5 sm:grid-cols-2"><Field label="Start"><input type="datetime-local" {...form.register("startAt")} className={inputClassName} /></Field><Field label="Due"><input type="datetime-local" {...form.register("dueAt")} className={inputClassName} /></Field></div><Field label="Status"><select {...form.register("status")} className={inputClassName}><option value="todo">To Do</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></Field><div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]"><button type="button" onClick={onClose} className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-400">Cancel</button><button type="submit" disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50">{isPending ? "Saving..." : task ? "Save Changes" : "Add Task"}</button></div></form></Sheet>;
+type Values = z.infer<typeof schema>;
+
+const inputClassName =
+  "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
+
+function toInputDate(value: string | null | undefined) {
+  return value ? dayjs(value).format("YYYY-MM-DDTHH:mm") : "";
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error-500">{error}</span>}</label>; }
+function defaults(
+  task: TaskRecord | null,
+  defaultStatus: Values["status"],
+  initialStartAt?: string | null,
+  initialDueAt?: string | null,
+): Values {
+  return task
+    ? {
+        title: task.title,
+        description: task.description ?? "",
+        type: task.type,
+        priority: task.priority,
+        status: task.status,
+        color: task.color ?? "#465fff",
+        startAt: toInputDate(task.startAt),
+        dueAt: toInputDate(task.dueAt),
+        reminderAt: toInputDate(task.reminderAt),
+        assigneeId: task.assignee?.id ?? "",
+        leadId: task.leadId ?? "",
+      }
+    : {
+        title: "",
+        description: "",
+        type: "general",
+        priority: "medium",
+        status: defaultStatus,
+        color: "#465fff",
+        startAt: toInputDate(initialStartAt),
+        dueAt: toInputDate(initialDueAt),
+        reminderAt: "",
+        assigneeId: "",
+        leadId: "",
+      };
+}
+
+export default function TaskFormSheet({
+  isOpen,
+  task,
+  defaultStatus = "not-started",
+  initialStartAt,
+  initialDueAt,
+  mode = "task",
+  readOnly = false,
+  onClose,
+  onSubmit,
+  isPending,
+}: {
+  isOpen: boolean;
+  task: TaskRecord | null;
+  defaultStatus?: Values["status"];
+  initialStartAt?: string | null;
+  initialDueAt?: string | null;
+  mode?: "task" | "event";
+  readOnly?: boolean;
+  onClose: () => void;
+  onSubmit: (input: CreateTaskInput, task?: TaskRecord) => Promise<void>;
+  isPending: boolean;
+}) {
+  const usersQuery = useUsersQuery();
+  const leadsQuery = useLeadsQuery();
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: defaults(task, defaultStatus, initialStartAt, initialDueAt),
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset(defaults(task, defaultStatus, initialStartAt, initialDueAt));
+    }
+  }, [defaultStatus, form, initialDueAt, initialStartAt, isOpen, task]);
+
+  const submit = form.handleSubmit(async (values) =>
+    onSubmit(
+      {
+        title: values.title.trim(),
+        description: values.description?.trim() || null,
+        type: values.type,
+        priority: values.priority,
+        status: values.status,
+        color: values.color,
+        startAt: values.startAt ? new Date(values.startAt).toISOString() : null,
+        dueAt: values.dueAt ? new Date(values.dueAt).toISOString() : null,
+        reminderAt: values.reminderAt ? new Date(values.reminderAt).toISOString() : null,
+        assigneeId: values.assigneeId || null,
+        leadId: values.leadId || null,
+      },
+      task ?? undefined,
+    ),
+  );
+
+  const subject = mode === "event" ? "Event" : "Task";
+
+  return (
+    <Sheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title={readOnly ? `View ${subject}` : task ? `Edit ${subject}` : `Add ${subject}`}
+      description={mode === "event" ? "Schedule a relationship event and assign ownership." : "Plan follow-ups and relationship work."}
+      side="right"
+      className="w-full sm:max-w-2xl"
+    >
+      <form onSubmit={submit}>
+        <fieldset disabled={readOnly} className="space-y-6">
+        <FormSection title="Activity details" description="Describe what needs to happen and why.">
+          <Field label={`${subject} title`} error={form.formState.errors.title?.message}>
+            <input {...form.register("title")} className={inputClassName} placeholder={mode === "event" ? "Client meeting" : "Follow up with client"} autoFocus />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Type">
+              <select {...form.register("type")} className={inputClassName}>
+                <option value="general">General</option>
+                <option value="call">Call</option>
+                <option value="email">Email</option>
+                <option value="meeting">Meeting</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="document">Document</option>
+                <option value="review">Review</option>
+              </select>
+            </Field>
+            <Field label="Priority">
+              <select {...form.register("priority")} className={inputClassName}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </Field>
+          </div>
+          <Field label="Description">
+            <textarea {...form.register("description")} rows={4} className={`${inputClassName} h-auto py-2`} placeholder="Add context, preparation notes, or next steps" />
+          </Field>
+        </FormSection>
+
+        <FormSection title="Ownership and relationship" description="Assign the activity to a teammate and connect it to a lead.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Assigned to">
+              <select {...form.register("assigneeId")} className={inputClassName} disabled={usersQuery.isLoading}>
+                <option value="">Me (default)</option>
+                {(usersQuery.data ?? []).map((user) => (
+                  <option key={user.id} value={user.id}>{user.isCurrentUser ? "Me" : user.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Related lead">
+              <select {...form.register("leadId")} className={inputClassName} disabled={leadsQuery.isLoading}>
+                <option value="">No lead linked</option>
+                {(leadsQuery.data ?? []).map((lead) => (
+                  <option key={lead.id} value={lead.id}>{lead.name}{lead.company ? ` · ${lead.company}` : ""}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Schedule" description="Set a start, due, and optional reminder date and time.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Start date and time">
+              <input type="datetime-local" {...form.register("startAt")} className={inputClassName} />
+            </Field>
+            <Field label="Due date and time" error={form.formState.errors.dueAt?.message}>
+              <input type="datetime-local" {...form.register("dueAt")} className={inputClassName} />
+            </Field>
+          </div>
+          <Field label="Reminder">
+            <input type="datetime-local" {...form.register("reminderAt")} className={inputClassName} />
+          </Field>
+        </FormSection>
+
+        <FormSection title="Workflow and appearance" description="Control the workflow status and calendar appearance.">
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+            <Field label="Status">
+              <select {...form.register("status")} className={inputClassName}>
+                <option value="not-started">Not started</option>
+                <option value="in-progress">In progress</option>
+                <option value="completed">Completed</option>
+                <option value="overdue">Overdue / Delayed</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </Field>
+            <Field label="Color hex">
+              <input {...form.register("color")} className={inputClassName} placeholder="#465fff" />
+            </Field>
+            <Field label="Color picker">
+              <input type="color" {...form.register("color")} className="h-10 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-gray-700 dark:bg-gray-900" />
+            </Field>
+          </div>
+        </FormSection>
+
+        </fieldset>
+        <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+          <button type="button" onClick={onClose} className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-400">Cancel</button>
+          <button type="submit" disabled={isPending || readOnly} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">{readOnly ? "View only" : isPending ? "Saving..." : task ? `Save ${subject}` : `Add ${subject}`}</button>
+        </div>
+      </form>
+    </Sheet>
+  );
+}
+
+function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return <section className="space-y-4 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05]"><div><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p></div>{children}</section>;
+}
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error-500">{error}</span>}</label>;
+}

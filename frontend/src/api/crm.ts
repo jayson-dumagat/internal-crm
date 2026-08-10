@@ -95,12 +95,14 @@ const taskSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   type: z.string(),
-  status: z.enum(["todo", "in-progress", "completed", "cancelled"]),
+  status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]),
   priority: z.enum(["low", "medium", "high", "urgent"]),
+  color: z.string().nullable().optional(),
   startAt: z.string().nullable(),
   dueAt: z.string().nullable(),
   reminderAt: z.string().nullable(),
   leadId: z.string().nullable(),
+  lead: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
   assignee: z.object({ id: z.string(), name: z.string(), avatar: z.string().nullable() }).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -118,6 +120,7 @@ export type LeadRecord = z.infer<typeof leadSchema>;
 export type ActivityRecord = z.infer<typeof activitySchema>;
 export type NoteRecord = z.infer<typeof noteSchema>;
 export type TaskRecord = z.infer<typeof taskSchema>;
+export type TaskStatus = TaskRecord["status"];
 
 export type CreateCompanyInput = {
   name: string;
@@ -188,6 +191,7 @@ export type CreateTaskInput = {
   type?: string;
   status?: TaskRecord["status"];
   priority?: TaskRecord["priority"];
+  color?: string | null;
   startAt?: string | null;
   dueAt?: string | null;
   reminderAt?: string | null;
@@ -299,6 +303,22 @@ export async function uploadCompanyLogo(
     return singleResponse(companySchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to upload company logo."));
+  }
+}
+
+export async function uploadLeadAvatar(
+  id: LeadRecord["id"],
+  file: File,
+): Promise<LeadRecord> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.post(`/leads/${id}/avatar`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return singleResponse(leadSchema).parse(response.data).data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Unable to upload lead image."));
   }
 }
 
