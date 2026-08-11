@@ -13,6 +13,7 @@ type LexicalNoteEditorProps = {
   onChange: (plainText: string, html: string) => void;
   initialContentHtml?: string | null;
   readOnly?: boolean;
+  placeholder?: string;
 };
 
 const editorConfig = {
@@ -35,6 +36,7 @@ export default function LexicalNoteEditor({
   onChange,
   initialContentHtml,
   readOnly = false,
+  placeholder = "Write your note...",
 }: LexicalNoteEditorProps) {
   return (
     <LexicalComposer initialConfig={{ ...editorConfig, editable: !readOnly }}>
@@ -52,7 +54,7 @@ export default function LexicalNoteEditor({
             }
             placeholder={
               <div className="pointer-events-none absolute top-3 left-4 text-sm text-gray-400 dark:text-white/30">
-                Write your note...
+                {placeholder}
               </div>
             }
             ErrorBoundary={LexicalErrorBoundary}

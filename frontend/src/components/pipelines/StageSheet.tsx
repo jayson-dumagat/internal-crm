@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 import Sheet from "../ui/sheet/Sheet";
 
@@ -6,6 +8,7 @@ import type {
   PipelineStage,
   StageColor,
 } from "./types";
+import { pipelineStageSchema, type PipelineStageValues } from "../../validations/pipeline";
 
 interface StageSheetProps {
   isOpen: boolean;
@@ -58,28 +61,27 @@ export default function StageSheet({
   onMoveLeft,
   onMoveRight,
 }: StageSheetProps) {
-  const [name, setName] = useState("");
-  const [color, setColor] =
-    useState<StageColor>("default");
+  const form = useForm<PipelineStageValues>({
+    resolver: zodResolver(pipelineStageSchema),
+    defaultValues: { name: "", color: "default" },
+  });
+  const name = form.watch("name");
 
   useEffect(() => {
-    setName(stage?.name ?? "");
-    setColor(stage?.color ?? "default");
-  }, [stage]);
+    form.reset({ name: stage?.name ?? "", color: stage?.color ?? "default" });
+  }, [form, stage]);
 
-  const handleSave = () => {
-    if (!stage || !name.trim()) {
-      return;
-    }
+  const handleSave = form.handleSubmit((values) => {
+    if (!stage) return;
 
     onSave({
       ...stage,
-      name: name.trim(),
-      color,
+      name: values.name.trim(),
+      color: values.color,
     });
 
     onClose();
-  };
+  });
 
   return (
     <Sheet
@@ -91,26 +93,20 @@ export default function StageSheet({
       className="w-full sm:max-w-lg"
     >
       {stage && (
-        <div className="space-y-5">
+        <form onSubmit={handleSave} noValidate className="space-y-5">
           <FormField label="Stage Name">
             <input
-              value={name}
-              onChange={(event) =>
-                setName(event.target.value)
-              }
+              {...form.register("name")}
+              maxLength={100}
               className={inputClassName}
               placeholder="Enter stage name"
             />
+            {form.formState.errors.name?.message && <p className="mt-1 text-xs text-error-500">{form.formState.errors.name.message}</p>}
           </FormField>
 
           <FormField label="Stage Color">
             <select
-              value={color}
-              onChange={(event) =>
-                setColor(
-                  event.target.value as StageColor,
-                )
-              }
+              {...form.register("color")}
               className={inputClassName}
             >
               {colorOptions.map((option) => (
@@ -175,16 +171,15 @@ export default function StageSheet({
               </button>
 
               <button
-                type="button"
+                type="submit"
                 disabled={!name.trim()}
-                onClick={handleSave}
                 className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Save Stage
               </button>
             </div>
           </div>
-        </div>
+        </form>
       )}
     </Sheet>
   );
@@ -201,31 +196,29 @@ export function AddStageSheet({
   onSave: (stage: PipelineStage) => void;
   nextOrder: number;
 }) {
-  const [name, setName] = useState("");
-  const [color, setColor] =
-    useState<StageColor>("default");
+  const form = useForm<PipelineStageValues>({
+    resolver: zodResolver(pipelineStageSchema),
+    defaultValues: { name: "", color: "default" },
+  });
+  const name = form.watch("name");
 
   useEffect(() => {
     if (isOpen) {
-      setName("");
-      setColor("default");
+      form.reset({ name: "", color: "default" });
     }
-  }, [isOpen]);
+  }, [form, isOpen]);
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      return;
-    }
+  const handleSave = form.handleSubmit((values) => {
 
     onSave({
       id: createId("stage"),
-      name: name.trim(),
-      color,
+      name: values.name.trim(),
+      color: values.color,
       order: nextOrder,
     });
 
     onClose();
-  };
+  });
 
   return (
     <Sheet
@@ -236,26 +229,20 @@ export function AddStageSheet({
       side="right"
       className="w-full sm:max-w-lg"
     >
-      <div className="space-y-5">
+      <form onSubmit={handleSave} noValidate className="space-y-5">
         <FormField label="Stage Name">
           <input
-            value={name}
-            onChange={(event) =>
-              setName(event.target.value)
-            }
+            {...form.register("name")}
+            maxLength={100}
             className={inputClassName}
             placeholder="Enter stage name"
           />
+          {form.formState.errors.name?.message && <p className="mt-1 text-xs text-error-500">{form.formState.errors.name.message}</p>}
         </FormField>
 
         <FormField label="Stage Color">
           <select
-            value={color}
-            onChange={(event) =>
-              setColor(
-                event.target.value as StageColor,
-              )
-            }
+            {...form.register("color")}
             className={inputClassName}
           >
             {colorOptions.map((option) => (
@@ -279,15 +266,14 @@ export function AddStageSheet({
           </button>
 
           <button
-            type="button"
+            type="submit"
             disabled={!name.trim()}
-            onClick={handleSave}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Add Stage
           </button>
         </div>
-      </div>
+      </form>
     </Sheet>
   );
 }

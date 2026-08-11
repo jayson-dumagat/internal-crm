@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import type { CompanyRecord, ContactRecord } from "../../api/crm";
+import { contactFormSchema, type ContactFormValues } from "../../validations/crm";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { useCreateContact, useUpdateContact, useUploadContactAvatar, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
@@ -13,24 +13,15 @@ import Avatar from "../ui/avatar/Avatar";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
 import { InfoIcon } from "../../icons";
 
-const contactFormSchema = z.object({
-  name: z.string().trim().min(1, "Contact name is required.").max(255),
-  role: z.string().max(200).optional(),
-  companyId: z.string().optional(),
-  email: z.string().trim().email("Enter a valid email address."),
-  phone: z.string().max(50).optional(),
-  relationshipLevel: z.enum(["High", "Medium", "Low"]),
-  relationshipOwnerId: z.string().max(150).optional(),
-  location: z.string().max(255).optional(),
-  typeOfClient: z.string().max(80).optional(),
-  riskProfile: z.string().max(30).optional(),
-  preferredContactMethod: z.string().max(30).optional(),
-  status: z.enum(["Customer", "Prospect", "KYC Pending", "Dormant", "Closed"]),
-  tags: z.string().optional(),
-});
-
-type ContactFormValues = z.infer<typeof contactFormSchema>;
 const inputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
+
+const clientTypeOptions = ["Retail Investor", "High Net Worth Individual", "Institutional Investor", "Corporate Client", "Partner / Introducer"] as const;
+const riskProfileOptions = ["Conservative", "Balanced", "Aggressive"] as const;
+const preferredContactMethodOptions = ["Email", "Phone", "Meeting", "Video Call"] as const;
+
+function normalizeSelectValue<T extends string>(value: string | null | undefined, options: readonly T[]): T | "" {
+  return value && options.includes(value as T) ? (value as T) : "";
+}
 
 const emptyContactFormValues = (relationshipOwnerId = ""): ContactFormValues => ({
   name: "",
@@ -88,9 +79,9 @@ export default function AddContactSheet({
       relationshipLevel: contact.relationship_level,
       relationshipOwnerId: contact.relationship_owner_id ?? (contact.owner.name === "Unassigned" ? "" : `legacy:${contact.owner.name}`),
       location: cleanDisplayValue(contact.location),
-      typeOfClient: contact.type_of_client ?? "",
-      riskProfile: contact.risk_profile ?? "",
-      preferredContactMethod: contact.preferred_contact_method ?? "",
+      typeOfClient: normalizeSelectValue(contact.type_of_client, clientTypeOptions),
+      riskProfile: normalizeSelectValue(contact.risk_profile, riskProfileOptions),
+      preferredContactMethod: normalizeSelectValue(contact.preferred_contact_method, preferredContactMethodOptions),
       status: contact.status,
       tags: contact.tags?.join(", ") ?? "",
     } : emptyContactFormValues(currentUser?.entraObjectId));
@@ -196,10 +187,10 @@ export default function AddContactSheet({
   });
 
   return (
-    <Sheet isOpen={isOpen} onClose={closeSheet} title={contact ? "Edit Contact" : "Add Contact"} description={contact ? "Update this client or relationship details." : "Add a client or relationship to your directory."} side="right" className="w-full sm:max-w-2xl">
-      <form onSubmit={submit} className="space-y-6">
+    <Sheet isOpen={isOpen} onClose={closeSheet} title={contact ? "Edit Contact" : "Add Contact"} description={contact ? "Update this client or relationship details." : "Add a client or relationship to your directory."} side="right" className="w-full sm:max-w-2xl xl:max-w-3xl">
+      <form onSubmit={submit} noValidate className="space-y-6">
         <FormSection title="Basic information" description="Identify the contact and their organization.">
-          <FormField label="Name" error={form.formState.errors.name?.message}><input {...form.register("name")} className={inputClassName} placeholder="Full name" autoFocus /></FormField>
+          <FormField label="Name" error={form.formState.errors.name?.message}><input {...form.register("name")} maxLength={255} className={inputClassName} placeholder="Full name" autoFocus /></FormField>
           <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
             <input {...getInputProps()} />
             <Avatar src={displayedAvatar} alt={contactName || "Contact"} colorKey="contact-avatar" size="large" />
@@ -209,22 +200,22 @@ export default function AddContactSheet({
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Role / Job Title"><input {...form.register("role")} className={inputClassName} placeholder="Managing Director" /></FormField>
+            <FormField label="Role / Job Title" error={form.formState.errors.role?.message}><input {...form.register("role")} maxLength={200} className={inputClassName} placeholder="Managing Director" /></FormField>
             <FormField label="Company"><select {...form.register("companyId")} disabled={companiesLoading} className={inputClassName}><option value="">Individual / not linked</option>{companiesLoading ? <option disabled>Loading companies...</option> : companies.map((company) => <option key={company.id} value={String(company.id)}>{company.name}</option>)}</select></FormField>
           </div>
         </FormSection>
 
         <FormSection title="Contact details" description="How the relationship team can reach this contact.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Email" error={form.formState.errors.email?.message}><input type="email" {...form.register("email")} className={inputClassName} placeholder="name@company.com" /></FormField>
-            <FormField label="Phone"><input {...form.register("phone")} className={inputClassName} placeholder="+63 917 555 0182" /></FormField>
+            <FormField label="Email" error={form.formState.errors.email?.message}><input type="email" {...form.register("email")} maxLength={320} className={inputClassName} placeholder="name@company.com" /></FormField>
+            <FormField label="Phone" error={form.formState.errors.phone?.message}><input type="tel" {...form.register("phone")} maxLength={50} className={inputClassName} placeholder="+63 917 555 0182" /></FormField>
           </div>
-          <FormField label="Location / Address"><input {...form.register("location")} className={inputClassName} placeholder="Makati, Philippines" /></FormField>
+          <FormField label="Location / Address" error={form.formState.errors.location?.message}><input {...form.register("location")} maxLength={255} className={inputClassName} placeholder="Makati, Philippines" /></FormField>
         </FormSection>
 
         <FormSection title="Relationship management" description="Assign ownership and track the current relationship state.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Relationship Owner">
+            <FormField label="Relationship Owner" error={form.formState.errors.relationshipOwnerId?.message}>
               <div className="relative">
                 {selectedOwner && <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center"><Avatar src={selectedOwner.avatarUrl} alt={selectedOwner.name} size="xsmall" colorKey={`owner-${selectedOwner.id}`} /></span>}
                 <select {...form.register("relationshipOwnerId")} disabled={usersQuery.isLoading} className={`${inputClassName} ${selectedOwner ? "pl-11" : ""}`}>
@@ -233,21 +224,21 @@ export default function AddContactSheet({
                 </select>
               </div>
             </FormField>
-            <FormField label="Relationship Level"><select {...form.register("relationshipLevel")} className={inputClassName}><option>High</option><option>Medium</option><option>Low</option></select></FormField>
+            <FormField label="Relationship Level" error={form.formState.errors.relationshipLevel?.message}><select {...form.register("relationshipLevel")} className={inputClassName}><option>High</option><option>Medium</option><option>Low</option></select></FormField>
           </div>
           <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Customer</option><option>KYC Pending</option><option>Dormant</option><option>Closed</option></select></FormField>
         </FormSection>
 
         <FormSection title="Investor profile" description="Capture client classification, suitability, and communication preferences.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Type of Client"><select {...form.register("typeOfClient")} className={inputClassName}><option value="">Select type</option><option>Retail Investor</option><option>High Net Worth Individual</option><option>Institutional Investor</option><option>Corporate Client</option><option>Partner / Introducer</option></select></FormField>
-            <FormField label="Risk Profile"><select {...form.register("riskProfile")} className={inputClassName}><option value="">Select profile</option><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></FormField>
+            <FormField label="Type of Client" error={form.formState.errors.typeOfClient?.message}><select {...form.register("typeOfClient")} className={inputClassName}><option value="">Select type</option><option>Retail Investor</option><option>High Net Worth Individual</option><option>Institutional Investor</option><option>Corporate Client</option><option>Partner / Introducer</option></select></FormField>
+            <FormField label="Risk Profile" error={form.formState.errors.riskProfile?.message}><select {...form.register("riskProfile")} className={inputClassName}><option value="">Select profile</option><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></FormField>
           </div>
-          <FormField label="Preferred Contact Method"><select {...form.register("preferredContactMethod")} className={inputClassName}><option value="">Select method</option><option>Email</option><option>Phone</option><option>Meeting</option><option>Video Call</option></select></FormField>
+          <FormField label="Preferred Contact Method" error={form.formState.errors.preferredContactMethod?.message}><select {...form.register("preferredContactMethod")} className={inputClassName}><option value="">Select method</option><option>Email</option><option>Phone</option><option>Meeting</option><option>Video Call</option></select></FormField>
         </FormSection>
 
         <FormSection title="Organization" description="Add labels that make this contact easier to find and segment.">
-          <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Decision Maker" /><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Separate tags with commas.</p></FormField>
+          <FormField label="Tags" error={form.formState.errors.tags?.message}><input {...form.register("tags")} maxLength={500} className={inputClassName} placeholder="VIP, Decision Maker" /><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Separate tags with commas.</p></FormField>
         </FormSection>
 
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]"><button type="button" onClick={closeSheet} className={secondaryButtonClassName}>Cancel</button><button type="submit" disabled={createContact.isPending || updateContact.isPending || uploadAvatar.isPending} className={primaryButtonClassName}>{createContact.isPending || updateContact.isPending || uploadAvatar.isPending ? "Saving..." : contact ? "Save Changes" : "Add Contact"}</button></div>

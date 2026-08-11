@@ -43,7 +43,7 @@ export default function Calendar() {
 
   const events = useMemo<EventInput[]>(
     () => tasks
-      .filter((task) => task.status !== "blocked" && (task.startAt || task.dueAt))
+      .filter((task) => task.kind === "event" && task.status !== "blocked" && (task.startAt || task.dueAt))
       .map((task) => {
         const color = task.color ?? priorityColors[task.priority];
         return {
@@ -100,10 +100,10 @@ export default function Calendar() {
     if (!editing && !canCreate) return;
     try {
       if (editing) {
-        await updateTask.mutateAsync({ id: editing.id, input });
+        await updateTask.mutateAsync({ id: editing.id, input: { ...input, kind: "event" } });
         toast.success("Calendar event updated.");
       } else {
-        await createTask.mutateAsync({ ...input, type: input.type ?? "meeting" });
+        await createTask.mutateAsync({ ...input, kind: "event", type: input.type ?? "meeting" });
         toast.success("Calendar event added.");
       }
       closeForm();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearch } from "../context/SearchContext";
+import { useSearch } from "../hooks/useSearch";
 import {useDebounce } from "../hooks/useDebounce";
 import dayjs from "dayjs";
 

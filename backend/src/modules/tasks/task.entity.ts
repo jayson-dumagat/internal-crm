@@ -21,6 +21,11 @@ export enum TaskStatus {
   BLOCKED = "blocked",
 }
 
+export enum TaskKind {
+  TASK = "task",
+  EVENT = "event",
+}
+
 export enum TaskPriority {
   LOW = "low",
   MEDIUM = "medium",
@@ -39,6 +44,7 @@ export enum TaskType {
 }
 
 @Entity({ name: "tasks" })
+@Index("idx_tasks_kind", ["kind"])
 @Index("idx_tasks_status", ["status"])
 @Index("idx_tasks_priority", ["priority"])
 @Index("idx_tasks_due_at", ["dueAt"])
@@ -64,6 +70,13 @@ export class Task {
     nullable: true,
   })
   description!: string | null;
+
+  @Column({
+    type: "varchar",
+    length: 20,
+    default: TaskKind.TASK,
+  })
+  kind!: TaskKind;
 
   @Column({
     type: "enum",

@@ -1,10 +1,6 @@
 import axios from "axios";
 import { z } from "zod";
-
-const apiErrorSchema = z.object({
-  error: z.string().optional(),
-  message: z.string().optional(),
-});
+import { apiErrorSchema } from "../validations/api";
 
 export function getApiErrorMessage(
   error: unknown,
@@ -23,4 +19,3 @@ export function getApiErrorMessage(
 
   return error instanceof Error ? error.message : fallback;
 }
-

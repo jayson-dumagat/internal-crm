@@ -1,8 +1,21 @@
 import { Link } from "react-router";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
+import { resetPasswordSchema, type ResetPasswordValues } from "../../validations/auth";
 
 export default function ResetPasswordForm() {
+  const form = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { email: "" },
+  });
+
+  const submit = form.handleSubmit(() => {
+    toast.info("Password resets are managed through your CGSI Microsoft Account.");
+  });
+
   return (
     <div className="flex flex-col flex-1 w-full lg:w-1/2">
       
@@ -17,7 +30,7 @@ export default function ResetPasswordForm() {
           </p>
         </div>
         <div>
-          <form>
+          <form onSubmit={submit} noValidate>
             <div className="space-y-5">
               {/* <!-- Email --> */}
               <div>
@@ -27,14 +40,17 @@ export default function ResetPasswordForm() {
                 <Input
                   type="email"
                   id="email"
-                  name="email"
                   placeholder="Enter your email"
+                  {...form.register("email")}
+                  error={Boolean(form.formState.errors.email)}
+                  hint={form.formState.errors.email?.message}
+                  maxLength={320}
                 />
               </div>
 
               {/* <!-- Button --> */}
               <div>
-                <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                <button type="submit" className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
                   Send Reset Link
                 </button>
               </div>

@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { SearchIcon } from "../../icons";
-import { useSearch } from "../../context/SearchContext";
+import { useSearch } from "../../hooks/useSearch";
 
 const SearchField = () => {
   const { search, setSearch } = useSearch();

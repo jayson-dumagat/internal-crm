@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { forwardRef } from "react";
 import type { FC } from "react";
 
 interface InputProps {
@@ -8,9 +8,11 @@ interface InputProps {
   placeholder?: string;
   value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   className?: string;
-  min?: string;
-  max?: string;
+  min?: string | number;
+  max?: string | number;
+  maxLength?: number;
   step?: number;
   disabled?: boolean;
   success?: boolean;
@@ -18,22 +20,24 @@ interface InputProps {
   hint?: string;
 }
 
-const Input: FC<InputProps> = ({
+const Input: FC<InputProps> = forwardRef<HTMLInputElement, InputProps>(({ 
   type = "text",
   id,
   name,
   placeholder,
   value,
   onChange,
+  onBlur,
   className = "",
   min,
   max,
+  maxLength,
   step,
   disabled = false,
   success = false,
   error = false,
   hint,
-}) => {
+}, ref) => {
   let inputClasses = ` h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3  dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${className}`;
 
   if (disabled) {
@@ -49,14 +53,17 @@ const Input: FC<InputProps> = ({
   return (
     <div className="relative">
       <input
+        ref={ref}
         type={type}
         id={id}
         name={name}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         min={min}
         max={max}
+        maxLength={maxLength}
         step={step}
         disabled={disabled}
         className={inputClasses}
@@ -77,6 +84,8 @@ const Input: FC<InputProps> = ({
       )}
     </div>
   );
-};
+});
+
+Input.displayName = "Input";
 
 export default Input;

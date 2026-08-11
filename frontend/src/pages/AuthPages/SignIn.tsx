@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
 import PageMeta from "../../components/common/PageMeta";
 import AuthLayout from "./AuthPageLayout";
 import SignInForm from "../../components/auth/SignInForm";
-import AuthToast from "../../components/auth/AuthToast";
+import { useToast } from "../../hooks/useToast";
 import { useSessionQuery } from "../../hooks/auth/useAuthApi";
 import { useAuth } from "../../hooks/auth/useAuth";
 
 export default function SignIn() {
+  const { success, error } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setUser } = useAuth();
@@ -25,18 +25,20 @@ export default function SignIn() {
       return;
     }
 
-    toast.custom((toastId) => (
-      <AuthToast
-        toastId={toastId}
-        variant="error"
-        title="Sign in failed"
-        description={callbackError}
-      />
-    ), {
-      id: "sign-in-error",
-      duration: 5000,
+    error("Sign in failed", {
+      description: callbackError,
     });
-  }, [callbackError]);
+  }, [callbackError, error]);
+
+  useEffect(() => {
+    if (!sessionQuery.data || !sessionQuery.error) {
+      return;
+    }
+
+    error("Sign in failed", {
+      description: sessionQuery.error.message,
+    });
+  }, [sessionQuery.data, sessionQuery.error, error]);
 
   useEffect(() => {
     if (!sessionQuery.data) {
@@ -44,19 +46,8 @@ export default function SignIn() {
     }
 
     setUser(sessionQuery.data.user);
-    toast.custom((toastId) => (
-      <AuthToast
-        toastId={toastId}
-        variant="success"
-        title={
-          isLoginCallback
-            ? "Logged in successfully"
-            : "You are already logged in, redirecting..."
-        }
-      />
-    ), {
-      id: "sign-in-success",
-      duration: 4000,
+    success("Sign in successful", {
+      description: "You will be redirected to the dashboard shortly.",
     });
 
     const redirectTimer = window.setTimeout(() => {
@@ -64,25 +55,17 @@ export default function SignIn() {
     }, 1200);
 
     return () => window.clearTimeout(redirectTimer);
-  }, [isLoginCallback, navigate, sessionQuery.data, setUser]);
+  }, [isLoginCallback, navigate, sessionQuery.data, setUser, success]);
 
   useEffect(() => {
     if (!isLoginCallback || !sessionQuery.error) {
       return;
     }
 
-    toast.custom((toastId) => (
-      <AuthToast
-        toastId={toastId}
-        variant="error"
-        title="Sign in could not be completed"
-        description={sessionQuery.error.message}
-      />
-    ), {
-      id: "sign-in-session-error",
-      duration: 5000,
+    error("Sign in failed", {
+      description: sessionQuery.error.message,
     });
-  }, [isLoginCallback, sessionQuery.error]);
+  }, [error, isLoginCallback, sessionQuery.error]);
 
   return (
     <>

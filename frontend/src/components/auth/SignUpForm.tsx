@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
+import { signUpSchema, type SignUpValues } from "../../validations/auth";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
@@ -8,6 +12,20 @@ import Checkbox from "../form/input/Checkbox";
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      termsAccepted: false,
+    },
+  });
+
+  const submit = form.handleSubmit(() => {
+    toast.info("Account creation is managed through your CGSI Microsoft Account.");
+  });
   return (
     <div className="flex flex-col flex-1 w-full overflow-y-auto lg:w-1/2 no-scrollbar">
       <div className="w-full max-w-md mx-auto mb-5 sm:pt-10">
@@ -31,7 +49,7 @@ export default function SignUpForm() {
           </div>
           <div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
-              <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
+              <button type="button" className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                 <svg
                   width="20"
                   height="20"
@@ -58,7 +76,7 @@ export default function SignUpForm() {
                 </svg>
                 Sign up with Google
               </button>
-              <button className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
+              <button type="button" className="inline-flex items-center justify-center gap-3 py-3 text-sm font-normal text-gray-700 transition-colors bg-gray-100 rounded-lg px-7 hover:bg-gray-200 hover:text-gray-800 dark:bg-white/5 dark:text-white/90 dark:hover:bg-white/10">
                 <svg
                   width="21"
                   className="fill-current"
@@ -82,7 +100,7 @@ export default function SignUpForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <form onSubmit={submit} noValidate>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   {/* <!-- First Name --> */}
@@ -93,8 +111,11 @@ export default function SignUpForm() {
                     <Input
                       type="text"
                       id="fname"
-                      name="fname"
                       placeholder="Enter your first name"
+                      {...form.register("firstName")}
+                      error={Boolean(form.formState.errors.firstName)}
+                      hint={form.formState.errors.firstName?.message}
+                      maxLength={100}
                     />
                   </div>
                   {/* <!-- Last Name --> */}
@@ -105,8 +126,11 @@ export default function SignUpForm() {
                     <Input
                       type="text"
                       id="lname"
-                      name="lname"
                       placeholder="Enter your last name"
+                      {...form.register("lastName")}
+                      error={Boolean(form.formState.errors.lastName)}
+                      hint={form.formState.errors.lastName?.message}
+                      maxLength={100}
                     />
                   </div>
                 </div>
@@ -118,8 +142,11 @@ export default function SignUpForm() {
                   <Input
                     type="email"
                     id="email"
-                    name="email"
                     placeholder="Enter your email"
+                    {...form.register("email")}
+                    error={Boolean(form.formState.errors.email)}
+                    hint={form.formState.errors.email?.message}
+                    maxLength={320}
                   />
                 </div>
                 {/* <!-- Password --> */}
@@ -131,6 +158,10 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      {...form.register("password")}
+                      error={Boolean(form.formState.errors.password)}
+                      hint={form.formState.errors.password?.message}
+                      maxLength={128}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -149,7 +180,12 @@ export default function SignUpForm() {
                   <Checkbox
                     className="w-5 h-5"
                     checked={isChecked}
-                    onChange={setIsChecked}
+                    onChange={(checked) => {
+                      setIsChecked(checked);
+                      form.setValue("termsAccepted", checked, {
+                        shouldValidate: true,
+                      });
+                    }}
                   />
                   <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
                     By creating an account means you agree to the{" "}
@@ -161,10 +197,15 @@ export default function SignUpForm() {
                       Privacy Policy
                     </span>
                   </p>
+                  {form.formState.errors.termsAccepted?.message && (
+                    <p className="text-xs text-error-500">
+                      {form.formState.errors.termsAccepted.message}
+                    </p>
+                  )}
                 </div>
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                  <button type="submit" className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
                     Sign Up
                   </button>
                 </div>

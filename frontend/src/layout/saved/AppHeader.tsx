@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useSidebar } from "../../context/SidebarContext";
-import { useSearch } from "../../context/SearchContext";
+import { useSearch } from "../../hooks/useSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 
 import { ThemeToggleButton } from "../../components/common/ThemeToggleButton";

@@ -10,6 +10,7 @@ export class CreateTasks1764800700000 implements MigrationInterface {
         tenant_id uuid NOT NULL,
         title varchar(255) NOT NULL,
         description text,
+        kind varchar(20) NOT NULL DEFAULT 'task',
         type varchar(30) NOT NULL DEFAULT 'general',
         status varchar(30) NOT NULL DEFAULT 'not_started',
         priority varchar(20) NOT NULL DEFAULT 'medium',
@@ -29,6 +30,7 @@ export class CreateTasks1764800700000 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tasks_tenant_id ON tasks(tenant_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tasks_kind ON tasks(kind)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee_id ON tasks(assignee_id)`);

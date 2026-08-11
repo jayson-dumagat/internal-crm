@@ -4,7 +4,7 @@ import { AppDataSource } from "../../database/data-source";
 import { recordActivity } from "../activities/activity.service";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
-import { Task, TaskPriority, TaskStatus, TaskType } from "./task.entity";
+import { Task, TaskKind, TaskPriority, TaskStatus, TaskType } from "./task.entity";
 import { createTaskSchema, updateTaskSchema, updateTaskStatusSchema } from "./task.schema";
 import { Lead } from "../leads/lead.entity";
 
@@ -53,6 +53,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
     const task = taskRepository().create({
       title: parsed.data.title,
       description: parsed.data.description || null,
+      kind: (parsed.data.kind ?? TaskKind.TASK) as TaskKind,
       type: (parsed.data.type ?? TaskType.GENERAL) as TaskType,
       status: toTaskStatus(parsed.data.status),
       priority: (parsed.data.priority ?? TaskPriority.MEDIUM) as TaskPriority,
@@ -73,7 +74,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
       isReminderSent: false,
     });
     const saved = await taskRepository().save(task);
-    await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: "created task", target: saved.title, category: "Task", ipAddress: req.ip });
+    await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "created event" : "created task", target: saved.title, category: "Task", ipAddress: req.ip });
     res.status(201).json({ data: toTaskDto(saved) });
   } catch (error) { next(error); }
 }
@@ -90,6 +91,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     Object.assign(task, {
       ...parsed.data,
       description: parsed.data.description === undefined ? task.description : parsed.data.description || null,
+      kind: parsed.data.kind === undefined ? task.kind : (parsed.data.kind as TaskKind),
       type: parsed.data.type === undefined ? task.type : parsed.data.type,
       status: parsed.data.status === undefined ? task.status : toTaskStatus(parsed.data.status),
       priority: parsed.data.priority === undefined ? task.priority : parsed.data.priority,
@@ -114,7 +116,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     if (task.status === TaskStatus.COMPLETED && !task.completedAt) { task.completedAt = new Date(); task.completedById = currentUser?.id ?? null; }
     if (task.status !== TaskStatus.COMPLETED) { task.completedAt = null; task.completedById = null; }
     const saved = await taskRepository().save(task);
-    if (currentUser) await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: "updated task", target: saved.title, category: "Task", ipAddress: req.ip });
+    if (currentUser) await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "updated event" : "updated task", target: saved.title, category: "Task", ipAddress: req.ip });
     res.status(200).json({ data: toTaskDto(saved) });
   } catch (error) { next(error); }
 }
@@ -144,6 +146,7 @@ function toTaskDto(task: Task) {
     id: task.id,
     title: task.title,
     description: task.description,
+    kind: task.kind,
     type: task.type,
     status: fromTaskStatus(task.status),
     priority: task.priority,

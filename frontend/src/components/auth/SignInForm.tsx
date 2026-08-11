@@ -2,16 +2,19 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { toast } from "sonner";
 import { EyeCloseIcon, EyeIcon, MicrosoftIcon } from "../../icons";
+import {
+  microsoftSignInSchema,
+  signInSchema,
+  type MicrosoftSignInValues,
+  type SignInValues,
+} from "../../validations/auth";
 import { useMicrosoftSignIn } from "../../hooks/auth/useAuthApi";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
-
-const microsoftSignInSchema = z.object({});
-type MicrosoftSignInValues = z.infer<typeof microsoftSignInSchema>;
 
 interface SignInFormProps {
   isCompletingSignIn?: boolean;
@@ -26,10 +29,18 @@ export default function SignInForm({
     resolver: zodResolver(microsoftSignInSchema),
     defaultValues: {},
   });
+  const passwordSignInForm = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: "", password: "", keepLoggedIn: false },
+  });
   const microsoftSignIn = useMicrosoftSignIn();
 
   const handleMicrosoftSignIn = microsoftSignInForm.handleSubmit(() => {
     microsoftSignIn.mutate();
+  });
+
+  const handlePasswordSignIn = passwordSignInForm.handleSubmit(() => {
+    toast.error("Password sign-in is unavailable. Use your CGSI Microsoft Account.");
   });
 
   return (
@@ -98,13 +109,20 @@ export default function SignInForm({
               </span>
             </div>
           </div>
-          <form>
+          <form onSubmit={handlePasswordSignIn} noValidate>
             <div className="space-y-5 sm:space-y-6">
               <div>
                 <Label>
                   Email <span className="text-error-500">*</span>
                 </Label>
-                <Input placeholder="john.doe@caballes-go.com" />
+                <Input
+                  type="email"
+                  placeholder="john.doe@caballes-go.com"
+                  {...passwordSignInForm.register("email")}
+                  error={Boolean(passwordSignInForm.formState.errors.email)}
+                  hint={passwordSignInForm.formState.errors.email?.message}
+                  maxLength={320}
+                />
               </div>
 
               <div>
@@ -116,6 +134,10 @@ export default function SignInForm({
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
+                    {...passwordSignInForm.register("password")}
+                    error={Boolean(passwordSignInForm.formState.errors.password)}
+                    hint={passwordSignInForm.formState.errors.password?.message}
+                    maxLength={128}
                   />
 
                   <span
@@ -133,7 +155,15 @@ export default function SignInForm({
 
               <div className="flex flex-row justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Checkbox checked={isChecked} onChange={setIsChecked} />
+                  <Checkbox
+                    checked={isChecked}
+                    onChange={(checked) => {
+                      setIsChecked(checked);
+                      passwordSignInForm.setValue("keepLoggedIn", checked, {
+                        shouldValidate: true,
+                      });
+                    }}
+                  />
                   <span className="block text-theme-sm font-normal text-gray-700 dark:text-gray-400">
                     Keep me logged in
                   </span>

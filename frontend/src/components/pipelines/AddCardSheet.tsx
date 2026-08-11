@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 import Sheet from "../ui/sheet/Sheet";
+import { pipelineCardSchema, type PipelineCardValues } from "../../validations/pipeline";
 
 export type NewPipelineCard = {
   name: string;
@@ -26,39 +29,31 @@ export default function AddCardSheet({
   onClose,
   onSave,
 }: AddCardSheetProps) {
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [company, setCompany] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const form = useForm<PipelineCardValues>({
+    resolver: zodResolver(pipelineCardSchema),
+    defaultValues: { name: "", role: "", company: "", email: "", phone: "" },
+  });
+  const name = form.watch("name");
 
-  const resetForm = () => {
-    setName("");
-    setRole("");
-    setCompany("");
-    setEmail("");
-    setPhone("");
-  };
+  useEffect(() => {
+    if (isOpen) form.reset({ name: "", role: "", company: "", email: "", phone: "" });
+  }, [form, isOpen]);
 
   const handleClose = () => {
-    resetForm();
+    form.reset({ name: "", role: "", company: "", email: "", phone: "" });
     onClose();
   };
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      return;
-    }
-
+  const handleSave = form.handleSubmit((values) => {
     onSave({
-      name: name.trim(),
-      role: role.trim(),
-      company: company.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
+      name: values.name.trim(),
+      role: values.role?.trim() ?? "",
+      company: values.company?.trim() ?? "",
+      email: values.email?.trim() ?? "",
+      phone: values.phone?.trim() ?? "",
     });
     handleClose();
-  };
+  });
 
   return (
     <Sheet
@@ -69,21 +64,22 @@ export default function AddCardSheet({
       side="right"
       className="w-full sm:max-w-lg"
     >
-      <div className="space-y-5">
+      <form onSubmit={handleSave} noValidate className="space-y-5">
         <FormField label="Name">
           <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            {...form.register("name")}
+            maxLength={255}
             className={inputClassName}
             placeholder="Enter contact name"
             autoFocus
           />
+          {form.formState.errors.name?.message && <p className="mt-1 text-xs text-error-500">{form.formState.errors.name.message}</p>}
         </FormField>
 
         <FormField label="Role">
           <input
-            value={role}
-            onChange={(event) => setRole(event.target.value)}
+            {...form.register("role")}
+            maxLength={200}
             className={inputClassName}
             placeholder="Enter role or job title"
           />
@@ -91,8 +87,8 @@ export default function AddCardSheet({
 
         <FormField label="Company">
           <input
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
+            {...form.register("company")}
+            maxLength={255}
             className={inputClassName}
             placeholder="Enter company"
           />
@@ -102,18 +98,19 @@ export default function AddCardSheet({
           <FormField label="Email">
             <input
               type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+            {...form.register("email")}
+            maxLength={320}
               className={inputClassName}
               placeholder="name@company.com"
             />
           </FormField>
+          {form.formState.errors.email?.message && <p className="-mt-4 text-xs text-error-500">{form.formState.errors.email.message}</p>}
 
           <FormField label="Phone">
             <input
               type="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              {...form.register("phone")}
+              maxLength={50}
               className={inputClassName}
               placeholder="+63"
             />
@@ -130,15 +127,14 @@ export default function AddCardSheet({
           </button>
 
           <button
-            type="button"
+            type="submit"
             disabled={!name.trim()}
-            onClick={handleSave}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Add Card
           </button>
         </div>
-      </div>
+      </form>
     </Sheet>
   );
 }

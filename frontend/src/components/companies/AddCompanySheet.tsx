@@ -3,27 +3,13 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import type { CompanyRecord } from "../../api/crm";
+import { companyFormSchema, type CompanyFormValues } from "../../validations/crm";
 import Sheet from "../ui/sheet/Sheet";
 import { useCreateCompany, useUpdateCompany, useUploadCompanyLogo } from "../../hooks/crm/useCrmDirectory";
 import Avatar from "../ui/avatar/Avatar";
 import { InfoIcon } from "../../icons";
-
-const companyFormSchema = z.object({
-  name: z.string().trim().min(1, "Company name is required.").max(255),
-  industry: z.string().max(200).optional(),
-  location: z.string().max(255).optional(),
-  employees: z.string().max(50).optional(),
-  revenue: z.string().max(100).optional(),
-  website: z.string().max(500).optional(),
-  customerSince: z.string().optional(),
-  tags: z.string().optional(),
-  status: z.enum(["Active", "Prospect", "Dormant"]),
-});
-
-type CompanyFormValues = z.infer<typeof companyFormSchema>;
 
 const inputClassName =
   "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -137,12 +123,12 @@ export default function AddCompanySheet({
       title={company ? "Edit Company" : "Add Company"}
       description={company ? "Update this company’s relationship details." : "Add a company to your relationship directory."}
       side="right"
-      className="w-full sm:max-w-lg"
+      className="w-full sm:max-w-2xl xl:max-w-3xl"
     >
-      <form onSubmit={submit} className="space-y-6">
+      <form onSubmit={submit} noValidate className="space-y-6">
         <FormSection title="Company identity" description="Identify the organization and its relationship status.">
           <FormField label="Company Name" error={form.formState.errors.name?.message}>
-            <input {...form.register("name")} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
+            <input {...form.register("name")} maxLength={255} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
           </FormField>
           <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
             <input {...getInputProps()} />
@@ -153,25 +139,25 @@ export default function AddCompanySheet({
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Industry"><input {...form.register("industry")} className={inputClassName} placeholder="Investment Management" /></FormField>
+            <FormField label="Industry" error={form.formState.errors.industry?.message}><input {...form.register("industry")} maxLength={200} className={inputClassName} placeholder="Investment Management" /></FormField>
             <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Active</option><option>Dormant</option></select></FormField>
           </div>
         </FormSection>
 
         <FormSection title="Business profile" description="Capture the organization’s location, size, value, and relationship timeline.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Location"><input {...form.register("location")} className={inputClassName} placeholder="Makati City, Philippines" /></FormField>
-            <FormField label="Employees"><input {...form.register("employees")} className={inputClassName} placeholder="51-200" /></FormField>
+            <FormField label="Location" error={form.formState.errors.location?.message}><input {...form.register("location")} maxLength={255} className={inputClassName} placeholder="Makati City, Philippines" /></FormField>
+            <FormField label="Employees" error={form.formState.errors.employees?.message}><input {...form.register("employees")} maxLength={50} inputMode="numeric" className={inputClassName} placeholder="51-200" /></FormField>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Revenue"><input {...form.register("revenue")} className={inputClassName} placeholder="PHP 850M" /></FormField>
+            <FormField label="Revenue" error={form.formState.errors.revenue?.message}><input {...form.register("revenue")} maxLength={100} className={inputClassName} placeholder="PHP 850M" /></FormField>
             <FormField label="Customer Since"><input type="date" {...form.register("customerSince")} className={inputClassName} /></FormField>
           </div>
         </FormSection>
 
         <FormSection title="Digital presence and tags" description="Add online details and labels for searching and segmentation.">
-          <FormField label="Website"><input {...form.register("website")} className={inputClassName} placeholder="northbridgecapital.com" /></FormField>
-          <FormField label="Tags"><input {...form.register("tags")} className={inputClassName} placeholder="VIP, Institutional" /><p className="mt-1 text-xs text-gray-500">Separate tags with commas.</p></FormField>
+          <FormField label="Website" error={form.formState.errors.website?.message}><input {...form.register("website")} maxLength={500} inputMode="url" className={inputClassName} placeholder="northbridgecapital.com" /></FormField>
+          <FormField label="Tags" error={form.formState.errors.tags?.message}><input {...form.register("tags")} maxLength={500} className={inputClassName} placeholder="VIP, Institutional" /><p className="mt-1 text-xs text-gray-500">Separate tags with commas.</p></FormField>
         </FormSection>
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
           <button type="button" onClick={closeSheet} className={secondaryButtonClassName}>Cancel</button>

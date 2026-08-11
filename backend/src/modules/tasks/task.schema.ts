@@ -3,6 +3,7 @@ import { z } from "zod";
 const taskFields = {
   title: z.string().trim().min(1).max(255),
   description: z.string().trim().max(10000).optional().nullable(),
+  kind: z.enum(["task", "event"]).optional(),
   type: z.enum(["general", "call", "email", "meeting", "follow_up", "document", "review"]).optional(),
   status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),

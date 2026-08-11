@@ -3,29 +3,15 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import type { CreateLeadInput, LeadRecord } from "../../api/crm";
+import { leadFormSchema, type LeadFormValues } from "../../validations/crm";
 import { useUploadLeadAvatar } from "../../hooks/crm/useCrmDirectory";
 import Avatar from "../ui/avatar/Avatar";
 import { InfoIcon } from "../../icons";
 import Sheet from "../ui/sheet/Sheet";
 import type { Lead } from "../../pages/CrmLeads/Leads";
 
-const leadFormSchema = z.object({
-  name: z.string().trim().min(1, "Name is required."),
-  role: z.string().optional(),
-  email: z.string().trim().email("Enter a valid email."),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  source: z.string().optional(),
-  annualRevenue: z.string().optional(),
-  status: z.enum(["New", "Contacted", "Qualified", "Converted", "Lost"]),
-  interestLevel: z.enum(["High", "Medium", "Low"]),
-  address: z.string().optional(),
-});
-
-type LeadFormValues = z.infer<typeof leadFormSchema>;
 const inputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
 export default function LeadFormSheet({
@@ -141,12 +127,12 @@ export default function LeadFormSheet({
       title={lead ? "Edit Lead" : "Add Lead"}
       description={lead ? "Update lead details and qualification." : "Add a prospect to your lead pipeline."}
       side="right"
-      className="w-full sm:max-w-2xl"
+      className="w-full sm:max-w-2xl xl:max-w-3xl"
     >
-      <form onSubmit={submit} className="space-y-6">
+      <form onSubmit={submit} noValidate className="space-y-6">
         <FormSection title="Basic information" description="Identify the lead and their organization.">
           <Field label="Name" error={form.formState.errors.name?.message}>
-            <input autoFocus {...form.register("name")} className={inputClassName} placeholder="Full name" />
+            <input autoFocus {...form.register("name")} maxLength={300} className={inputClassName} placeholder="Full name" />
           </Field>
           <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
             <input {...getInputProps()} />
@@ -157,23 +143,23 @@ export default function LeadFormSheet({
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Role / Job Title"><input {...form.register("role")} className={inputClassName} placeholder="Investor" /></Field>
-            <Field label="Company"><input {...form.register("company")} className={inputClassName} placeholder="Company or institution" /></Field>
+            <Field label="Role / Job Title" error={form.formState.errors.role?.message}><input {...form.register("role")} maxLength={200} className={inputClassName} placeholder="Investor" /></Field>
+            <Field label="Company" error={form.formState.errors.company?.message}><input {...form.register("company")} maxLength={255} className={inputClassName} placeholder="Company or institution" /></Field>
           </div>
         </FormSection>
 
         <FormSection title="Contact details" description="How the relationship team can reach this lead.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Email" error={form.formState.errors.email?.message}><input type="email" {...form.register("email")} className={inputClassName} placeholder="name@company.com" /></Field>
-            <Field label="Phone"><input {...form.register("phone")} className={inputClassName} placeholder="+63 917 555 0000" /></Field>
+            <Field label="Email" error={form.formState.errors.email?.message}><input type="email" {...form.register("email")} maxLength={320} className={inputClassName} placeholder="name@company.com" /></Field>
+            <Field label="Phone" error={form.formState.errors.phone?.message}><input type="tel" {...form.register("phone")} maxLength={50} className={inputClassName} placeholder="+63 917 555 0000" /></Field>
           </div>
-          <Field label="Address"><input {...form.register("address")} className={inputClassName} placeholder="City, country" /></Field>
+          <Field label="Address" error={form.formState.errors.address?.message}><input {...form.register("address")} maxLength={1000} className={inputClassName} placeholder="City, country" /></Field>
         </FormSection>
 
         <FormSection title="Lead qualification" description="Capture the source, value, interest, and current lead status.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Lead Source"><input {...form.register("source")} className={inputClassName} placeholder="Referral, Manual, Event" /></Field>
-            <Field label="Annual Revenue"><input {...form.register("annualRevenue")} className={inputClassName} placeholder="PHP 25M" /></Field>
+            <Field label="Lead Source" error={form.formState.errors.source?.message}><input {...form.register("source")} maxLength={150} className={inputClassName} placeholder="Referral, Manual, Event" /></Field>
+            <Field label="Annual Revenue" error={form.formState.errors.annualRevenue?.message}><input {...form.register("annualRevenue")} maxLength={100} className={inputClassName} placeholder="PHP 25M" /></Field>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Status"><select {...form.register("status")} className={inputClassName}><option>New</option><option>Contacted</option><option>Qualified</option><option>Converted</option><option>Lost</option></select></Field>

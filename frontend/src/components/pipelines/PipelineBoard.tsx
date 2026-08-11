@@ -28,6 +28,7 @@ import type {
   PipelineView,
 } from "./types";
 import { useCan } from "../../hooks/auth/useCan";
+import { pipelineNameSchema } from "../../validations/pipeline";
 
 export default function PipelineBoard() {
   const canManage = useCan("pipelines.manage");
@@ -56,6 +57,7 @@ export default function PipelineBoard() {
   const [leadSearch, setLeadSearch] = useState("");
   const [viewNameDraft, setViewNameDraft] =
     useState("");
+  const [viewNameError, setViewNameError] = useState<string | null>(null);
 
   const [selectedStage, setSelectedStage] =
     useState<PipelineStage | null>(null);
@@ -158,11 +160,13 @@ export default function PipelineBoard() {
   };
 
   const updateActiveViewName = () => {
-    const trimmedName = viewNameDraft.trim();
-
-    if (!trimmedName) {
+    const parsed = pipelineNameSchema.safeParse({ name: viewNameDraft });
+    if (!parsed.success) {
+      setViewNameError(parsed.error.issues[0]?.message ?? "Enter a valid pipeline name.");
       return;
     }
+
+    const trimmedName = parsed.data.name;
 
     setViews((currentViews) =>
       currentViews.map((view) =>
@@ -172,6 +176,7 @@ export default function PipelineBoard() {
       ),
     );
     setIsEditViewOpen(false);
+    setViewNameError(null);
   };
 
   const addCard = (card: NewPipelineCard) => {
@@ -410,6 +415,7 @@ export default function PipelineBoard() {
                 title={canManage ? "Edit Pipeline" : "Read-only access"}
                 onClick={() => {
                   setViewNameDraft(activeView.name);
+                  setViewNameError(null);
                   setIsEditViewOpen(true);
                 }}
                 className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
@@ -517,6 +523,7 @@ export default function PipelineBoard() {
             <input
               value={leadSearch}
               onChange={(event) => setLeadSearch(event.target.value)}
+              maxLength={255}
               placeholder="Name, company, source, or owner"
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             />
@@ -556,12 +563,17 @@ export default function PipelineBoard() {
             <input
               value={viewNameDraft}
               onChange={(event) =>
-                setViewNameDraft(event.target.value)
+                {
+                  setViewNameDraft(event.target.value);
+                  setViewNameError(null);
+                }
               }
+              maxLength={100}
               className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
               placeholder="Enter pipeline name"
               autoFocus
             />
+            {viewNameError && <p className="mt-1 text-xs text-error-500">{viewNameError}</p>}
           </label>
 
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">

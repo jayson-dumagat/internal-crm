@@ -1,10 +1,18 @@
 import React, { useRef, useState } from "react";
 import { Link } from "react-router";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import Label from "../form/Label";
+import { otpSchema, type OtpValues } from "../../validations/auth";
 
 export default function OtpForm() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef<HTMLInputElement[]>([]);
+  const form = useForm<OtpValues>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: { otp: "" },
+  });
 
   const handleChange = (value: string, index: number) => {
     const updatedOtp = [...otp];
@@ -12,6 +20,7 @@ export default function OtpForm() {
 
     // Update the state with the new value
     setOtp(updatedOtp);
+    form.setValue("otp", updatedOtp.join(""), { shouldValidate: true });
 
     // Automatically move to the next input if a value is entered
     if (value && index < inputsRef.current.length - 1) {
@@ -34,6 +43,7 @@ export default function OtpForm() {
       // Clear the current input
       updatedOtp[index] = "";
       setOtp(updatedOtp);
+      form.setValue("otp", updatedOtp.join(""), { shouldValidate: true });
     }
 
     if (event.key === "ArrowLeft" && index > 0) {
@@ -60,6 +70,7 @@ export default function OtpForm() {
     });
 
     setOtp(updatedOtp);
+    form.setValue("otp", updatedOtp.join(""), { shouldValidate: true });
 
     // Focus the last filled input
     const filledIndex = pasteData.length - 1;
@@ -68,9 +79,9 @@ export default function OtpForm() {
     }
   };
 
-  const handleSubmit = () => {
-    alert(`Submitted OTP: ${otp.join("")}`);
-  };
+  const handleSubmit = form.handleSubmit(({ otp: value }) => {
+    toast.success(`Verification code ${value} is ready to submit.`);
+  });
   return (
     <div className="flex flex-col flex-1 w-full lg:w-1/2">
       <div className="w-full max-w-md pt-10 mx-auto">
@@ -108,7 +119,7 @@ export default function OtpForm() {
           </p>
         </div>
         <div>
-          <form>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="space-y-5">
               {/* <!-- Email --> */}
               <div>
@@ -118,6 +129,8 @@ export default function OtpForm() {
                     <input
                       key={index}
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength={1}
                       value={otp[index]}
                       onChange={(e) => handleChange(e.target.value, index)}
@@ -137,12 +150,18 @@ export default function OtpForm() {
 
               {/* <!-- Button --> */}
               <div>
-                <button
-                  onClick={handleSubmit}
+                  <button
+                  type="submit"
+                  disabled={form.formState.isSubmitting}
                   className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
                 >
                   Verify My Account
                 </button>
+                {form.formState.errors.otp?.message && (
+                  <p className="mt-2 text-xs text-error-500">
+                    {form.formState.errors.otp.message}
+                  </p>
+                )}
               </div>
             </div>
           </form>

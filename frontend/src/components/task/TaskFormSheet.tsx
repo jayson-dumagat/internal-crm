@@ -2,33 +2,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import type { CreateTaskInput, TaskRecord } from "../../api/crm";
+import { taskFormSchema, type TaskFormValues } from "../../validations/crm";
 import { useLeadsQuery, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
 
-const schema = z
-  .object({
-    title: z.string().trim().min(1, "Task title is required."),
-    description: z.string().optional(),
-    type: z.string(),
-    priority: z.enum(["low", "medium", "high", "urgent"]),
-    status: z.enum(["not-started", "in-progress", "completed", "overdue", "blocked"]),
-    color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Choose a valid color."),
-    startAt: z.string().optional(),
-    dueAt: z.string().optional(),
-    reminderAt: z.string().optional(),
-    assigneeId: z.string().optional(),
-    leadId: z.string().optional(),
-  })
-  .superRefine((values, context) => {
-    if (values.startAt && values.dueAt && dayjs(values.dueAt).isBefore(dayjs(values.startAt))) {
-      context.addIssue({ code: "custom", path: ["dueAt"], message: "Due date must be after the start date." });
-    }
-  });
+type Values = TaskFormValues;
 
-type Values = z.infer<typeof schema>;
+const taskTypes: Values["type"][] = ["general", "call", "email", "meeting", "follow_up", "document", "review"];
+
+function normalizeTaskType(value: string): Values["type"] {
+  return taskTypes.includes(value as Values["type"]) ? (value as Values["type"]) : "general";
+}
 
 const inputClassName =
   "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -47,7 +33,7 @@ function defaults(
     ? {
         title: task.title,
         description: task.description ?? "",
-        type: task.type,
+        type: normalizeTaskType(task.type),
         priority: task.priority,
         status: task.status,
         color: task.color ?? "#465fff",
@@ -98,7 +84,7 @@ export default function TaskFormSheet({
   const usersQuery = useUsersQuery();
   const leadsQuery = useLeadsQuery();
   const form = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(taskFormSchema),
     defaultValues: defaults(task, defaultStatus, initialStartAt, initialDueAt),
   });
 
@@ -113,6 +99,7 @@ export default function TaskFormSheet({
       {
         title: values.title.trim(),
         description: values.description?.trim() || null,
+        kind: mode === "event" ? "event" : "task",
         type: values.type,
         priority: values.priority,
         status: values.status,
@@ -136,16 +123,16 @@ export default function TaskFormSheet({
       title={readOnly ? `View ${subject}` : task ? `Edit ${subject}` : `Add ${subject}`}
       description={mode === "event" ? "Schedule a relationship event and assign ownership." : "Plan follow-ups and relationship work."}
       side="right"
-      className="w-full sm:max-w-2xl"
+      className="w-full sm:max-w-2xl xl:max-w-3xl"
     >
-      <form onSubmit={submit}>
+      <form onSubmit={submit} noValidate>
         <fieldset disabled={readOnly} className="space-y-6">
         <FormSection title="Activity details" description="Describe what needs to happen and why.">
           <Field label={`${subject} title`} error={form.formState.errors.title?.message}>
-            <input {...form.register("title")} className={inputClassName} placeholder={mode === "event" ? "Client meeting" : "Follow up with client"} autoFocus />
+            <input {...form.register("title")} maxLength={255} className={inputClassName} placeholder={mode === "event" ? "Client meeting" : "Follow up with client"} autoFocus />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Type">
+            <Field label="Type" error={form.formState.errors.type?.message}>
               <select {...form.register("type")} className={inputClassName}>
                 <option value="general">General</option>
                 <option value="call">Call</option>
@@ -156,7 +143,7 @@ export default function TaskFormSheet({
                 <option value="review">Review</option>
               </select>
             </Field>
-            <Field label="Priority">
+            <Field label="Priority" error={form.formState.errors.priority?.message}>
               <select {...form.register("priority")} className={inputClassName}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -165,14 +152,14 @@ export default function TaskFormSheet({
               </select>
             </Field>
           </div>
-          <Field label="Description">
-            <textarea {...form.register("description")} rows={4} className={`${inputClassName} h-auto py-2`} placeholder="Add context, preparation notes, or next steps" />
+          <Field label="Description" error={form.formState.errors.description?.message}>
+            <textarea {...form.register("description")} maxLength={10000} rows={4} className={`${inputClassName} h-auto py-2`} placeholder="Add context, preparation notes, or next steps" />
           </Field>
         </FormSection>
 
         <FormSection title="Ownership and relationship" description="Assign the activity to a teammate and connect it to a lead.">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Assigned to">
+            <Field label="Assigned to" error={form.formState.errors.assigneeId?.message}>
               <select {...form.register("assigneeId")} className={inputClassName} disabled={usersQuery.isLoading}>
                 <option value="">Me (default)</option>
                 {(usersQuery.data ?? []).map((user) => (
@@ -180,7 +167,7 @@ export default function TaskFormSheet({
                 ))}
               </select>
             </Field>
-            <Field label="Related lead">
+            <Field label="Related lead" error={form.formState.errors.leadId?.message}>
               <select {...form.register("leadId")} className={inputClassName} disabled={leadsQuery.isLoading}>
                 <option value="">No lead linked</option>
                 {(leadsQuery.data ?? []).map((lead) => (
@@ -193,14 +180,14 @@ export default function TaskFormSheet({
 
         <FormSection title="Schedule" description="Set a start, due, and optional reminder date and time.">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Start date and time">
+            <Field label="Start date and time" error={form.formState.errors.startAt?.message}>
               <input type="datetime-local" {...form.register("startAt")} className={inputClassName} />
             </Field>
             <Field label="Due date and time" error={form.formState.errors.dueAt?.message}>
               <input type="datetime-local" {...form.register("dueAt")} className={inputClassName} />
             </Field>
           </div>
-          <Field label="Reminder">
+          <Field label="Reminder" error={form.formState.errors.reminderAt?.message}>
             <input type="datetime-local" {...form.register("reminderAt")} className={inputClassName} />
           </Field>
         </FormSection>
@@ -216,8 +203,8 @@ export default function TaskFormSheet({
                 <option value="blocked">Blocked</option>
               </select>
             </Field>
-            <Field label="Color hex">
-              <input {...form.register("color")} className={inputClassName} placeholder="#465fff" />
+            <Field label="Color hex" error={form.formState.errors.color?.message}>
+              <input {...form.register("color")} maxLength={7} className={inputClassName} placeholder="#465fff" />
             </Field>
             <Field label="Color picker">
               <input type="color" {...form.register("color")} className="h-10 w-16 cursor-pointer rounded-lg border border-gray-300 bg-white p-1 dark:border-gray-700 dark:bg-gray-900" />

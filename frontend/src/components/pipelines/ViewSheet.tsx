@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 import Sheet from "../ui/sheet/Sheet";
 
 import type { PipelineView } from "./types";
+import { pipelineNameSchema, type PipelineNameValues } from "../../validations/pipeline";
 
 interface ViewSheetProps {
   isOpen: boolean;
@@ -15,20 +18,20 @@ export default function ViewSheet({
   onClose,
   onCreate,
 }: ViewSheetProps) {
-  const [name, setName] = useState("");
+  const form = useForm<PipelineNameValues>({
+    resolver: zodResolver(pipelineNameSchema),
+    defaultValues: { name: "" },
+  });
+  const name = form.watch("name");
 
   useEffect(() => {
     if (isOpen) {
-      setName("");
+      form.reset({ name: "" });
     }
-  }, [isOpen]);
+  }, [form, isOpen]);
 
-  const handleCreate = () => {
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      return;
-    }
+  const handleCreate = form.handleSubmit((values) => {
+    const trimmedName = values.name.trim();
 
     const viewId = createId("pipeline");
     const stageId = createId("stage");
@@ -47,7 +50,7 @@ export default function ViewSheet({
     });
 
     onClose();
-  };
+  });
 
   return (
     <Sheet
@@ -58,20 +61,19 @@ export default function ViewSheet({
       side="right"
       className="w-full sm:max-w-lg"
     >
-      <div className="space-y-5">
+      <form onSubmit={handleCreate} noValidate className="space-y-5">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Pipeline Name
           </span>
 
           <input
-            value={name}
-            onChange={(event) =>
-              setName(event.target.value)
-            }
+            {...form.register("name")}
+            maxLength={100}
             placeholder="Example: PERA, KYC or Institutional"
             className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
           />
+          {form.formState.errors.name?.message && <p className="mt-1 text-xs text-error-500">{form.formState.errors.name.message}</p>}
         </label>
 
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
@@ -84,15 +86,14 @@ export default function ViewSheet({
           </button>
 
           <button
-            type="button"
+            type="submit"
             disabled={!name.trim()}
-            onClick={handleCreate}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Create View
           </button>
         </div>
-      </div>
+      </form>
     </Sheet>
   );
 }

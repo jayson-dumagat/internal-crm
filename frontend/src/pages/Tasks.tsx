@@ -42,7 +42,10 @@ export default function Tasks() {
   const canUpdate = useCan("tasks.update");
   const canDelete = useCan("tasks.delete");
   const canUpdateStatus = useCan("tasks.status.update");
-  const tasks = tasksQuery.data ?? [];
+  const tasks = useMemo(
+    () => (tasksQuery.data ?? []).filter((task) => task.kind === "task"),
+    [tasksQuery.data],
+  );
   const [activeView, setActiveView] = useState<TaskView>("list");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<

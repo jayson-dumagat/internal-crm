@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 
 import Avatar from "../ui/avatar/Avatar";
 import Badge from "../ui/badge/Badge";
 import Sheet from "../ui/sheet/Sheet";
+import LexicalNoteEditor from "../notes/LexicalNoteEditor";
 
 import type { Lead } from "../../pages/CrmLeads/Leads";
-import { EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon } from "../../icons";
+import { CalendarAltIcon, EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon, TaskIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
-import { useActivitiesQuery, useCreateNote, useNotesQuery } from "../../hooks/crm/useCrmDirectory";
+import { useActivitiesQuery, useCreateNote, useNotesQuery, useTasksQuery } from "../../hooks/crm/useCrmDirectory";
+import type { TaskRecord } from "../../api/crm";
 import { toast } from "sonner";
 import { useCan } from "../../hooks/auth/useCan";
 
@@ -20,7 +23,7 @@ type BadgeColor =
   | "light"
   | "dark";
 
-type LeadPreviewTab = "activity" | "notes" | "tasks" | "deals";
+type LeadPreviewTab = "activity" | "notes" | "tasks" | "events";
 
 interface LeadPreviewProps {
   lead: Lead | null;
@@ -45,8 +48,8 @@ const tabs: Array<{
     label: "Tasks",
   },
   {
-    id: "deals",
-    label: "Deals",
+    id: "events",
+    label: "Events",
   },
 ];
 
@@ -95,25 +98,11 @@ export default function LeadPreview({
           <div className="pt-5">
             {activeTab === "activity" && <ActivityTab lead={lead} />}
 
-            {activeTab === "notes" && <NotesTab lead={lead} />}
+            {activeTab === "notes" && <NotesTab key={lead.id} lead={lead} />}
 
-            {activeTab === "tasks" && (
-              <EmptyTab
-                title="Tasks"
-                emptyTitle="No tasks"
-                description={`There are no open tasks for ${lead.name}.`}
-                actionLabel="Create Task"
-              />
-            )}
+            {activeTab === "tasks" && <TasksTab lead={lead} />}
 
-            {activeTab === "deals" && (
-              <EmptyTab
-                title="Deals"
-                emptyTitle="No deals"
-                description={`No deals are currently associated with ${lead.name}.`}
-                actionLabel="Create Deal"
-              />
-            )}
+            {activeTab === "events" && <EventsTab lead={lead} />}
           </div>
         </div>
       )}
@@ -395,6 +384,261 @@ function ActivityTab({ lead }: { lead: Lead }) {
   );
 }
 
+const eventStatusLabels: Record<TaskRecord["status"], string> = {
+  "not-started": "Not started",
+  "in-progress": "In progress",
+  completed: "Completed",
+  overdue: "Overdue",
+  blocked: "Blocked",
+};
+
+const eventStatusColors: Record<TaskRecord["status"], BadgeColor> = {
+  "not-started": "light",
+  "in-progress": "info",
+  completed: "success",
+  overdue: "warning",
+  blocked: "error",
+};
+
+const taskPriorityLabels: Record<TaskRecord["priority"], string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  urgent: "Urgent",
+};
+
+const taskPriorityColors: Record<TaskRecord["priority"], BadgeColor> = {
+  low: "light",
+  medium: "info",
+  high: "warning",
+  urgent: "error",
+};
+
+function TasksTab({ lead }: { lead: Lead }) {
+  const tasksQuery = useTasksQuery();
+  const tasks = (tasksQuery.data ?? [])
+    .filter((task) => task.kind === "task" && task.leadId === lead.id)
+    .sort((a, b) => {
+      const aDate = a.dueAt ?? a.startAt ?? a.createdAt;
+      const bDate = b.dueAt ?? b.startAt ?? b.createdAt;
+      return dayjs(aDate).valueOf() - dayjs(bDate).valueOf();
+    });
+
+  return (
+    <div>
+      <TabHeader title="Tasks" />
+
+      {tasksQuery.isLoading ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading tasks...</p>
+        </div>
+      ) : tasksQuery.isError ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm text-error-500">
+            {tasksQuery.error instanceof Error
+              ? tasksQuery.error.message
+              : "Unable to load tasks."}
+          </p>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm font-medium text-gray-800 dark:text-white/90">No tasks</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            No tasks are currently associated with {lead.name}.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ task }: { task: TaskRecord }) {
+  return (
+    <article className="flex gap-3 rounded-xl border border-gray-100 p-3.5 dark:border-white/[0.05]">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+        <TaskIcon className="size-4" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+              {task.title}
+            </h4>
+            <p className="mt-1 text-xs capitalize text-gray-500 dark:text-gray-400">
+              {task.type.replace(/_/g, " ")}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap gap-1.5">
+            <Badge variant="light" color={eventStatusColors[task.status]} size="sm">
+              {eventStatusLabels[task.status]}
+            </Badge>
+            <Badge variant="light" color={taskPriorityColors[task.priority]} size="sm">
+              {taskPriorityLabels[task.priority]}
+            </Badge>
+          </div>
+        </div>
+
+        {task.description && (
+          <p className="mt-2 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
+            {task.description}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <span>{formatTaskSchedule(task)}</span>
+
+          {task.assignee && (
+            <span className="inline-flex items-center gap-1.5">
+              <Avatar src={task.assignee.avatar} alt={task.assignee.name} size="xsmall" />
+              <span className="max-w-40 truncate">{task.assignee.name}</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EventsTab({ lead }: { lead: Lead }) {
+  const tasksQuery = useTasksQuery();
+  const events = (tasksQuery.data ?? [])
+    .filter(
+      (task) =>
+        task.kind === "event" &&
+        task.leadId === lead.id &&
+        task.status !== "blocked" &&
+        Boolean(task.startAt || task.dueAt),
+    )
+    .sort((a, b) => {
+      const aDate = a.startAt ?? a.dueAt ?? a.createdAt;
+      const bDate = b.startAt ?? b.dueAt ?? b.createdAt;
+      return dayjs(aDate).valueOf() - dayjs(bDate).valueOf();
+    });
+
+  return (
+    <div>
+      <TabHeader title="Events" />
+
+      {tasksQuery.isLoading ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading events...</p>
+        </div>
+      ) : tasksQuery.isError ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm text-error-500">
+            {tasksQuery.error instanceof Error
+              ? tasksQuery.error.message
+              : "Unable to load events."}
+          </p>
+        </div>
+      ) : events.length === 0 ? (
+        <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
+          <p className="text-sm font-medium text-gray-800 dark:text-white/90">No events</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
+            No scheduled events are currently associated with {lead.name}.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {events.map((event) => (
+            <EventRow key={event.id} event={event} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventRow({ event }: { event: TaskRecord }) {
+  return (
+    <article className="flex gap-3 rounded-xl border border-gray-100 p-3.5 dark:border-white/[0.05]">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400">
+        <CalendarAltIcon className="size-4" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+              {event.title}
+            </h4>
+            <p className="mt-1 text-xs capitalize text-gray-500 dark:text-gray-400">
+              {event.type.replace(/_/g, " ")}
+            </p>
+          </div>
+
+          <Badge
+            variant="light"
+            color={eventStatusColors[event.status]}
+            size="sm"
+          >
+            {eventStatusLabels[event.status]}
+          </Badge>
+        </div>
+
+        {event.description && (
+          <p className="mt-2 line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
+            {event.description}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <span>{formatEventSchedule(event)}</span>
+
+          {event.assignee && (
+            <span className="inline-flex items-center gap-1.5">
+              <Avatar
+                src={event.assignee.avatar}
+                alt={event.assignee.name}
+                size="xsmall"
+              />
+              <span className="max-w-40 truncate">{event.assignee.name}</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function formatTaskSchedule(task: TaskRecord) {
+  const start = task.startAt ? dayjs(task.startAt) : null;
+  const due = task.dueAt ? dayjs(task.dueAt) : null;
+
+  if (!start && !due) return "No date scheduled";
+  if (!start) return `Due ${due?.format("DD MMMM, YYYY h:mm A")}`;
+  if (!due) return `Starts ${start.format("DD MMMM, YYYY h:mm A")}`;
+
+  if (start.isSame(due, "day")) {
+    return `${start.format("DD MMMM, YYYY h:mm A")} – ${due.format("h:mm A")}`;
+  }
+
+  return `${start.format("DD MMMM, YYYY h:mm A")} – ${due.format("DD MMMM, YYYY h:mm A")}`;
+}
+
+function formatEventSchedule(event: TaskRecord) {
+  const start = event.startAt ? dayjs(event.startAt) : null;
+  const due = event.dueAt ? dayjs(event.dueAt) : null;
+
+  if (!start && !due) return "No date scheduled";
+  if (!start) return `Due ${due?.format("DD MMMM, YYYY h:mm A")}`;
+  if (!due) return start.format("DD MMMM, YYYY h:mm A");
+
+  if (start.isSame(due, "day")) {
+    return `${start.format("DD MMMM, YYYY h:mm A")} – ${due.format("h:mm A")}`;
+  }
+
+  return `${start.format("DD MMMM, YYYY h:mm A")} – ${due.format("DD MMMM, YYYY h:mm A")}`;
+}
+
 function SummaryField({
   label,
   value,
@@ -490,39 +734,10 @@ function TabHeader({
   );
 }
 
-function EmptyTab({
-  title,
-  emptyTitle,
-  description,
-  actionLabel,
-}: {
-  title: string;
-  emptyTitle: string;
-  description: string;
-  actionLabel: string;
-}) {
-  return (
-    <div>
-      <TabHeader
-        title={title}
-        actionLabel={actionLabel}
-      />
-
-      <div className="mt-4 border-y border-gray-100 py-10 text-center dark:border-white/[0.05]">
-        <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-          {emptyTitle}
-        </p>
-
-        <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
-          {description}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function NotesTab({ lead }: { lead: Lead }) {
   const [note, setNote] = useState("");
+  const [noteHtml, setNoteHtml] = useState("");
+  const [editorVersion, setEditorVersion] = useState(0);
   const notesQuery = useNotesQuery();
   const createNote = useCreateNote();
   const previousNotes = (notesQuery.data ?? []).filter((item) => item.relatedTo === lead.name || item.relatedTo === lead.company);
@@ -535,9 +750,17 @@ function NotesTab({ lead }: { lead: Lead }) {
     }
 
     try {
-      await createNote.mutateAsync({ title: `Note about ${lead.name}`, content: trimmedNote, category: "Client", relatedTo: lead.name });
+      await createNote.mutateAsync({
+        title: `Note about ${lead.name}`,
+        content: trimmedNote,
+        contentHtml: noteHtml || null,
+        category: "Client",
+        relatedTo: lead.name,
+      });
       toast.success("Note added successfully.");
       setNote("");
+      setNoteHtml("");
+      setEditorVersion((version) => version + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save note.");
     }
@@ -546,12 +769,13 @@ function NotesTab({ lead }: { lead: Lead }) {
   return (
     <div>
       <div className="mt-4">
-        <textarea
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
+        <LexicalNoteEditor
+          key={`${lead.id}-${editorVersion}`}
           placeholder={`Write a note about ${lead.name}...`}
-          rows={5}
-          className="w-full resize-none rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+          onChange={(plainText, html) => {
+            setNote(plainText);
+            setNoteHtml(html);
+          }}
         />
 
         <div className="mt-3 flex items-center justify-end gap-3">
