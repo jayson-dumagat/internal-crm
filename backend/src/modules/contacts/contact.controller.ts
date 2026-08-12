@@ -9,6 +9,7 @@ import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Contact } from "./contact.entity";
 import { createContactSchema, updateContactSchema } from "./contact.schema";
+import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const contactRepository = () => AppDataSource.getRepository(Contact);
 const companyRepository = () => AppDataSource.getRepository(Company);
@@ -27,11 +28,14 @@ export async function listContacts(
     }
 
     const [contacts, companies, users] = await Promise.all([
-      contactRepository().find({ order: { createdAt: "DESC" } }),
-      companyRepository().find(),
+      contactRepository().find({ where: { tenantId }, order: { createdAt: "DESC" } }),
+      companyRepository().find({ where: { tenantId } }),
       userRepository().find({ where: { entraTenantId: tenantId, status: UserStatus.ACTIVE, isAccessEnabled: true } }),
     ]);
     const companiesById = new Map(companies.map((company) => [company.id, company]));
+    const visibleContacts = contacts.filter((contact) => canAccessRecord(req, "contacts", contact.id)).filter((contact) => getDataScope(req, "contacts") === "own"
+      ? contact.createdById === req.session.user?.entraObjectId
+      : true);
     const ownersById = new Map(users.map((user) => [user.entraObjectId, user]));
     const ownersByName = new Map(
       users.flatMap((user) => [
@@ -41,7 +45,7 @@ export async function listContacts(
     );
 
     res.status(200).json({
-      data: contacts.map((contact) =>
+      data: visibleContacts.map((contact) =>
         toContactDto(
           contact,
           contact.companyId ? companiesById.get(contact.companyId) : undefined,
@@ -50,6 +54,7 @@ export async function listContacts(
             : contact.relationshipOwner
               ? ownersByName.get(contact.relationshipOwner.toLowerCase())
               : undefined,
+          req,
         ),
       ),
     });
@@ -64,6 +69,20 @@ export async function createContact(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const requestTenantId = req.session.user?.tenantId;
+    if (!requestTenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
+    if (hasResourceRestriction(req, "contacts")) {
+      res.status(403).json({ success: false, message: "You cannot create contacts while contact access is restricted to assigned records." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "contacts.name", role: "contacts.position", companyId: "contacts.company", companyName: "contacts.company",
+      email: "contacts.email", phone: "contacts.phone", relationshipLevel: "contacts.relationshipLevel",
+      relationshipOwnerId: "contacts.owner", relationshipOwner: "contacts.owner", location: "contacts.location",
+      typeOfClient: "contacts.preferences", riskProfile: "contacts.preferences", preferredContactMethod: "contacts.preferences",
+      status: "contacts.status", tags: "contacts.tags",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const parsed = createContactSchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -77,7 +96,7 @@ export async function createContact(
 
     let companyName = parsed.data.companyName;
     if (parsed.data.companyId) {
-      const company = await companyRepository().findOneBy({ id: parsed.data.companyId });
+      const company = await companyRepository().findOneBy({ id: parsed.data.companyId, tenantId: requestTenantId });
       if (!company) {
         res.status(400).json({ success: false, message: "The selected company was not found." });
         return;
@@ -95,6 +114,7 @@ export async function createContact(
 
     const contact = contactRepository().create({
       ...parsed.data,
+      tenantId: requestTenantId,
       companyName,
       relationshipOwner: owner
         ? normalizeUserName(owner.displayName)
@@ -106,10 +126,10 @@ export async function createContact(
     });
     const savedContact = await contactRepository().save(contact);
     const company = savedContact.companyId
-      ? await companyRepository().findOneBy({ id: savedContact.companyId })
+      ? await companyRepository().findOneBy({ id: savedContact.companyId, tenantId: requestTenantId })
       : undefined;
 
-    res.status(201).json({ data: toContactDto(savedContact, company ?? undefined, owner) });
+    res.status(201).json({ data: toContactDto(savedContact, company ?? undefined, owner, req) });
   } catch (error) {
     next(error);
   }
@@ -121,8 +141,20 @@ export async function updateContact(
   next: NextFunction,
 ): Promise<void> {
   try {
+    if (!canAccessRecord(req, "contacts", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Contact not found." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "contacts.name", role: "contacts.position", companyId: "contacts.company", companyName: "contacts.company",
+      email: "contacts.email", phone: "contacts.phone", relationshipLevel: "contacts.relationshipLevel",
+      relationshipOwnerId: "contacts.owner", relationshipOwner: "contacts.owner", location: "contacts.location",
+      typeOfClient: "contacts.preferences", riskProfile: "contacts.preferences", preferredContactMethod: "contacts.preferences",
+      status: "contacts.status", tags: "contacts.tags",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const contactId = String(req.params.id);
-    const contact = await contactRepository().findOneBy({ id: contactId });
+    const contact = await contactRepository().findOneBy({ id: contactId, tenantId: req.session.user?.tenantId ?? "" });
     if (!contact) {
       res.status(404).json({ success: false, message: "Contact not found." });
       return;
@@ -140,7 +172,7 @@ export async function updateContact(
     if ("companyId" in parsed.data) {
       contact.companyId = companyId ?? null;
       if (companyId) {
-        const company = await companyRepository().findOneBy({ id: companyId });
+        const company = await companyRepository().findOneBy({ id: companyId, tenantId: req.session.user?.tenantId ?? "" });
         if (!company) {
           res.status(400).json({ success: false, message: "The selected company was not found." });
           return;
@@ -176,13 +208,13 @@ export async function updateContact(
 
     const savedContact = await contactRepository().save(contact);
     const company = savedContact.companyId
-      ? await companyRepository().findOneBy({ id: savedContact.companyId })
+      ? await companyRepository().findOneBy({ id: savedContact.companyId, tenantId: req.session.user?.tenantId ?? "" })
       : undefined;
     owner ??= savedContact.relationshipOwnerId
       ? await findRelationshipOwner(req, savedContact.relationshipOwnerId)
       : undefined;
 
-    res.status(200).json({ data: toContactDto(savedContact, company ?? undefined, owner) });
+    res.status(200).json({ data: toContactDto(savedContact, company ?? undefined, owner, req) });
   } catch (error) {
     next(error);
   }
@@ -194,7 +226,11 @@ export async function deleteContact(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!canAccessRecord(req, "contacts", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Contact not found." });
+      return;
+    }
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id), tenantId: req.session.user?.tenantId ?? "" });
     if (!contact) {
       res.status(404).json({ success: false, message: "Contact not found." });
       return;
@@ -224,7 +260,11 @@ export async function uploadContactAvatar(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!canAccessRecord(req, "contacts", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Contact avatar not found." });
+      return;
+    }
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id), tenantId: req.session.user?.tenantId ?? "" });
     if (!contact) {
       res.status(404).json({ success: false, message: "Contact not found." });
       return;
@@ -252,10 +292,10 @@ export async function uploadContactAvatar(
     }
 
     const company = savedContact.companyId
-      ? await companyRepository().findOneBy({ id: savedContact.companyId })
+      ? await companyRepository().findOneBy({ id: savedContact.companyId, tenantId: req.session.user?.tenantId ?? "" })
       : undefined;
 
-    res.status(200).json({ data: toContactDto(savedContact, company ?? undefined) });
+    res.status(200).json({ data: toContactDto(savedContact, company ?? undefined, undefined, req) });
   } catch (error) {
     next(error);
   }
@@ -267,7 +307,15 @@ export async function getContactAvatar(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const contact = await contactRepository().findOneBy({ id: String(req.params.id) });
+    if (!canAccessRecord(req, "contacts", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Contact avatar not found." });
+      return;
+    }
+    if (!canViewField(req, "contacts.name")) {
+      res.status(404).json({ success: false, message: "Contact avatar not found." });
+      return;
+    }
+    const contact = await contactRepository().findOneBy({ id: String(req.params.id), tenantId: req.session.user?.tenantId ?? "" });
     if (!contact?.avatarUrl) {
       res.status(404).json({ success: false, message: "Contact avatar not found." });
       return;
@@ -301,29 +349,30 @@ async function findRelationshipOwner(req: Request, ownerId: string): Promise<Use
   })) ?? undefined;
 }
 
-function toContactDto(contact: Contact, company?: Company, owner?: User) {
+function toContactDto(contact: Contact, company?: Company, owner?: User, req?: Request) {
+  const canSee = (field: string) => !req || canViewField(req, field);
   const dto = {
     id: contact.id,
     company_id: contact.companyId,
     user: {
-      image: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      name: contact.name,
+      image: canSee("contacts.name") && contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
+      name: canSee("contacts.name") ? contact.name : "Restricted",
     },
     position: contact.role ?? "—",
     company: {
-      image: company?.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
-      name: company?.name ?? contact.companyName ?? "Individual",
+      image: canSee("contacts.company") && company?.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
+      name: canSee("contacts.company") ? company?.name ?? contact.companyName ?? "Individual" : "Restricted",
     },
     relationship_level: contact.relationshipLevel,
     contact: {
-      email: contact.email,
+      email: canSee("contacts.email") ? contact.email : "Restricted",
       phone: contact.phone ?? "—",
     },
     owner: {
-      image: owner?.avatarUrl
+      image: canSee("contacts.owner") && owner?.avatarUrl
         ? `/api/v1/users/${owner.entraObjectId}/avatar`
         : null,
-      name: normalizeUserName(owner?.displayName ?? contact.relationshipOwner ?? "Unassigned"),
+      name: canSee("contacts.owner") ? normalizeUserName(owner?.displayName ?? contact.relationshipOwner ?? "Unassigned") : "Restricted",
     },
     relationship_owner_id: contact.relationshipOwnerId,
     location: contact.location ?? "—",
@@ -331,15 +380,22 @@ function toContactDto(contact: Contact, company?: Company, owner?: User) {
     last_activity: contact.lastActivityAt
       ? contact.lastActivityAt.toISOString().slice(0, 10)
       : "—",
-    type_of_client: contact.typeOfClient,
-    risk_profile: contact.riskProfile,
-    preferred_contact_method: contact.preferredContactMethod,
-    tags: contact.tags ?? [],
+    type_of_client: canSee("contacts.preferences") ? contact.typeOfClient : null,
+    risk_profile: canSee("contacts.preferences") ? contact.riskProfile : null,
+    preferred_contact_method: canSee("contacts.preferences") ? contact.preferredContactMethod : null,
+    tags: canSee("contacts.tags") ? contact.tags ?? [] : [],
   };
+
+  if (!canSee("contacts.phone")) dto.contact.phone = "Restricted";
+  if (!canSee("contacts.location")) dto.location = "Restricted";
+  if (!canSee("contacts.position")) dto.position = "Restricted";
+  if (!canSee("contacts.relationshipLevel")) dto.relationship_level = "Restricted";
+  if (!canSee("contacts.status")) dto.status = "Restricted";
+  if (!canSee("contacts.lastActivity")) dto.last_activity = "Restricted";
 
   return {
     ...dto,
-    last_activity: contact.lastActivityAt?.toISOString() ?? null,
+    last_activity: canSee("contacts.lastActivity") ? contact.lastActivityAt?.toISOString() ?? null : null,
   };
 }
 

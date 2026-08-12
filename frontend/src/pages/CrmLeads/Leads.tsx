@@ -17,7 +17,7 @@ import { useCan } from "../../hooks/auth/useCan";
 
 export type LeadStatus = LeadRecord["status"];
 export type InterestLevel = LeadRecord["interestLevel"];
-export type Lead = LeadRecord;
+export type Lead = LeadRecord & { companyLogo?: string | null };
 
 const leadColumn = createColumnHelper<Lead>();
 const leadColumns = [
@@ -49,9 +49,11 @@ export default function Leads() {
       (contactsQuery.data ?? []).map((contact) => [contact.contact.email.trim().toLowerCase(), contact.user.image]),
     );
 
+    const companies = contactsQuery.data ?? [];
     return (leadsQuery.data ?? []).map((lead) => ({
       ...lead,
       avatar: lead.avatar ?? contactsByEmail.get(lead.email.trim().toLowerCase()) ?? null,
+      companyLogo: companies.find((contact) => contact.company.name === lead.company)?.company.image ?? null,
     }));
   }, [contactsQuery.data, leadsQuery.data]);
 

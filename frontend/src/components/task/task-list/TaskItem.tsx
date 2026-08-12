@@ -4,18 +4,18 @@ import type { Task } from "./types/Task";
 
 interface TaskItemProps extends Task { readOnly: boolean; onDragStateChange: (taskId: string | null) => void }
 
-export default function TaskItem({ id, title, isChecked, dueDate, commentCount, category, userAvatar, readOnly, onDragStateChange, toggleChecked }: TaskItemProps) {
+export default function TaskItem({ id, title, isChecked, dueDate, commentCount, category, userAvatar, status, readOnly, onDragStateChange, toggleChecked }: TaskItemProps) {
   const itemRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   useEffect(() => {
     if (!itemRef.current) return;
     return draggable({
       element: itemRef.current,
-      getInitialData: () => ({ type: "task-list-item", taskId: id }),
+      getInitialData: () => ({ type: "task-list-item", taskId: id, status }),
       onDragStart: () => { setIsDragging(true); onDragStateChange(id); },
       onDrop: () => { setIsDragging(false); onDragStateChange(null); },
     });
-  }, [id, onDragStateChange]);
+  }, [id, onDragStateChange, status]);
   return <article ref={itemRef} className={`rounded-xl border border-gray-100 bg-white p-4 shadow-theme-sm transition-all duration-200 dark:border-white/[0.05] dark:bg-white/5 ${isDragging ? "scale-[0.99] opacity-40" : "hover:border-gray-200 hover:shadow-theme-xs"}`}>
     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
       <div className="flex w-full items-start gap-3">

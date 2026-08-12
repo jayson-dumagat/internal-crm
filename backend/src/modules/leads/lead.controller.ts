@@ -10,6 +10,7 @@ import { UserStatus } from "../users/user.types";
 import { Lead } from "./lead.entity";
 import { LeadInterestLevel, LeadStatus } from "./lead.types";
 import { createLeadSchema, updateLeadSchema } from "./lead.schema";
+import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const leadRepository = () => AppDataSource.getRepository(Lead);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -47,7 +48,13 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       relations: { owner: true, assignedTo: true },
       order: { createdAt: "DESC" },
     });
-    res.status(200).json({ data: leads.map(toLeadDto) });
+    const scope = getDataScope(req, "leads");
+    const visibleLeads = leads.filter((lead) => canAccessRecord(req, "leads", lead.id)).filter((lead) => scope === "own"
+      ? lead.owner?.entraObjectId === req.session.user?.entraObjectId
+      : scope === "assigned"
+        ? lead.owner?.entraObjectId === req.session.user?.entraObjectId || lead.assignedTo?.entraObjectId === req.session.user?.entraObjectId
+        : true);
+    res.status(200).json({ data: visibleLeads.map((lead) => toLeadDto(lead, req)) });
   } catch (error) {
     next(error);
   }
@@ -55,6 +62,16 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
 
 export async function createLead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (hasResourceRestriction(req, "leads")) {
+      res.status(403).json({ success: false, message: "You cannot create leads while your lead access is restricted to assigned records." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "leads.name", role: "leads.role", email: "leads.email", phone: "leads.phone", company: "leads.company",
+      source: "leads.source", annualRevenue: "leads.revenue", status: "leads.status", interestLevel: "leads.interestLevel",
+      address: "leads.address", assignedToId: "leads.assignedTo",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) {
       res.status(401).json({ success: false, message: "Authentication is required." });
@@ -70,8 +87,13 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       res.status(400).json({ success: false, message: "Please check the lead fields and try again.", errors: parsed.error.issues });
       return;
     }
-    const assignedTo = await getAssignedUser(req, parsed.data.assignedToId);
-    if (parsed.data.assignedToId && !assignedTo) {
+    // New leads default to the signed-in relationship manager. Sending null
+    // explicitly keeps the lead unassigned.
+    const requestedAssigneeId = parsed.data.assignedToId === undefined
+      ? sessionUser.entraObjectId
+      : parsed.data.assignedToId;
+    const assignedTo = await getAssignedUser(req, requestedAssigneeId);
+    if (requestedAssigneeId && !assignedTo) {
       res.status(400).json({ success: false, message: "The selected assignee was not found." });
       return;
     }
@@ -108,7 +130,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       ipAddress: req.ip,
       details: saved.companyName ? `Company: ${saved.companyName}.` : null,
     });
-    res.status(201).json({ data: toLeadDto(saved) });
+    res.status(201).json({ data: toLeadDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -116,6 +138,12 @@ export async function createLead(req: Request, res: Response, next: NextFunction
 
 export async function updateLead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "leads.name", role: "leads.role", email: "leads.email", phone: "leads.phone", company: "leads.company",
+      source: "leads.source", annualRevenue: "leads.revenue", status: "leads.status", interestLevel: "leads.interestLevel",
+      address: "leads.address", assignedToId: "leads.assignedTo",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) {
       res.status(401).json({ success: false, message: "Authentication is required." });
@@ -124,6 +152,10 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     const currentUser = await getCurrentUser(req);
     const lead = await leadRepository().findOne({ where: { id: String(req.params.id), owner: { entraTenantId: sessionUser.tenantId } }, relations: { owner: true, assignedTo: true } });
     if (!lead) {
+      res.status(404).json({ success: false, message: "Lead not found." });
+      return;
+    }
+    if (!canAccessRecord(req, "leads", lead.id)) {
       res.status(404).json({ success: false, message: "Lead not found." });
       return;
     }
@@ -170,7 +202,7 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
         ipAddress: req.ip,
       });
     }
-    res.status(200).json({ data: toLeadDto(saved) });
+    res.status(200).json({ data: toLeadDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -185,6 +217,10 @@ export async function deleteLead(req: Request, res: Response, next: NextFunction
     }
     const lead = await leadRepository().findOne({ where: { id: String(req.params.id), owner: { entraTenantId: sessionUser.tenantId } }, relations: { owner: true } });
     if (!lead) {
+      res.status(404).json({ success: false, message: "Lead not found." });
+      return;
+    }
+    if (!canAccessRecord(req, "leads", lead.id)) {
       res.status(404).json({ success: false, message: "Lead not found." });
       return;
     }
@@ -230,7 +266,7 @@ export async function uploadLeadAvatar(req: Request, res: Response, next: NextFu
       await removeObject(previousObjectKey).catch((error) => console.error("Failed to remove previous lead avatar", error));
     }
 
-    res.status(200).json({ data: toLeadDto(savedLead) });
+    res.status(200).json({ data: toLeadDto(savedLead, req) });
   } catch (error) {
     next(error);
   }
@@ -238,6 +274,10 @@ export async function uploadLeadAvatar(req: Request, res: Response, next: NextFu
 
 export async function getLeadAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (!canViewField(req, "leads.name")) {
+      res.status(404).json({ success: false, message: "Lead avatar not found." });
+      return;
+    }
     const sessionUser = req.session.user;
     if (!sessionUser) {
       res.status(401).json({ success: false, message: "Authentication is required." });
@@ -245,6 +285,10 @@ export async function getLeadAvatar(req: Request, res: Response, next: NextFunct
     }
     const lead = await leadRepository().findOne({ where: { id: String(req.params.id), owner: { entraTenantId: sessionUser.tenantId } } });
     if (!lead?.avatarUrl) {
+      res.status(404).json({ success: false, message: "Lead avatar not found." });
+      return;
+    }
+    if (!canAccessRecord(req, "leads", lead.id)) {
       res.status(404).json({ success: false, message: "Lead avatar not found." });
       return;
     }
@@ -262,11 +306,12 @@ export async function getLeadAvatar(req: Request, res: Response, next: NextFunct
   }
 }
 
-function toLeadDto(lead: Lead) {
-  return {
+function toLeadDto(lead: Lead, req?: Request) {
+  const canSee = (field: string) => !req || canViewField(req, field);
+  const dto = {
     id: lead.id,
-    name: formatLeadName(lead),
-    avatar: lead.avatarUrl ? `/api/v1/leads/${lead.id}/avatar` : null,
+    name: canSee("leads.name") ? formatLeadName(lead) : "Restricted",
+    avatar: canSee("leads.name") && lead.avatarUrl ? `/api/v1/leads/${lead.id}/avatar` : null,
     role: lead.jobTitle ?? "—",
     lastActivity: lead.lastActivityAt?.toISOString() ?? lead.updatedAt.toISOString(),
     email: lead.email,
@@ -274,17 +319,31 @@ function toLeadDto(lead: Lead) {
     company: lead.companyName ?? "Individual",
     source: lead.source ?? "Manual",
     annualRevenue: lead.annualRevenue ?? undefined,
-    owner: toUserDto(lead.owner),
+    owner: canSee("leads.owner") ? toUserDto(lead.owner) : toUserDto(null),
+    ownerId: lead.owner?.entraObjectId ?? null,
     status: titleCase(lead.status),
     interestLevel: titleCase(lead.interestLevel),
     dateCreated: lead.createdAt.toISOString(),
     address: [lead.addressLine1, lead.addressLine2, lead.city, lead.stateProvince, lead.postalCode, lead.country].filter(Boolean).join(", ") || "—",
-    assignedTo: toUserDto(lead.assignedTo),
+    assignedToId: lead.assignedTo?.entraObjectId ?? null,
+    assignedTo: canSee("leads.assignedTo") ? toUserDto(lead.assignedTo) : toUserDto(null),
   };
+  if (!canSee("leads.email")) dto.email = "Restricted";
+  if (!canSee("leads.phone")) dto.phone = "Restricted";
+  if (!canSee("leads.company")) dto.company = "Restricted";
+  if (!canSee("leads.address")) dto.address = "Restricted";
+  if (!canSee("leads.revenue")) dto.annualRevenue = undefined;
+  if (!canSee("leads.role")) dto.role = "Restricted";
+  if (!canSee("leads.source")) dto.source = "Restricted";
+  if (!canSee("leads.status")) dto.status = "Restricted";
+  if (!canSee("leads.interestLevel")) dto.interestLevel = "Restricted";
+  if (!canSee("leads.dateCreated")) dto.dateCreated = "";
+  return dto;
 }
 
 function toUserDto(user: User | null | undefined) {
   return {
+    id: user?.entraObjectId ?? null,
     name: user?.displayName?.replace(/\s*\(CGSI\)\s*$/i, "").trim() || "Unassigned",
     avatar: user?.avatarUrl ? `/api/v1/users/${user.entraObjectId}/avatar` : null,
   };

@@ -23,6 +23,7 @@ import { formatDisplayDate } from "../../utils/date";
 import SearchField from "../search/SearchField";
 import { useCan } from "../../hooks/auth/useCan";
 import Checkbox from "../form/input/Checkbox";
+import Sheet from "../ui/sheet/Sheet";
 
 type CompanyStatus = "Active" | "Prospect" | "Dormant";
 type SortKey =
@@ -88,6 +89,7 @@ export default function CompanyTable() {
   const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(
     null,
   );
+  const [viewCompany, setViewCompany] = useState<Company | null>(null);
   const deleteCompany = useDeleteCompany();
   const canCreate = useCan("companies.create");
   const canUpdate = useCan("companies.update");
@@ -308,14 +310,12 @@ export default function CompanyTable() {
                   return (
                     <tr
                       key={company.id}
-                      className={
-                        isSelected
-                          ? "bg-brand-50/40 dark:bg-brand-500/[0.05]"
-                          : ""
-                      }
+                      onClick={() => setViewCompany(company)}
+                      className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                     >
                       <td
-                        className={`border border-gray-100 px-4 py-4 text-center dark:border-white/[0.05] ${isSelected ? "bg-brand-50 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="border border-gray-100 bg-white px-4 py-4 text-center dark:border-white/[0.05] dark:bg-gray-900"
                       >
                         <Checkbox
                         checked={isSelected}
@@ -334,7 +334,8 @@ export default function CompanyTable() {
                         />
                       </td>
                       <td
-                        className={`border border-gray-100 px-4 py-4 dark:border-white/[0.05] ${isSelected ? "bg-brand-50 dark:bg-gray-900" : "bg-white dark:bg-gray-900"}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="border border-gray-100 bg-white px-4 py-4 dark:border-white/[0.05] dark:bg-gray-900"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <Avatar
@@ -408,7 +409,7 @@ export default function CompanyTable() {
                         {formatDisplayDate(company.lastActivity)}
                       </td>
                       <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
                           <button
                             type="button"
                             aria-label={`Delete ${company.name}`}
@@ -514,6 +515,9 @@ export default function CompanyTable() {
         }}
         company={editingCompany}
       />
+      <Sheet isOpen={Boolean(viewCompany)} onClose={() => setViewCompany(null)} title={viewCompany?.name ?? "Company details"} description="Review company relationship information." side="right" className="w-full sm:max-w-2xl">
+        {viewCompany && <div className="space-y-5"><div className="flex items-center gap-3"><Avatar src={viewCompany.logoUrl} alt={viewCompany.name} size="large" colorKey={`company-${viewCompany.id}`} /><div><h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{viewCompany.name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{viewCompany.industry}</p></div></div><div className="grid gap-4 sm:grid-cols-2">{[["Location", viewCompany.location], ["Employees", viewCompany.employees], ["Revenue", viewCompany.revenue], ["Website", viewCompany.website], ["Customer since", formatDisplayDate(viewCompany.customerSince)], ["Status", viewCompany.status], ["Last activity", formatDisplayDate(viewCompany.lastActivity)], ["Contacts", String(viewCompany.contacts.length)]].map(([label, value]) => <div key={label}><p className="text-xs text-gray-400">{label}</p><p className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p></div>)}</div><button type="button" disabled={!canUpdate} onClick={() => { setEditingCompany(viewCompany as unknown as CompanyRecord); setViewCompany(null); setIsAddCompanyOpen(true); }} className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-40">Edit company</button></div>}
+      </Sheet>
     </>
   );
 }

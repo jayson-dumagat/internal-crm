@@ -9,7 +9,7 @@ import {
 } from "@azure/msal-node";
 
 import { entraConfig } from "../config/entra";
-import { getPermissionsForRoles } from "../modules/access/access-control";
+import { getDatabasePermissionsForRoles } from "../modules/access/access-permission.service";
 import type {
   EntraAuthenticationResult,
   EntraAuthorizationResult,
@@ -116,7 +116,7 @@ class EntraService {
       );
     }
 
-    const user = this.mapClaimsToUser(
+    const user = await this.mapClaimsToUser(
       claims,
       result.account.homeAccountId,
       result.account.username,
@@ -169,12 +169,12 @@ class EntraService {
     return logoutUrl.toString();
   }
 
-  private mapClaimsToUser(
+  private async mapClaimsToUser(
     claims: EntraIdTokenClaims,
     homeAccountId: string,
     accountUsername?: string,
     accountName?: string,
-  ): EntraUser {
+  ): Promise<EntraUser> {
     if (!claims.oid) {
       throw new Error(
         "The Microsoft ID token does not contain an oid claim.",
@@ -209,7 +209,7 @@ class EntraService {
       username,
       avatarUrl: null,
       roles,
-      permissions: getPermissionsForRoles(roles),
+      permissions: await getDatabasePermissionsForRoles(roles),
       homeAccountId,
     };
   }

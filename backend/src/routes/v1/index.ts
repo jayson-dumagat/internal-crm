@@ -7,6 +7,7 @@ import leadRouter from "../../modules/leads/lead.routes";
 import activityRouter from "../../modules/activities/activity.routes";
 import noteRouter from "../../modules/notes/note.routes";
 import taskRouter from "../../modules/tasks/task.routes";
+import accessRouter from "../../modules/access/access.routes";
 
 export const v1Router = Router();
 
@@ -18,4 +19,5 @@ v1Router.use("/leads", leadRouter);
 v1Router.use("/activities", activityRouter);
 v1Router.use("/notes", noteRouter);
 v1Router.use("/tasks", taskRouter);
+v1Router.use("/access", accessRouter);
 

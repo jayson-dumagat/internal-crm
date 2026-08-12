@@ -6,6 +6,6 @@ export interface Task {
   commentCount: number;
   category?: string;
   userAvatar: string;
-  status: string;
+  status: "not-started" | "in-progress" | "completed" | "overdue" | "blocked";
   toggleChecked: () => void;
 }

@@ -40,3 +40,13 @@ export async function logout(): Promise<string> {
     throw new Error(getApiErrorMessage(error, "Unable to sign out."));
   }
 }
+
+export async function getMicrosoftLogoutUrl(): Promise<string> {
+  try {
+    const response = await apiClient.get("/auth/logout-url");
+
+    return logoutResponseSchema.parse(response.data).logoutUrl;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Unable to sign out."));
+  }
+}

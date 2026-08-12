@@ -5,6 +5,7 @@ import { User } from "../users/user.entity";
 import { recordActivity } from "../activities/activity.service";
 import { Note } from "./note.entity";
 import { createNoteSchema, updateNoteSchema } from "./note.schema";
+import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const noteRepository = () => AppDataSource.getRepository(Note);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -23,7 +24,11 @@ export async function listNotes(req: Request, res: Response, next: NextFunction)
       return;
     }
     const notes = await noteRepository().find({ where: { tenantId }, order: { updatedAt: "DESC" }, take: 500 });
-    res.status(200).json({ data: notes.map(toNoteDto) });
+    const currentUser = await getAuthor(req);
+    const visibleNotes = notes.filter((note) => canAccessRecord(req, "notes", note.id)).filter((note) => getDataScope(req, "notes") === "own"
+      ? note.authorId === currentUser?.id
+      : true);
+    res.status(200).json({ data: visibleNotes.map((note) => toNoteDto(note, req)) });
   } catch (error) {
     next(error);
   }
@@ -31,6 +36,15 @@ export async function listNotes(req: Request, res: Response, next: NextFunction)
 
 export async function createNote(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (hasResourceRestriction(req, "notes")) {
+      res.status(403).json({ success: false, message: "You cannot create notes while note access is restricted to assigned records." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      title: "notes.title", content: "notes.content", contentHtml: "notes.content",
+      category: "notes.category", relatedTo: "notes.relatedTo",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) {
       res.status(401).json({ success: false, message: "Authentication is required." });
@@ -63,7 +77,7 @@ export async function createNote(req: Request, res: Response, next: NextFunction
       ipAddress: req.ip,
       details: saved.relatedTo ? `Related to ${saved.relatedTo}.` : null,
     });
-    res.status(201).json({ data: toNoteDto(saved) });
+    res.status(201).json({ data: toNoteDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -71,6 +85,11 @@ export async function createNote(req: Request, res: Response, next: NextFunction
 
 export async function updateNote(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      title: "notes.title", content: "notes.content", contentHtml: "notes.content",
+      category: "notes.category", relatedTo: "notes.relatedTo",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) {
       res.status(401).json({ success: false, message: "Authentication is required." });
@@ -81,6 +100,7 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
       res.status(404).json({ success: false, message: "Note not found." });
       return;
     }
+    if (!canAccessRecord(req, "notes", note.id)) { res.status(404).json({ success: false, message: "Note not found." }); return; }
     const parsed = updateNoteSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ success: false, message: "Please check the note fields and try again.", errors: parsed.error.issues });
@@ -90,7 +110,7 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
     if ("relatedTo" in parsed.data) note.relatedTo = parsed.data.relatedTo || null;
     if ("contentHtml" in parsed.data) note.contentHtml = parsed.data.contentHtml || null;
     const saved = await noteRepository().save(note);
-    res.status(200).json({ data: toNoteDto(saved) });
+    res.status(200).json({ data: toNoteDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -103,6 +123,7 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
       res.status(401).json({ success: false, message: "Authentication is required." });
       return;
     }
+    if (!canAccessRecord(req, "notes", String(req.params.id))) { res.status(404).json({ success: false, message: "Note not found." }); return; }
     const result = await noteRepository().delete({ id: String(req.params.id), tenantId });
     if (!result.affected) {
       res.status(404).json({ success: false, message: "Note not found." });
@@ -114,17 +135,21 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
   }
 }
 
-function toNoteDto(note: Note) {
-  return {
+function toNoteDto(note: Note, req?: Request) {
+  const canSee = (field: string) => !req || canViewField(req, field);
+  const dto = {
     id: note.id,
     title: note.title,
-    content: note.content,
-    contentHtml: note.contentHtml,
+    content: canSee("notes.content") ? note.content : "Restricted",
+    contentHtml: canSee("notes.content") ? note.contentHtml : null,
     category: note.category,
-    relatedTo: note.relatedTo ?? "",
-    author: note.authorName.replace(/\s*\(CGSI\)\s*$/i, "").trim(),
-    authorAvatar: note.authorAvatarUrl,
+    relatedTo: canSee("notes.relatedTo") ? note.relatedTo ?? "" : "Restricted",
+    author: canSee("notes.author") ? note.authorName.replace(/\s*\(CGSI\)\s*$/i, "").trim() : "Restricted",
+    authorAvatar: canSee("notes.author") ? note.authorAvatarUrl : null,
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
   };
+  if (!canSee("notes.title")) dto.title = "Restricted";
+  if (!canSee("notes.category")) dto.category = "Restricted";
+  return dto;
 }

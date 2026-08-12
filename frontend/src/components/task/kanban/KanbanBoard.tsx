@@ -54,10 +54,10 @@ export default function KanbanBoard({
         canMonitor: ({ source }) => source.data.type === "task",
         onDrop({ source, location }) {
           const target = location.current.dropTargets[0];
-          const sourceData = source.data as { taskId?: string };
+          const sourceData = source.data as { taskId?: string; status?: string };
           const targetData = target?.data as { status?: string } | undefined;
 
-          if (sourceData.taskId && targetData?.status) {
+          if (sourceData.taskId && targetData?.status && sourceData.status !== targetData.status) {
             changeTaskStatus(sourceData.taskId, targetData.status);
           }
         },

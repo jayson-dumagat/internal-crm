@@ -1,12 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import type { CreateLeadInput, LeadRecord } from "../../api/crm";
 import { leadFormSchema, type LeadFormValues } from "../../validations/crm";
-import { useUploadLeadAvatar } from "../../hooks/crm/useCrmDirectory";
+import { useAuth } from "../../hooks/auth/useAuth";
+import { useCompaniesQuery, useUploadLeadAvatar, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
+import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
 import Avatar from "../ui/avatar/Avatar";
 import { InfoIcon } from "../../icons";
 import Sheet from "../ui/sheet/Sheet";
@@ -27,7 +29,10 @@ export default function LeadFormSheet({
   onSubmit: (input: CreateLeadInput, lead?: Lead) => Promise<LeadRecord>;
   isPending: boolean;
 }) {
+  const { user: currentUser } = useAuth();
   const uploadAvatar = useUploadLeadAvatar();
+  const usersQuery = useUsersQuery();
+  const companiesQuery = useCompaniesQuery();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const form = useForm<LeadFormValues>({
@@ -43,6 +48,7 @@ export default function LeadFormSheet({
       status: "New",
       interestLevel: "Low",
       address: "",
+      assignedToId: currentUser?.entraObjectId ?? "",
     },
   });
 
@@ -60,11 +66,24 @@ export default function LeadFormSheet({
             annualRevenue: lead.annualRevenue ?? "",
             status: lead.status,
             interestLevel: lead.interestLevel,
+            assignedToId: lead.assignedToId ?? lead.assignedTo.id ?? "",
             address: lead.address === "—" ? "" : lead.address,
           }
-        : undefined,
+        : {
+            name: "",
+            role: "",
+            email: "",
+            phone: "",
+            company: "",
+            source: "Manual",
+            annualRevenue: "",
+            status: "New",
+            interestLevel: "Low",
+            address: "",
+            assignedToId: currentUser?.entraObjectId ?? "",
+          },
     );
-  }, [form, isOpen, lead]);
+  }, [currentUser?.entraObjectId, form, isOpen, lead]);
 
   useEffect(() => {
     return () => {
@@ -94,6 +113,26 @@ export default function LeadFormSheet({
   };
 
   const contactImage = lead?.avatar ?? null;
+  const assigneeOptions = (usersQuery.data ?? []).map((assignee) => ({
+    ...assignee,
+    name: formatUserDisplayName(assignee.name),
+    avatarUrl: assignee.avatarUrl ?? (
+      assignee.id === currentUser?.entraObjectId
+        ? currentUser.avatarUrl ?? CURRENT_USER_AVATAR
+        : null
+    ),
+  }));
+  if (currentUser && !assigneeOptions.some((assignee) => assignee.id === currentUser.entraObjectId)) {
+    assigneeOptions.unshift({
+      id: currentUser.entraObjectId,
+      name: formatUserDisplayName(currentUser.name),
+      email: currentUser.email,
+      avatarUrl: currentUser.avatarUrl ?? CURRENT_USER_AVATAR,
+      isCurrentUser: true,
+    });
+  }
+  const selectedAssigneeId = useWatch({ control: form.control, name: "assignedToId" });
+  const selectedAssignee = assigneeOptions.find((assignee) => assignee.id === selectedAssigneeId);
   const submit = form.handleSubmit(async (values) => {
     try {
       const savedLead = await onSubmit(
@@ -105,6 +144,7 @@ export default function LeadFormSheet({
           source: values.source || null,
           annualRevenue: values.annualRevenue || null,
           address: values.address || null,
+          assignedToId: values.assignedToId || null,
         },
         lead ?? undefined,
       );
@@ -144,7 +184,7 @@ export default function LeadFormSheet({
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Role / Job Title" error={form.formState.errors.role?.message}><input {...form.register("role")} maxLength={200} className={inputClassName} placeholder="Investor" /></Field>
-            <Field label="Company" error={form.formState.errors.company?.message}><input {...form.register("company")} maxLength={255} className={inputClassName} placeholder="Company or institution" /></Field>
+            <Field label="Company" error={form.formState.errors.company?.message}><select {...form.register("company")} className={inputClassName}><option value="">Individual / no company</option>{companiesQuery.isLoading ? <option disabled>Loading companies...</option> : (companiesQuery.data ?? []).map((company) => <option key={company.id} value={company.name}>{company.name}</option>)}</select></Field>
           </div>
         </FormSection>
 
@@ -154,6 +194,40 @@ export default function LeadFormSheet({
             <Field label="Phone" error={form.formState.errors.phone?.message}><input type="tel" {...form.register("phone")} maxLength={50} className={inputClassName} placeholder="+63 917 555 0000" /></Field>
           </div>
           <Field label="Address" error={form.formState.errors.address?.message}><input {...form.register("address")} maxLength={1000} className={inputClassName} placeholder="City, country" /></Field>
+        </FormSection>
+
+        <FormSection title="Lead assignment" description="Choose the relationship manager responsible for this lead.">
+          <Field label="Assigned To" error={form.formState.errors.assignedToId?.message}>
+            <div className="relative">
+              {selectedAssignee && (
+                <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center">
+                  <Avatar
+                    src={selectedAssignee.avatarUrl}
+                    alt={selectedAssignee.name}
+                    size="xsmall"
+                    colorKey={`lead-assignee-${selectedAssignee.id}`}
+                  />
+                </span>
+              )}
+              <select
+                {...form.register("assignedToId")}
+                disabled={usersQuery.isLoading}
+                className={`${inputClassName} ${selectedAssignee ? "pl-11" : ""}`}
+              >
+                <option value="">Unassigned</option>
+                {usersQuery.isLoading ? (
+                  <option disabled>Loading users...</option>
+                ) : (
+                  assigneeOptions.map((assignee) => (
+                    <option key={assignee.id} value={assignee.id}>
+                      {assignee.id === currentUser?.entraObjectId ? "Me" : assignee.name}
+                      {assignee.id !== currentUser?.entraObjectId && assignee.email ? ` — ${assignee.email}` : ""}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </Field>
         </FormSection>
 
         <FormSection title="Lead qualification" description="Capture the source, value, interest, and current lead status.">

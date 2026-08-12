@@ -162,6 +162,8 @@ export default function Calendar() {
             editable={canUpdate}
             eventStartEditable={canUpdate}
             eventDurationEditable={canUpdate}
+            dayMaxEvents={3}
+            eventMaxStack={3}
             select={handleDateSelect}
             eventClick={handleEventClick}
             eventDrop={(change) => void persistEventRange(change)}

@@ -8,7 +8,9 @@ import { AppDataSource } from "../../database/data-source";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import type { EntraUser } from "./auth.types";
-import { getPermissionsForRoles } from "../access/access-control";
+import { toAccessPolicySnapshot } from "../access/access-control";
+import { getDatabaseEffectivePermissions } from "../access/access-permission.service";
+import { UserAccessPolicy } from "../access/user-access-policy.entity";
 
 const AUTH_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -149,6 +151,15 @@ export async function handleEntraCallback(
     }
     await syncAuthenticatedUser(authenticatedUser, profilePhoto);
 
+    const authenticatedPolicy = await AppDataSource.getRepository(UserAccessPolicy).findOne({
+      where: {
+        entraTenantId: authenticatedUser.tenantId,
+        entraObjectId: authenticatedUser.entraObjectId,
+      },
+    });
+    authenticatedUser.permissions = await getDatabaseEffectivePermissions(authenticatedUser.roles, authenticatedPolicy);
+    authenticatedUser.accessPolicy = toAccessPolicySnapshot(authenticatedPolicy);
+
     await regenerateSession(req);
 
     req.session.user = authenticatedUser;
@@ -199,6 +210,7 @@ async function syncAuthenticatedUser(
     entraObjectId: authenticatedUser.entraObjectId,
     email: authenticatedUser.email || authenticatedUser.username,
     displayName: authenticatedUser.name,
+    entraRoles: authenticatedUser.roles,
     lastLoginAt: new Date(),
     lastSyncedAt: new Date(),
   };
@@ -241,19 +253,32 @@ export async function getCurrentSession(
     return;
   }
 
-  const storedUser = await AppDataSource.getRepository(User).findOne({
-    where: {
-      entraTenantId: req.session.user.tenantId,
-      entraObjectId: req.session.user.entraObjectId,
-    },
-    select: { avatarUrl: true },
-  });
+  const [storedUser, policy] = await Promise.all([
+    AppDataSource.getRepository(User).findOne({
+      where: {
+        entraTenantId: req.session.user.tenantId,
+        entraObjectId: req.session.user.entraObjectId,
+      },
+      select: { avatarUrl: true },
+    }),
+    AppDataSource.getRepository(UserAccessPolicy).findOne({
+      where: {
+        entraTenantId: req.session.user.tenantId,
+        entraObjectId: req.session.user.entraObjectId,
+      },
+    }),
+  ]);
+
+  const effectivePermissions = await getDatabaseEffectivePermissions(req.session.user.roles, policy);
+  req.session.user.permissions = effectivePermissions;
+  req.session.user.accessPolicy = toAccessPolicySnapshot(policy);
 
   res.status(200).json({
     authenticated: true,
     user: {
       ...req.session.user,
-      permissions: getPermissionsForRoles(req.session.user.roles),
+      permissions: effectivePermissions,
+      accessPolicy: toAccessPolicySnapshot(policy),
       avatarUrl: storedUser?.avatarUrl
         ? "/api/v1/users/me/avatar"
         : null,
@@ -277,6 +302,19 @@ export async function logout(
   } catch (error) {
     next(error);
   }
+}
+
+/**
+ * Provides the Microsoft logout endpoint for the client fallback path when
+ * the server session has already expired or cannot be destroyed cleanly.
+ */
+export function getMicrosoftLogoutUrl(
+  _req: Request,
+  res: Response,
+): void {
+  res.status(200).json({
+    logoutUrl: entraService.createLogoutUrl(),
+  });
 }
 
 function getQueryString(value: unknown): string | undefined {

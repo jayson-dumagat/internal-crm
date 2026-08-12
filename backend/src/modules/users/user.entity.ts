@@ -51,6 +51,9 @@ export class User {
   })
   displayName!: string;
 
+  @Column({ name: "entra_roles", type: "text", array: true, default: "{}" })
+  entraRoles!: string[];
+
   @Column({
     name: "given_name",
     type: "varchar",

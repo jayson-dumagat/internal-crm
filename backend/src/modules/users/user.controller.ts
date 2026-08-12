@@ -24,6 +24,7 @@ export async function listUsers(
       entraObjectId: currentUser.entraObjectId,
       email: currentUser.email || currentUser.username,
       displayName: currentUser.name,
+      entraRoles: currentUser.roles,
       status: UserStatus.ACTIVE,
       isAccessEnabled: true,
       lastLoginAt: new Date(),

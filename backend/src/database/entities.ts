@@ -7,6 +7,9 @@ import { Task } from "../modules/tasks/task.entity.js";
 import { User } from "../modules/users/user.entity.js";
 import { Activity } from "../modules/activities/activity.entity.js";
 import { Note } from "../modules/notes/note.entity.js";
+import { UserAccessPolicy } from "../modules/access/user-access-policy.entity.js";
+import { Permission } from "../modules/access/permission.entity.js";
+import { Role } from "../modules/access/role.entity.js";
 
 export const entities = [
   User,
@@ -18,4 +21,7 @@ export const entities = [
   Contact,
   Activity,
   Note,
+  UserAccessPolicy,
+  Permission,
+  Role,
 ];

@@ -21,6 +21,7 @@ export default function ProtectedRoute({
 
   const sessionQuery = useSessionQuery({
     refetchOnMount: "always",
+    refetchInterval: 15_000,
   });
 
   useEffect(() => {

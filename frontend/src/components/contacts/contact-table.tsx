@@ -36,6 +36,7 @@ import SearchField from "../search/SearchField";
 import { useSearch } from "../../hooks/useSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import Checkbox from "../form/input/Checkbox";
+import Sheet from "../ui/sheet/Sheet";
 
 type ContactStatus =
   | "Customer"
@@ -117,6 +118,7 @@ export default function ContactTable() {
   const [editingContact, setEditingContact] = useState<ContactRecord | null>(
     null,
   );
+  const [viewContact, setViewContact] = useState<Contact | null>(null);
   const deleteContact = useDeleteContact();
 
   const filteredData = useMemo(() => {
@@ -391,15 +393,13 @@ export default function ContactTable() {
                   return (
                     <TableRow
                       key={item.id}
-                      className={
-                        isSelected
-                          ? "bg-brand-50/40 dark:bg-brand-500/[0.05]"
-                          : ""
-                      }
+                      onClick={() => setViewContact(item)}
+                      className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                     >
                       <TableCell
+                        onClick={(event) => event.stopPropagation()}
                         className={`w-[52px] max-w-[52px] min-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900 ${
-                          isSelected ? "bg-brand-50 dark:bg-gray-900" : ""
+                          "bg-white dark:bg-gray-900"
                         }`}
                       >
                         <Checkbox
@@ -409,8 +409,9 @@ export default function ContactTable() {
                         />
                       </TableCell>
                       <TableCell
+                        onClick={(event) => event.stopPropagation()}
                         className={`w-[250px] min-w-[250px] border border-gray-100 bg-white px-4 py-3 whitespace-nowrap dark:border-white/[0.05] dark:bg-gray-900 ${
-                          isSelected ? "bg-brand-50 dark:bg-gray-900" : ""
+                          "bg-white dark:bg-gray-900"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -504,7 +505,7 @@ export default function ContactTable() {
                         {formatDisplayDate(item.last_activity)}
                       </TableCell>
                       <TableCell className="w-[110px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
                           <button
                             type="button"
                             aria-label={`Delete ${item.user.name}`}
@@ -615,6 +616,9 @@ export default function ContactTable() {
         companiesLoading={companiesQuery.isLoading}
         contact={editingContact}
       />
+      <Sheet isOpen={Boolean(viewContact)} onClose={() => setViewContact(null)} title={viewContact?.user.name ?? "Contact details"} description="Review contact relationship information." side="right" className="w-full sm:max-w-2xl">
+        {viewContact && <div className="space-y-5"><div className="flex items-center gap-3"><Avatar src={viewContact.user.image} alt={viewContact.user.name} size="large" /><div><h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{viewContact.user.name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{viewContact.position}</p></div></div><div className="grid gap-4 sm:grid-cols-2">{[["Company", viewContact.company.name], ["Email", viewContact.contact.email], ["Phone", viewContact.contact.phone], ["Relationship owner", viewContact.owner.name], ["Location", viewContact.location], ["Status", viewContact.status], ["Last activity", formatDisplayDate(viewContact.last_activity)], ["Risk profile", viewContact.risk_profile || "Not provided"]].map(([label, value]) => <div key={label}><p className="text-xs text-gray-400">{label}</p><p className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p></div>)}</div><button type="button" disabled={!canUpdate} onClick={() => { setEditingContact(viewContact as unknown as ContactRecord); setViewContact(null); setIsAddContactOpen(true); }} className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-40">Edit contact</button></div>}
+      </Sheet>
     </div>
   );
 }

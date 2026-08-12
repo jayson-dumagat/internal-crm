@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   getCurrentSession,
   getMicrosoftLoginUrl,
+  getMicrosoftLogoutUrl,
   logout,
 } from "../../api/auth";
-import { useAuth } from "./useAuth";
 
 export const authKeys = {
   all: ["auth"] as const,
@@ -15,12 +15,14 @@ export function useSessionQuery(options?: {
   enabled?: boolean;
   refetchOnMount?: boolean | "always";
   staleTime?: number;
+  refetchInterval?: number;
 }) {
   return useQuery({
     queryKey: authKeys.session(),
     queryFn: getCurrentSession,
     retry: false,
     staleTime: options?.staleTime ?? 30_000,
+    refetchInterval: options?.refetchInterval,
     refetchOnMount: options?.refetchOnMount ?? false,
     enabled: options?.enabled ?? true,
   });
@@ -34,19 +36,32 @@ export function useMicrosoftSignIn() {
 }
 
 export function useLogout() {
-  const queryClient = useQueryClient();
-  const { clearUser } = useAuth();
+  const redirectToMicrosoftLogout = (logoutUrl: string) => {
+    // Do not clear React auth state before this navigation. ProtectedRoute
+    // could otherwise render /signin while the browser is still leaving for
+    // Microsoft. The server session has already been destroyed, and the next
+    // app load will establish the signed-out state.
+    // replace() also prevents the authenticated CRM page from being restored
+    // with the browser Back button.
+    window.location.replace(logoutUrl);
+  };
 
   return useMutation({
     mutationFn: logout,
     onSuccess: (logoutUrl) => {
-      clearUser();
-      queryClient.removeQueries({ queryKey: authKeys.all });
-      window.location.assign(logoutUrl);
+      redirectToMicrosoftLogout(logoutUrl);
     },
-    onError: () => {
-      clearUser();
-      queryClient.removeQueries({ queryKey: authKeys.all });
+    onError: async () => {
+      // If the session POST fails because the session already expired, still
+      // send the user through Microsoft's logout endpoint instead of letting
+      // the route guard redirect directly to /signin.
+      try {
+        const logoutUrl = await getMicrosoftLogoutUrl();
+        redirectToMicrosoftLogout(logoutUrl);
+      } catch {
+        // Keep the current route if both logout requests fail so the user is
+        // not silently redirected to the local sign-in page.
+      }
     },
   });
 }

@@ -1,38 +1,8 @@
 import type { AuthUser } from "../api/auth";
 
-export const accessPermissions = [
-  "dashboard.read",
-  "calendar.read",
-  "tasks.read",
-  "tasks.create",
-  "tasks.update",
-  "tasks.delete",
-  "tasks.status.update",
-  "notes.read",
-  "notes.create",
-  "notes.update",
-  "notes.delete",
-  "inbox.read",
-  "activities.read",
-  "activities.create",
-  "leads.read",
-  "leads.create",
-  "leads.update",
-  "leads.delete",
-  "contacts.read",
-  "contacts.create",
-  "contacts.update",
-  "contacts.delete",
-  "companies.read",
-  "companies.create",
-  "companies.update",
-  "companies.delete",
-  "pipelines.read",
-  "pipelines.manage",
-  "users.read",
-] as const;
-
-export type AccessPermission = (typeof accessPermissions)[number];
+/** Permission codes are owned by the backend permissions table. The frontend
+ * accepts string codes so adding a permission does not require a rebuild. */
+export type AccessPermission = string;
 
 export function hasPermission(
   user: Pick<AuthUser, "permissions"> | null | undefined,
@@ -46,4 +16,3 @@ export function hasAnyPermission(
 ): boolean {
   return Boolean(user?.permissions.length);
 }
-

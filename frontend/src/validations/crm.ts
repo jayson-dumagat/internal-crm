@@ -32,6 +32,7 @@ export const leadFormSchema = z
     status: z.enum(["New", "Contacted", "Qualified", "Converted", "Lost"]),
     interestLevel: z.enum(["High", "Medium", "Low"]),
     address: optionalText(1000),
+    assignedToId: z.string().trim().max(150, "Select a valid assignee.").optional(),
   })
   .strict();
 

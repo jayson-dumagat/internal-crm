@@ -22,9 +22,9 @@ export default function TaskList({
     canMonitor: ({ source }) => source.data.type === "task-list-item",
     onDrop: ({ source, location }) => {
       const target = location.current.dropTargets[0];
-      const sourceData = source.data as { taskId?: string };
+      const sourceData = source.data as { taskId?: string; status?: string };
       const targetData = target?.data as { status?: string } | undefined;
-      if (sourceData.taskId && targetData?.status && lanes.includes(targetData.status as TaskStatus)) {
+      if (sourceData.taskId && targetData?.status && sourceData.status !== targetData.status && lanes.includes(targetData.status as TaskStatus)) {
         updateStatus(sourceData.taskId, targetData.status as TaskStatus);
       }
       setDragging(null);

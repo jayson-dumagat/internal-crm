@@ -7,6 +7,7 @@ import { UserStatus } from "../users/user.types";
 import { Task, TaskKind, TaskPriority, TaskStatus, TaskType } from "./task.entity";
 import { createTaskSchema, updateTaskSchema, updateTaskStatusSchema } from "./task.schema";
 import { Lead } from "../leads/lead.entity";
+import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const taskRepository = () => AppDataSource.getRepository(Task);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -34,12 +35,29 @@ export async function listTasks(req: Request, res: Response, next: NextFunction)
     const tenantId = req.session.user?.tenantId;
     if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
     const tasks = await taskRepository().find({ where: { tenantId }, relations: { assignee: true, lead: true }, order: { dueAt: "ASC", createdAt: "DESC" } });
-    res.status(200).json({ data: tasks.map(toTaskDto) });
+    const currentUser = await getCurrentUser(req);
+    const scope = getDataScope(req, "tasks");
+    const visibleTasks = tasks.filter((task) => canAccessRecord(req, "tasks", task.id)).filter((task) => scope === "own"
+      ? task.createdById === currentUser?.id
+      : scope === "assigned"
+        ? task.createdById === currentUser?.id || task.assignee?.entraObjectId === req.session.user?.entraObjectId
+        : true);
+    res.status(200).json({ data: visibleTasks.map((task) => toTaskDto(task, req)) });
   } catch (error) { next(error); }
 }
 
 export async function createTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (hasResourceRestriction(req, "tasks")) {
+      res.status(403).json({ success: false, message: "You cannot create tasks while task access is restricted to assigned records." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      title: "tasks.title", description: "tasks.description", type: "tasks.type", status: "tasks.status",
+      priority: "tasks.priority", color: "tasks.schedule", startAt: "tasks.schedule", dueAt: "tasks.schedule",
+      reminderAt: "tasks.schedule", assigneeId: "tasks.assignee", leadId: "tasks.lead",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
     const currentUser = await getCurrentUser(req);
@@ -75,17 +93,24 @@ export async function createTask(req: Request, res: Response, next: NextFunction
     });
     const saved = await taskRepository().save(task);
     await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "created event" : "created task", target: saved.title, category: "Task", ipAddress: req.ip });
-    res.status(201).json({ data: toTaskDto(saved) });
+    res.status(201).json({ data: toTaskDto(saved, req) });
   } catch (error) { next(error); }
 }
 
 export async function updateTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      title: "tasks.title", description: "tasks.description", type: "tasks.type", status: "tasks.status",
+      priority: "tasks.priority", color: "tasks.schedule", startAt: "tasks.schedule", dueAt: "tasks.schedule",
+      reminderAt: "tasks.schedule", assigneeId: "tasks.assignee", leadId: "tasks.lead",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const sessionUser = req.session.user;
     if (!sessionUser) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
     const currentUser = await getCurrentUser(req);
     const task = await taskRepository().findOne({ where: { id: String(req.params.id), tenantId: sessionUser.tenantId }, relations: { assignee: true, lead: true } });
     if (!task) { res.status(404).json({ success: false, message: "Task not found." }); return; }
+    if (!canAccessRecord(req, "tasks", task.id)) { res.status(404).json({ success: false, message: "Task not found." }); return; }
     const parsed = updateTaskSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ success: false, message: "Please check the task fields and try again.", errors: parsed.error.issues }); return; }
     Object.assign(task, {
@@ -117,7 +142,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     if (task.status !== TaskStatus.COMPLETED) { task.completedAt = null; task.completedById = null; }
     const saved = await taskRepository().save(task);
     if (currentUser) await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "updated event" : "updated task", target: saved.title, category: "Task", ipAddress: req.ip });
-    res.status(200).json({ data: toTaskDto(saved) });
+    res.status(200).json({ data: toTaskDto(saved, req) });
   } catch (error) { next(error); }
 }
 
@@ -135,17 +160,19 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
   try {
     const tenantId = req.session.user?.tenantId;
     if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
+    if (!canAccessRecord(req, "tasks", String(req.params.id))) { res.status(404).json({ success: false, message: "Task not found." }); return; }
     const result = await taskRepository().delete({ id: String(req.params.id), tenantId });
     if (!result.affected) { res.status(404).json({ success: false, message: "Task not found." }); return; }
     res.status(200).json({ success: true });
   } catch (error) { next(error); }
 }
 
-function toTaskDto(task: Task) {
-  return {
+function toTaskDto(task: Task, req?: Request) {
+  const canSee = (field: string) => !req || canViewField(req, field);
+  const dto = {
     id: task.id,
     title: task.title,
-    description: task.description,
+    description: canSee("tasks.description") ? task.description : null,
     kind: task.kind,
     type: task.type,
     status: fromTaskStatus(task.status),
@@ -155,11 +182,22 @@ function toTaskDto(task: Task) {
     dueAt: task.dueAt?.toISOString() ?? null,
     reminderAt: task.reminderAt?.toISOString() ?? null,
     leadId: task.leadId,
-    lead: task.lead ? { id: task.lead.id, name: `${task.lead.firstName} ${task.lead.lastName}`.trim() } : null,
-    assignee: task.assignee ? { id: task.assignee.entraObjectId, name: task.assignee.displayName.replace(/\s*\(CGSI\)\s*$/i, "").trim(), avatar: task.assignee.avatarUrl ? `/api/v1/users/${task.assignee.entraObjectId}/avatar` : null } : null,
+    lead: canSee("tasks.lead") && task.lead ? { id: task.lead.id, name: `${task.lead.firstName} ${task.lead.lastName}`.trim() } : null,
+    assignee: canSee("tasks.assignee") && task.assignee ? { id: task.assignee.entraObjectId, name: task.assignee.displayName.replace(/\s*\(CGSI\)\s*$/i, "").trim(), avatar: task.assignee.avatarUrl ? `/api/v1/users/${task.assignee.entraObjectId}/avatar` : null } : null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
+  if (!canSee("tasks.description")) dto.description = null;
+  if (!canSee("tasks.title")) dto.title = "Restricted";
+  if (!canSee("tasks.type")) dto.type = TaskType.GENERAL;
+  if (!canSee("tasks.status")) dto.status = "not-started";
+  if (!canSee("tasks.priority")) dto.priority = TaskPriority.LOW;
+  if (!canSee("tasks.schedule")) {
+    dto.startAt = null;
+    dto.dueAt = null;
+    dto.reminderAt = null;
+  }
+  return dto;
 }
 
 function toDate(value?: string | null) { return value ? new Date(value) : null; }

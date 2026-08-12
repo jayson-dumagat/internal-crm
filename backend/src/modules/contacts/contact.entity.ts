@@ -15,6 +15,9 @@ export class Contact {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
+  @Column({ name: "tenant_id", type: "varchar", length: 150, nullable: true })
+  tenantId!: string;
+
   @Column({ type: "varchar", length: 255 })
   name!: string;
 

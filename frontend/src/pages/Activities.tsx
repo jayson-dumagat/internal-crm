@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useSearch } from "../hooks/useSearch";
 import {useDebounce } from "../hooks/useDebounce";
 import dayjs from "dayjs";
@@ -29,6 +30,7 @@ const categories: ActivityRecord["category"][] = [
 
 export default function Activities() {
   const { search } = useSearch();
+  const [searchParams] = useSearchParams();
 
   const activitiesQuery = useActivitiesQuery();
   const events = activitiesQuery.data ?? [];
@@ -48,10 +50,16 @@ export default function Activities() {
 
   const filteredEvents = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
+    const targetFilter = (searchParams.get("target") ?? "").trim().toLowerCase();
+    const actorFilter = (searchParams.get("actor") ?? "").trim().toLowerCase();
+    const dateFilter = searchParams.get("date");
     return events.filter(
       (event) =>
         (category === "All" || event.category === category) &&
         (outcome === "All" || event.outcome === outcome) &&
+        (!targetFilter || event.target.toLowerCase().includes(targetFilter)) &&
+        (!actorFilter || event.actor.toLowerCase().includes(actorFilter)) &&
+        (!dateFilter || dayjs(event.timestamp).isSame(dayjs(dateFilter), "day")) &&
         (!term ||
           [
             event.id,
@@ -65,7 +73,7 @@ export default function Activities() {
             .toLowerCase()
             .includes(term)),
     );
-  }, [category, events, outcome, debouncedSearch]);
+  }, [category, events, outcome, debouncedSearch, searchParams]);
   const totalPages = Math.max(
     1,
     Math.ceil(filteredEvents.length / itemsPerPage),
@@ -75,6 +83,14 @@ export default function Activities() {
     (safePage - 1) * itemsPerPage,
     safePage * itemsPerPage,
   );
+  const groupedEvents = useMemo(() => {
+    const groups = new Map<string, ActivityRecord[]>();
+    visibleEvents.forEach((event) => {
+      const key = dayjs(event.timestamp).format("YYYY-MM-DD");
+      groups.set(key, [...(groups.get(key) ?? []), event]);
+    });
+    return [...groups.entries()];
+  }, [visibleEvents]);
   const exportAuditLog = () => {
     const rows = [
       [
@@ -201,8 +217,10 @@ export default function Activities() {
           {visibleEvents.length ? (
             <div className="relative">
               <div className="absolute top-5 bottom-5 left-5 w-px bg-gray-200 dark:bg-gray-800" />
-              {visibleEvents.map((event) => (
-                <article
+              {groupedEvents.map(([dateKey, dayEvents]) => (
+                <div key={dateKey} className="mb-6 last:mb-0">
+                  <div className="mb-3 flex items-center gap-3"><span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{dayjs(dateKey).isSame(dayjs(), "day") ? "Today" : dayjs(dateKey).format("DD MMMM YYYY")}</span><span className="h-px flex-1 bg-gray-100 dark:bg-white/[0.05]" /></div>
+                  {dayEvents.map((event) => <article
                   key={event.id}
                   className="relative mb-5 flex gap-4 last:mb-0"
                 >
@@ -266,7 +284,8 @@ export default function Activities() {
                       </div>
                     )}
                   </div>
-                </article>
+                </article>)}
+                </div>
               ))}
             </div>
           ) : (

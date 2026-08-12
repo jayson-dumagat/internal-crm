@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router";
 
 import Avatar from "../ui/avatar/Avatar";
 import Badge from "../ui/badge/Badge";
@@ -183,8 +184,8 @@ function LeadSummary({
         </div>
       </div>
 
-      {/* Owner, company, role and revenue */}
-      <div className="grid grid-cols-2 divide-x divide-y divide-gray-100 border-b border-gray-100 sm:grid-cols-4 sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05]">
+      {/* Owner, assignee, company, role and revenue */}
+      <div className="grid grid-cols-2 divide-x divide-y divide-gray-100 border-b border-gray-100 sm:grid-cols-5 sm:divide-y-0 dark:divide-white/[0.05] dark:border-white/[0.05]">
         <SummaryField label="Lead Owner" className="py-4 pr-4">
           <div className="flex min-w-0 items-center gap-2">
             <Avatar
@@ -194,6 +195,18 @@ function LeadSummary({
             />
 
             <span className="truncate">{lead.owner.name}</span>
+          </div>
+        </SummaryField>
+
+        <SummaryField label="Assigned To" className="py-4 pl-4 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <Avatar
+              src={lead.assignedTo.avatar}
+              alt={lead.assignedTo.name}
+              size="small"
+            />
+
+            <span className="truncate">{lead.assignedTo.name}</span>
           </div>
         </SummaryField>
 
@@ -331,6 +344,7 @@ function LeadTabs({
 }
 
 function ActivityTab({ lead }: { lead: Lead }) {
+  const navigate = useNavigate();
   const activitiesQuery = useActivitiesQuery();
   const activities = (activitiesQuery.data ?? []).filter((activity) => activity.target === lead.name || activity.target === lead.company);
 
@@ -343,6 +357,7 @@ function ActivityTab({ lead }: { lead: Lead }) {
 
         <button
           type="button"
+          onClick={() => navigate(`/activities?target=${encodeURIComponent(lead.name)}`)}
           className="inline-flex items-center gap-1 text-sm font-medium text-brand-500 transition hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
         >
           View all activity
@@ -741,6 +756,11 @@ function NotesTab({ lead }: { lead: Lead }) {
   const notesQuery = useNotesQuery();
   const createNote = useCreateNote();
   const previousNotes = (notesQuery.data ?? []).filter((item) => item.relatedTo === lead.name || item.relatedTo === lead.company);
+  const noteGroups = previousNotes.reduce<Record<string, typeof previousNotes>>((groups, item) => {
+    const key = dayjs(item.updatedAt).format("YYYY-MM-DD");
+    groups[key] = [...(groups[key] ?? []), item];
+    return groups;
+  }, {});
 
   const handleSaveNote = async () => {
     const trimmedNote = note.trim();
@@ -795,7 +815,7 @@ function NotesTab({ lead }: { lead: Lead }) {
           Previous Notes
         </p>
 
-        {previousNotes.length > 0 ? <div className="mt-4 space-y-3">{previousNotes.map((item) => <article key={item.id} className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.05]"><p className="text-sm text-gray-700 dark:text-gray-300">{item.content}</p><p className="mt-2 text-xs text-gray-400">{formatDisplayDate(item.updatedAt)} · {item.author}</p></article>)}</div> : <div className="mt-4 py-6 text-center"><p className="text-sm text-gray-500 dark:text-gray-400">{notesQuery.isLoading ? "Loading notes..." : "No notes have been added yet."}</p></div>}
+        {previousNotes.length > 0 ? <div className="mt-4 space-y-5">{Object.entries(noteGroups).map(([date, items]) => <div key={date}><div className="mb-2 flex items-center gap-2"><span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{dayjs(date).format("DD MMMM YYYY")}</span><span className="h-px flex-1 bg-gray-100 dark:bg-white/[0.05]" /></div><div className="space-y-3">{items.map((item) => <article key={item.id} className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.05]"><p className="text-sm text-gray-700 dark:text-gray-300">{item.content}</p><p className="mt-2 text-xs text-gray-400">{formatDisplayDate(item.updatedAt)} · {item.author}</p></article>)}</div></div>)}</div> : <div className="mt-4 py-6 text-center"><p className="text-sm text-gray-500 dark:text-gray-400">{notesQuery.isLoading ? "Loading notes..." : "No notes have been added yet."}</p></div>}
       </div>
     </div>
   );

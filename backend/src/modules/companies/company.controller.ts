@@ -7,25 +7,32 @@ import { getObject, putObject, removeObject, statObject } from "../../config/sto
 import { Contact } from "../contacts/contact.entity";
 import { Company } from "./company.entity";
 import { createCompanySchema, updateCompanySchema } from "./company.schema";
+import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const companyRepository = () => AppDataSource.getRepository(Company);
 const contactRepository = () => AppDataSource.getRepository(Contact);
 
 export async function listCompanies(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
+    const tenantId = req.session.user?.tenantId;
+    if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
     const [companies, contacts] = await Promise.all([
-      companyRepository().find({ order: { createdAt: "DESC" } }),
-      contactRepository().find({ order: { createdAt: "ASC" } }),
+      companyRepository().find({ where: { tenantId }, order: { createdAt: "DESC" } }),
+      contactRepository().find({ where: { tenantId }, order: { createdAt: "ASC" } }),
     ]);
 
+    const visibleCompanies = companies.filter((company) => canAccessRecord(req, "companies", company.id)).filter((company) => getDataScope(req, "companies") === "own"
+      ? company.createdById === req.session.user?.entraObjectId
+      : true);
+    const visibleCompanyIds = new Set(visibleCompanies.map((company) => company.id));
     const contactsByCompany = new Map<string, Array<{ name: string; avatar: string | null }>>();
 
     for (const contact of contacts) {
-      if (!contact.companyId) continue;
+      if (!contact.companyId || !visibleCompanyIds.has(contact.companyId)) continue;
       const companyContacts = contactsByCompany.get(contact.companyId) ?? [];
       companyContacts.push({
         name: contact.name,
@@ -35,7 +42,7 @@ export async function listCompanies(
     }
 
     res.status(200).json({
-      data: companies.map((company) => toCompanyDto(company, contactsByCompany.get(company.id) ?? [])),
+      data: visibleCompanies.map((company) => toCompanyDto(company, contactsByCompany.get(company.id) ?? [], req)),
     });
   } catch (error) {
     next(error);
@@ -48,6 +55,18 @@ export async function createCompany(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const tenantId = req.session.user?.tenantId;
+    if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
+    if (hasResourceRestriction(req, "companies")) {
+      res.status(403).json({ success: false, message: "You cannot create companies while company access is restricted to assigned records." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "companies.name", industry: "companies.industry", location: "companies.location",
+      employees: "companies.employees", revenue: "companies.revenue", website: "companies.website",
+      customerSince: "companies.customerSince", tags: "companies.tags", status: "companies.status",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const parsed = createCompanySchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -61,11 +80,12 @@ export async function createCompany(
 
     const company = companyRepository().create({
       ...parsed.data,
+      tenantId,
       createdById: req.session.user?.entraObjectId ?? null,
     });
     const savedCompany = await companyRepository().save(company);
 
-    res.status(201).json({ data: toCompanyDto(savedCompany, []) });
+    res.status(201).json({ data: toCompanyDto(savedCompany, [], req) });
   } catch (error) {
     next(error);
   }
@@ -77,8 +97,18 @@ export async function updateCompany(
   next: NextFunction,
 ): Promise<void> {
   try {
+    if (!canAccessRecord(req, "companies", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Company not found." });
+      return;
+    }
+    const forbiddenField = firstHiddenInput(req, req.body, {
+      name: "companies.name", industry: "companies.industry", location: "companies.location",
+      employees: "companies.employees", revenue: "companies.revenue", website: "companies.website",
+      customerSince: "companies.customerSince", tags: "companies.tags", status: "companies.status",
+    });
+    if (forbiddenField) { res.status(403).json({ success: false, message: `You cannot write the restricted field ${forbiddenField}.` }); return; }
     const companyId = String(req.params.id);
-    const company = await companyRepository().findOneBy({ id: companyId });
+    const company = await companyRepository().findOneBy({ id: companyId, tenantId: req.session.user?.tenantId ?? "" });
     if (!company) {
       res.status(404).json({ success: false, message: "Company not found." });
       return;
@@ -92,13 +122,13 @@ export async function updateCompany(
 
     Object.assign(company, parsed.data);
     const savedCompany = await companyRepository().save(company);
-    const contacts = await contactRepository().find({ where: { companyId: savedCompany.id } });
+    const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
 
     res.status(200).json({
       data: toCompanyDto(savedCompany, contacts.map((contact) => ({
         name: contact.name,
         avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      }))),
+      })), req),
     });
   } catch (error) {
     next(error);
@@ -111,8 +141,12 @@ export async function deleteCompany(
   next: NextFunction,
 ): Promise<void> {
   try {
+    if (!canAccessRecord(req, "companies", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Company not found." });
+      return;
+    }
     const companyId = String(req.params.id);
-    const company = await companyRepository().findOneBy({ id: companyId });
+    const company = await companyRepository().findOneBy({ id: companyId, tenantId: req.session.user?.tenantId ?? "" });
     if (!company) {
       res.status(404).json({ success: false, message: "Company not found." });
       return;
@@ -142,7 +176,11 @@ export async function uploadCompanyLogo(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const company = await companyRepository().findOneBy({ id: String(req.params.id) });
+    if (!canAccessRecord(req, "companies", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Company logo not found." });
+      return;
+    }
+    const company = await companyRepository().findOneBy({ id: String(req.params.id), tenantId: req.session.user?.tenantId ?? "" });
     if (!company) {
       res.status(404).json({ success: false, message: "Company not found." });
       return;
@@ -168,12 +206,12 @@ export async function uploadCompanyLogo(
       });
     }
 
-    const contacts = await contactRepository().find({ where: { companyId: savedCompany.id } });
+    const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
     res.status(200).json({
       data: toCompanyDto(savedCompany, contacts.map((contact) => ({
         name: contact.name,
         avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      }))),
+      })), req),
     });
   } catch (error) {
     next(error);
@@ -186,7 +224,15 @@ export async function getCompanyLogo(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const company = await companyRepository().findOneBy({ id: String(req.params.id) });
+    if (!canAccessRecord(req, "companies", String(req.params.id))) {
+      res.status(404).json({ success: false, message: "Company logo not found." });
+      return;
+    }
+    if (!canViewField(req, "companies.name")) {
+      res.status(404).json({ success: false, message: "Company logo not found." });
+      return;
+    }
+    const company = await companyRepository().findOneBy({ id: String(req.params.id), tenantId: req.session.user?.tenantId ?? "" });
     if (!company?.logoUrl) {
       res.status(404).json({ success: false, message: "Company logo not found." });
       return;
@@ -215,28 +261,38 @@ export async function getCompanyLogo(
 function toCompanyDto(
   company: Company,
   contacts: Array<{ name: string; avatar: string | null }>,
+  req?: Request,
 ) {
+  const canSee = (field: string) => !req || canViewField(req, field);
   const dto = {
     id: company.id,
-    name: company.name,
+    name: canSee("companies.name") ? company.name : "Restricted",
     industry: company.industry ?? "—",
     location: company.location ?? "—",
     employees: company.employees ?? "—",
     revenue: company.revenue ?? "—",
-    contacts,
+    contacts: canSee("companies.contacts") ? contacts : [],
     website: company.website ?? "—",
     customerSince: company.customerSince ?? "—",
-    tags: company.tags ?? [],
+    tags: canSee("companies.tags") ? company.tags ?? [] : [],
     status: company.status,
     lastActivity: company.updatedAt
       ? company.updatedAt.toISOString().slice(0, 10)
       : "—",
-    logoUrl: company.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
+    logoUrl: canSee("companies.name") && company.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
   };
+
+  if (!canSee("companies.revenue")) dto.revenue = "Restricted";
+  if (!canSee("companies.industry")) dto.industry = "Restricted";
+  if (!canSee("companies.location")) dto.location = "Restricted";
+  if (!canSee("companies.employees")) dto.employees = "Restricted";
+  if (!canSee("companies.website")) dto.website = "Restricted";
+  if (!canSee("companies.customerSince")) dto.customerSince = "Restricted";
+  if (!canSee("companies.status")) dto.status = "Restricted";
 
   return {
     ...dto,
-    customerSince: company.customerSince,
+    customerSince: canSee("companies.customerSince") ? company.customerSince : null,
     lastActivity: company.updatedAt?.toISOString() ?? null,
   };
 }

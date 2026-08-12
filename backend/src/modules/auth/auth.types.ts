@@ -1,4 +1,5 @@
 import type { AccountInfo, IdTokenClaims } from "@azure/msal-node";
+import type { AccessPolicySnapshot } from "../access/access-control";
 
 export interface EntraIdTokenClaims extends IdTokenClaims {
   oid?: string;
@@ -18,6 +19,7 @@ export interface EntraUser {
   avatarUrl?: string | null;
   roles: string[];
   permissions: string[];
+  accessPolicy?: AccessPolicySnapshot;
   homeAccountId: string;
 }
 

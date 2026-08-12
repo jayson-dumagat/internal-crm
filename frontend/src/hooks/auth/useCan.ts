@@ -1,13 +1,21 @@
-import { useAuth } from "./useAuth";
-import { hasAnyPermission, hasPermission, type AccessPermission } from "../../config/rbac";
+import { usePermission, type PermissionResource } from "../../context/PermissionContext";
+import type { AccessPermission } from "../../config/rbac";
+
+const createResourceByPermission: Partial<Record<AccessPermission, PermissionResource>> = {
+  "leads.create": "leads",
+  "companies.create": "companies",
+  "contacts.create": "contacts",
+  "tasks.create": "tasks",
+  "notes.create": "notes",
+  "activities.create": "activities",
+};
 
 export function useCan(permission: AccessPermission): boolean {
-  const { user } = useAuth();
-  return hasPermission(user, permission);
+  const permissions = usePermission();
+  const resource = createResourceByPermission[permission];
+  return permissions.can(permission) && (!resource || !permissions.isRecordRestricted(resource));
 }
 
 export function useHasCrmAccess(): boolean {
-  const { user } = useAuth();
-  return hasAnyPermission(user);
+  return usePermission().canAny("dashboard.read", "leads.read", "contacts.read", "companies.read", "tasks.read", "notes.read", "activities.read");
 }
-

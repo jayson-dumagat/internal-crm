@@ -102,6 +102,7 @@ import Activities from "./pages/Activities";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PermissionRoute from "./components/auth/PermissionRoute";
 import Unauthorized from "./pages/saved/OtherPage/Unauthorized";
+import AccessControl from "./pages/AccessControl";
 
 export default function App() {
   return (
@@ -127,6 +128,7 @@ export default function App() {
             <Route path="/companies" element={<PermissionRoute permission="companies.read"><Companies /></PermissionRoute>} />
             <Route path="/pipelines" element={<PermissionRoute permission="pipelines.read"><Pipelines /></PermissionRoute>} />
             <Route path="/activities" element={<PermissionRoute permission="activities.read"><Activities /></PermissionRoute>} />
+            <Route path="/access-control" element={<PermissionRoute permission="access.manage"><AccessControl /></PermissionRoute>} />
           </Route>
 
           {/* Dashboard Layout */}
