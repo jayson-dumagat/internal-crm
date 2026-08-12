@@ -25,7 +25,6 @@ import { FilterIcon, PlusIcon, PencilIcon, TrashBinIcon } from "../../icons";
 import LexicalNoteEditor from "../../components/notes/LexicalNoteEditor";
 import { formatDisplayDate } from "../../utils/date";
 import { useCan } from "../../hooks/auth/useCan";
-import { Card } from "../../components/ui/card";
 import { useSearch } from "../../hooks/useSearch";
 import SearchField from "../../components/search/SearchField";
 
@@ -175,7 +174,7 @@ export default function Notes() {
         description="Manage client and relationship notes."
       />
       <AppBreadcrumb pageName="Notes" />
-      <Card>
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="border-b border-gray-100 px-4 py-2.5 sm:px-5 dark:border-white/[0.05]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SearchField />
@@ -329,7 +328,7 @@ export default function Notes() {
             onPageChange={setCurrentPage}
           />
         </div>
-      </Card>
+      </div>
       <Sheet
         isOpen={isEditorOpen}
         onClose={closeEditor}
