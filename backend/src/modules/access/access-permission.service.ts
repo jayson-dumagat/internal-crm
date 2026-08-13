@@ -30,12 +30,15 @@ export function applyPermissionPolicy(
   policy?: Partial<AccessPolicySnapshot> | null,
 ): string[] {
   const effective = new Set(baselinePermissions);
-  const allowed = new Set(policy?.allowedPermissions ?? []);
   const denied = new Set(policy?.deniedPermissions ?? []);
-  if (allowed.size) {
-    for (const permission of effective) if (!allowed.has(permission)) effective.delete(permission);
-  }
+
+  // Permission policies are restrictive overrides. An empty or legacy
+  // allowedPermissions value must never turn into an implicit allowlist: doing
+  // so would remove every other Entra role permission after one checkbox is
+  // enabled again. Entra roles remain the source of grants; deniedPermissions
+  // is the explicit revocation list.
   for (const permission of denied) effective.delete(permission);
+
   return [...effective];
 }
 

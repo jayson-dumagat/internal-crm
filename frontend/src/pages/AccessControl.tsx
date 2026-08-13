@@ -55,7 +55,10 @@ export default function AccessControl() {
   const updateDraft = (change: Partial<PermissionState>) => setDraft((current) => ({ ...current, ...change }));
   const togglePermission = (code: string, enabled: boolean) => setDraft((current) => ({
     ...current,
-    allowedPermissions: enabled ? Array.from(new Set([...current.allowedPermissions, code])) : current.allowedPermissions.filter((value) => value !== code),
+    // Entra roles grant permissions; this page only adds/removes explicit
+    // revocations. Do not build an allowlist when a permission is re-enabled,
+    // otherwise all of the user's other role permissions disappear.
+    allowedPermissions: current.allowedPermissions.filter((value) => value !== code),
     deniedPermissions: enabled ? current.deniedPermissions.filter((value) => value !== code) : Array.from(new Set([...current.deniedPermissions, code])),
   }));
   const toggleResourceRecord = (resource: string, id: string, enabled: boolean) => {
@@ -71,7 +74,10 @@ export default function AccessControl() {
     if (!selectedUser) return;
     try {
       const { effectivePermissions: _effective, baselinePermissions: _baseline, ...input } = draft;
-      await updateUser.mutateAsync({ id: selectedUser.id, input });
+      await updateUser.mutateAsync({
+        id: selectedUser.id,
+        input: { ...input, allowedPermissions: [] },
+      });
       toast.success("Access policy saved.");
       setSheetOpen(false);
     } catch (error) {
