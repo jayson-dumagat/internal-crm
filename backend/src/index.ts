@@ -1,3 +1,13 @@
+/**
+ * This file serves as the entry point for the CRM API application.
+ * It initializes the Express server, connects to Redis and the database, and sets up necessary configurations.
+ *
+ * The server entry point is separated from the application logic in app.ts.
+ * This ensures that the server can be started and stopped independently of the application logic, 
+ * which is useful for testing and development.
+ * 
+*/
+
 import { app } from "./app";
 import { env } from "./config/env";
 import {

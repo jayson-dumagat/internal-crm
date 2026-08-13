@@ -1,16 +1,26 @@
 import type { NextFunction, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 
 import { AppDataSource } from "../../database/data-source";
 import { getObject, putObject, removeObject } from "../../config/storage";
+import {
+  mimeExtension as sharedMimeExtension,
+  resolveImageContentType as sharedResolveImageContentType,
+  inferImageContentType as sharedInferImageContentType,
+} from "../../shared/utils/media";
+import { splitPersonName as sharedSplitPersonName } from "../../shared/utils/names";
 import { recordActivity } from "../activities/activity.service";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Lead } from "./lead.entity";
-import { LeadInterestLevel, LeadStatus } from "./lead.types";
 import { createLeadSchema, updateLeadSchema } from "./lead.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import {
+  formatLeadName as formatLeadNameDto,
+  toInterestLevel as mapInterestLevel,
+  toLeadDto as mapLeadDto,
+  toLeadStatus as mapLeadStatus,
+} from "./lead.mapper";
 
 const leadRepository = () => AppDataSource.getRepository(Lead);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -54,7 +64,7 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       : scope === "assigned"
         ? lead.owner?.entraObjectId === req.session.user?.entraObjectId || lead.assignedTo?.entraObjectId === req.session.user?.entraObjectId
         : true);
-    res.status(200).json({ data: visibleLeads.map((lead) => toLeadDto(lead, req)) });
+    res.status(200).json({ data: visibleLeads.map((lead) => mapLeadDto(lead, req)) });
   } catch (error) {
     next(error);
   }
@@ -97,7 +107,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       res.status(400).json({ success: false, message: "The selected assignee was not found." });
       return;
     }
-    const { firstName, lastName } = splitName(parsed.data.name);
+    const { firstName, lastName } = sharedSplitPersonName(parsed.data.name);
     const lead = leadRepository().create({
       firstName,
       lastName,
@@ -107,8 +117,8 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       companyName: parsed.data.company || null,
       annualRevenue: parsed.data.annualRevenue || null,
       source: parsed.data.source || "Manual",
-      status: toLeadStatus(parsed.data.status),
-      interestLevel: toInterestLevel(parsed.data.interestLevel),
+      status: mapLeadStatus(parsed.data.status),
+      interestLevel: mapInterestLevel(parsed.data.interestLevel),
       addressLine1: parsed.data.address || null,
       ownerId: currentUser.id,
       owner: currentUser,
@@ -125,12 +135,12 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       actorName: currentUser.displayName,
       actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null,
       action: "created lead",
-      target: formatLeadName(saved),
+      target: formatLeadNameDto(saved),
       category: "Client",
       ipAddress: req.ip,
       details: saved.companyName ? `Company: ${saved.companyName}.` : null,
     });
-    res.status(201).json({ data: toLeadDto(saved, req) });
+    res.status(201).json({ data: mapLeadDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -165,7 +175,7 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
       return;
     }
     if (parsed.data.name !== undefined) {
-      const names = splitName(parsed.data.name);
+      const names = sharedSplitPersonName(parsed.data.name);
       lead.firstName = names.firstName;
       lead.lastName = names.lastName;
     }
@@ -176,8 +186,8 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     if (parsed.data.source !== undefined) lead.source = parsed.data.source || null;
     if (parsed.data.annualRevenue !== undefined) lead.annualRevenue = parsed.data.annualRevenue || null;
     if (parsed.data.address !== undefined) lead.addressLine1 = parsed.data.address || null;
-    if (parsed.data.status !== undefined) lead.status = toLeadStatus(parsed.data.status);
-    if (parsed.data.interestLevel !== undefined) lead.interestLevel = toInterestLevel(parsed.data.interestLevel);
+    if (parsed.data.status !== undefined) lead.status = mapLeadStatus(parsed.data.status);
+    if (parsed.data.interestLevel !== undefined) lead.interestLevel = mapInterestLevel(parsed.data.interestLevel);
     if (parsed.data.assignedToId !== undefined) {
       const assignedTo = await getAssignedUser(req, parsed.data.assignedToId);
       if (parsed.data.assignedToId && !assignedTo) {
@@ -197,12 +207,12 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
         actorName: currentUser.displayName,
         actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null,
         action: "updated lead",
-        target: formatLeadName(saved),
+        target: formatLeadNameDto(saved),
         category: "Client",
         ipAddress: req.ip,
       });
     }
-    res.status(200).json({ data: toLeadDto(saved, req) });
+    res.status(200).json({ data: mapLeadDto(saved, req) });
   } catch (error) {
     next(error);
   }
@@ -255,8 +265,8 @@ export async function uploadLeadAvatar(req: Request, res: Response, next: NextFu
       return;
     }
 
-    const contentType = resolveImageContentType(req.file);
-    const objectKey = `leads/${lead.id}/${randomUUID()}${mimeExtension(contentType)}`;
+    const contentType = sharedResolveImageContentType(req.file);
+    const objectKey = `leads/${lead.id}/${randomUUID()}${sharedMimeExtension(contentType)}`;
     await putObject(objectKey, req.file.buffer, contentType);
 
     const previousObjectKey = lead.avatarUrl;
@@ -266,7 +276,7 @@ export async function uploadLeadAvatar(req: Request, res: Response, next: NextFu
       await removeObject(previousObjectKey).catch((error) => console.error("Failed to remove previous lead avatar", error));
     }
 
-    res.status(200).json({ data: toLeadDto(savedLead, req) });
+    res.status(200).json({ data: mapLeadDto(savedLead, req) });
   } catch (error) {
     next(error);
   }
@@ -294,7 +304,7 @@ export async function getLeadAvatar(req: Request, res: Response, next: NextFunct
     }
 
     const objectStream = await getObject(lead.avatarUrl);
-    res.setHeader("Content-Type", inferAvatarContentType(lead.avatarUrl));
+    res.setHeader("Content-Type", sharedInferImageContentType(lead.avatarUrl));
     res.setHeader("Cache-Control", "private, max-age=3600");
     objectStream.on("error", (error) => {
       if (res.headersSent) res.destroy(error);
@@ -304,98 +314,4 @@ export async function getLeadAvatar(req: Request, res: Response, next: NextFunct
   } catch (error) {
     next(error);
   }
-}
-
-function toLeadDto(lead: Lead, req?: Request) {
-  const canSee = (field: string) => !req || canViewField(req, field);
-  const dto = {
-    id: lead.id,
-    name: canSee("leads.name") ? formatLeadName(lead) : "Restricted",
-    avatar: canSee("leads.name") && lead.avatarUrl ? `/api/v1/leads/${lead.id}/avatar` : null,
-    role: lead.jobTitle ?? "—",
-    lastActivity: lead.lastActivityAt?.toISOString() ?? lead.updatedAt.toISOString(),
-    email: lead.email,
-    phone: lead.phone ?? "—",
-    company: lead.companyName ?? "Individual",
-    source: lead.source ?? "Manual",
-    annualRevenue: lead.annualRevenue ?? undefined,
-    owner: canSee("leads.owner") ? toUserDto(lead.owner) : toUserDto(null),
-    ownerId: lead.owner?.entraObjectId ?? null,
-    status: titleCase(lead.status),
-    interestLevel: titleCase(lead.interestLevel),
-    dateCreated: lead.createdAt.toISOString(),
-    address: [lead.addressLine1, lead.addressLine2, lead.city, lead.stateProvince, lead.postalCode, lead.country].filter(Boolean).join(", ") || "—",
-    assignedToId: lead.assignedTo?.entraObjectId ?? null,
-    assignedTo: canSee("leads.assignedTo") ? toUserDto(lead.assignedTo) : toUserDto(null),
-  };
-  if (!canSee("leads.email")) dto.email = "Restricted";
-  if (!canSee("leads.phone")) dto.phone = "Restricted";
-  if (!canSee("leads.company")) dto.company = "Restricted";
-  if (!canSee("leads.address")) dto.address = "Restricted";
-  if (!canSee("leads.revenue")) dto.annualRevenue = undefined;
-  if (!canSee("leads.role")) dto.role = "Restricted";
-  if (!canSee("leads.source")) dto.source = "Restricted";
-  if (!canSee("leads.status")) dto.status = "Restricted";
-  if (!canSee("leads.interestLevel")) dto.interestLevel = "Restricted";
-  if (!canSee("leads.dateCreated")) dto.dateCreated = "";
-  return dto;
-}
-
-function toUserDto(user: User | null | undefined) {
-  return {
-    id: user?.entraObjectId ?? null,
-    name: user?.displayName?.replace(/\s*\(CGSI\)\s*$/i, "").trim() || "Unassigned",
-    avatar: user?.avatarUrl ? `/api/v1/users/${user.entraObjectId}/avatar` : null,
-  };
-}
-
-function mimeExtension(mimeType: string): string {
-  const extension = mimeType.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return extension ? `.${extension}` : ".bin";
-}
-
-function resolveImageContentType(file: Express.Multer.File): string {
-  if (file.mimetype.startsWith("image/")) return file.mimetype;
-  switch (path.extname(file.originalname).toLowerCase()) {
-    case ".gif": return "image/gif";
-    case ".jpeg":
-    case ".jpg": return "image/jpeg";
-    case ".png": return "image/png";
-    case ".svg": return "image/svg+xml";
-    case ".webp": return "image/webp";
-    default: return "application/octet-stream";
-  }
-}
-
-function inferAvatarContentType(objectKey: string): string {
-  switch (path.extname(objectKey).toLowerCase()) {
-    case ".gif": return "image/gif";
-    case ".jpeg":
-    case ".jpg": return "image/jpeg";
-    case ".png": return "image/png";
-    case ".svg": return "image/svg+xml";
-    case ".webp": return "image/webp";
-    default: return "application/octet-stream";
-  }
-}
-
-function splitName(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return { firstName: parts.shift() ?? name.trim(), lastName: parts.join(" ") || "—" };
-}
-
-function formatLeadName(lead: Lead) {
-  return `${lead.firstName} ${lead.lastName === "—" ? "" : lead.lastName}`.trim();
-}
-
-function titleCase(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-}
-
-function toLeadStatus(value?: string): LeadStatus {
-  return (value ? value.toLowerCase() : LeadStatus.NEW) as LeadStatus;
-}
-
-function toInterestLevel(value?: string): LeadInterestLevel {
-  return (value ? value.toLowerCase() : LeadInterestLevel.LOW) as LeadInterestLevel;
 }

@@ -6,8 +6,10 @@ import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Task, TaskKind, TaskPriority, TaskStatus, TaskType } from "./task.entity";
 import { createTaskSchema, updateTaskSchema, updateTaskStatusSchema } from "./task.schema";
+import { toTaskDto } from "./task.mapper";
+import { toTaskStatus as mapTaskStatus } from "./task.types";
 import { Lead } from "../leads/lead.entity";
-import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { canAccessRecord, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 
 const taskRepository = () => AppDataSource.getRepository(Task);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -73,7 +75,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
       description: parsed.data.description || null,
       kind: (parsed.data.kind ?? TaskKind.TASK) as TaskKind,
       type: (parsed.data.type ?? TaskType.GENERAL) as TaskType,
-      status: toTaskStatus(parsed.data.status),
+      status: mapTaskStatus(parsed.data.status),
       priority: (parsed.data.priority ?? TaskPriority.MEDIUM) as TaskPriority,
       color: parsed.data.color ?? null,
       startAt: toDate(parsed.data.startAt),
@@ -118,7 +120,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
       description: parsed.data.description === undefined ? task.description : parsed.data.description || null,
       kind: parsed.data.kind === undefined ? task.kind : (parsed.data.kind as TaskKind),
       type: parsed.data.type === undefined ? task.type : parsed.data.type,
-      status: parsed.data.status === undefined ? task.status : toTaskStatus(parsed.data.status),
+      status: parsed.data.status === undefined ? task.status : mapTaskStatus(parsed.data.status),
       priority: parsed.data.priority === undefined ? task.priority : parsed.data.priority,
       color: parsed.data.color === undefined ? task.color : parsed.data.color,
       startAt: parsed.data.startAt === undefined ? task.startAt : toDate(parsed.data.startAt),
@@ -166,57 +168,4 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
     res.status(200).json({ success: true });
   } catch (error) { next(error); }
 }
-
-function toTaskDto(task: Task, req?: Request) {
-  const canSee = (field: string) => !req || canViewField(req, field);
-  const dto = {
-    id: task.id,
-    title: task.title,
-    description: canSee("tasks.description") ? task.description : null,
-    kind: task.kind,
-    type: task.type,
-    status: fromTaskStatus(task.status),
-    priority: task.priority,
-    color: task.color,
-    startAt: task.startAt?.toISOString() ?? null,
-    dueAt: task.dueAt?.toISOString() ?? null,
-    reminderAt: task.reminderAt?.toISOString() ?? null,
-    leadId: task.leadId,
-    lead: canSee("tasks.lead") && task.lead ? { id: task.lead.id, name: `${task.lead.firstName} ${task.lead.lastName}`.trim() } : null,
-    assignee: canSee("tasks.assignee") && task.assignee ? { id: task.assignee.entraObjectId, name: task.assignee.displayName.replace(/\s*\(CGSI\)\s*$/i, "").trim(), avatar: task.assignee.avatarUrl ? `/api/v1/users/${task.assignee.entraObjectId}/avatar` : null } : null,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-  };
-  if (!canSee("tasks.description")) dto.description = null;
-  if (!canSee("tasks.title")) dto.title = "Restricted";
-  if (!canSee("tasks.type")) dto.type = TaskType.GENERAL;
-  if (!canSee("tasks.status")) dto.status = "not-started";
-  if (!canSee("tasks.priority")) dto.priority = TaskPriority.LOW;
-  if (!canSee("tasks.schedule")) {
-    dto.startAt = null;
-    dto.dueAt = null;
-    dto.reminderAt = null;
-  }
-  return dto;
-}
-
 function toDate(value?: string | null) { return value ? new Date(value) : null; }
-function toTaskStatus(value?: string): TaskStatus {
-  switch (value) {
-    case "in-progress": return TaskStatus.IN_PROGRESS;
-    case "completed": return TaskStatus.COMPLETED;
-    case "overdue": return TaskStatus.OVERDUE;
-    case "blocked": return TaskStatus.BLOCKED;
-    default: return TaskStatus.NOT_STARTED;
-  }
-}
-
-function fromTaskStatus(value: TaskStatus): "not-started" | "in-progress" | "completed" | "overdue" | "blocked" {
-  switch (value) {
-    case TaskStatus.IN_PROGRESS: return "in-progress";
-    case TaskStatus.COMPLETED: return "completed";
-    case TaskStatus.OVERDUE: return "overdue";
-    case TaskStatus.BLOCKED: return "blocked";
-    default: return "not-started";
-  }
-}

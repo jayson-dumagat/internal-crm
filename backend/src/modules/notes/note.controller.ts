@@ -5,7 +5,8 @@ import { User } from "../users/user.entity";
 import { recordActivity } from "../activities/activity.service";
 import { Note } from "./note.entity";
 import { createNoteSchema, updateNoteSchema } from "./note.schema";
-import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { canAccessRecord, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { toNoteDto } from "./note.mapper";
 
 const noteRepository = () => AppDataSource.getRepository(Note);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -133,23 +134,4 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
   } catch (error) {
     next(error);
   }
-}
-
-function toNoteDto(note: Note, req?: Request) {
-  const canSee = (field: string) => !req || canViewField(req, field);
-  const dto = {
-    id: note.id,
-    title: note.title,
-    content: canSee("notes.content") ? note.content : "Restricted",
-    contentHtml: canSee("notes.content") ? note.contentHtml : null,
-    category: note.category,
-    relatedTo: canSee("notes.relatedTo") ? note.relatedTo ?? "" : "Restricted",
-    author: canSee("notes.author") ? note.authorName.replace(/\s*\(CGSI\)\s*$/i, "").trim() : "Restricted",
-    authorAvatar: canSee("notes.author") ? note.authorAvatarUrl : null,
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
-  };
-  if (!canSee("notes.title")) dto.title = "Restricted";
-  if (!canSee("notes.category")) dto.category = "Restricted";
-  return dto;
 }

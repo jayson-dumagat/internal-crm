@@ -1,15 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 
 import { AppDataSource } from "../../database/data-source";
 import { getObject, putObject, removeObject } from "../../config/storage";
+import {
+  mimeExtension as sharedMimeExtension,
+  resolveImageContentType as sharedResolveImageContentType,
+} from "../../shared/utils/media";
+import { normalizeUserName as sharedNormalizeUserName } from "../../shared/utils/names";
 import { Company } from "../companies/company.entity";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Contact } from "./contact.entity";
 import { createContactSchema, updateContactSchema } from "./contact.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { toContactDto } from "./contact.mapper";
 
 const contactRepository = () => AppDataSource.getRepository(Contact);
 const companyRepository = () => AppDataSource.getRepository(Company);
@@ -40,7 +45,7 @@ export async function listContacts(
     const ownersByName = new Map(
       users.flatMap((user) => [
         [user.displayName.toLowerCase(), user] as const,
-        [normalizeUserName(user.displayName).toLowerCase(), user] as const,
+        [sharedNormalizeUserName(user.displayName).toLowerCase(), user] as const,
       ]),
     );
 
@@ -117,7 +122,7 @@ export async function createContact(
       tenantId: requestTenantId,
       companyName,
       relationshipOwner: owner
-        ? normalizeUserName(owner.displayName)
+        ? sharedNormalizeUserName(owner.displayName)
         : parsed.data.relationshipOwner,
       lastActivityAt: parsed.data.lastActivityAt
         ? new Date(parsed.data.lastActivityAt)
@@ -198,7 +203,7 @@ export async function updateContact(
           res.status(400).json({ success: false, message: "The selected relationship owner was not found." });
           return;
         }
-        contact.relationshipOwner = normalizeUserName(owner.displayName);
+        contact.relationshipOwner = sharedNormalizeUserName(owner.displayName);
       } else {
         contact.relationshipOwner = parsed.data.relationshipOwner ?? null;
       }
@@ -275,8 +280,8 @@ export async function uploadContactAvatar(
       return;
     }
 
-    const contentType = resolveImageContentType(req.file);
-    const extension = mimeExtension(contentType);
+    const contentType = sharedResolveImageContentType(req.file);
+    const extension = sharedMimeExtension(contentType);
     const objectKey = `contacts/${contact.id}/${randomUUID()}${extension}`;
     await putObject(objectKey, req.file.buffer, contentType);
 
@@ -347,79 +352,4 @@ async function findRelationshipOwner(req: Request, ownerId: string): Promise<Use
     status: UserStatus.ACTIVE,
     isAccessEnabled: true,
   })) ?? undefined;
-}
-
-function toContactDto(contact: Contact, company?: Company, owner?: User, req?: Request) {
-  const canSee = (field: string) => !req || canViewField(req, field);
-  const dto = {
-    id: contact.id,
-    company_id: contact.companyId,
-    user: {
-      image: canSee("contacts.name") && contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      name: canSee("contacts.name") ? contact.name : "Restricted",
-    },
-    position: contact.role ?? "—",
-    company: {
-      image: canSee("contacts.company") && company?.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
-      name: canSee("contacts.company") ? company?.name ?? contact.companyName ?? "Individual" : "Restricted",
-    },
-    relationship_level: contact.relationshipLevel,
-    contact: {
-      email: canSee("contacts.email") ? contact.email : "Restricted",
-      phone: contact.phone ?? "—",
-    },
-    owner: {
-      image: canSee("contacts.owner") && owner?.avatarUrl
-        ? `/api/v1/users/${owner.entraObjectId}/avatar`
-        : null,
-      name: canSee("contacts.owner") ? normalizeUserName(owner?.displayName ?? contact.relationshipOwner ?? "Unassigned") : "Restricted",
-    },
-    relationship_owner_id: contact.relationshipOwnerId,
-    location: contact.location ?? "—",
-    status: contact.status,
-    last_activity: contact.lastActivityAt
-      ? contact.lastActivityAt.toISOString().slice(0, 10)
-      : "—",
-    type_of_client: canSee("contacts.preferences") ? contact.typeOfClient : null,
-    risk_profile: canSee("contacts.preferences") ? contact.riskProfile : null,
-    preferred_contact_method: canSee("contacts.preferences") ? contact.preferredContactMethod : null,
-    tags: canSee("contacts.tags") ? contact.tags ?? [] : [],
-  };
-
-  if (!canSee("contacts.phone")) dto.contact.phone = "Restricted";
-  if (!canSee("contacts.location")) dto.location = "Restricted";
-  if (!canSee("contacts.position")) dto.position = "Restricted";
-  if (!canSee("contacts.relationshipLevel")) dto.relationship_level = "Restricted";
-  if (!canSee("contacts.status")) dto.status = "Restricted";
-  if (!canSee("contacts.lastActivity")) dto.last_activity = "Restricted";
-
-  return {
-    ...dto,
-    last_activity: canSee("contacts.lastActivity") ? contact.lastActivityAt?.toISOString() ?? null : null,
-  };
-}
-
-function mimeExtension(mimeType: string): string {
-  const extension = mimeType.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return extension ? `.${extension}` : ".bin";
-}
-
-function resolveImageContentType(file: Express.Multer.File): string {
-  if (file.mimetype.startsWith("image/")) {
-    return file.mimetype;
-  }
-
-  switch (path.extname(file.originalname).toLowerCase()) {
-    case ".gif": return "image/gif";
-    case ".jpeg":
-    case ".jpg": return "image/jpeg";
-    case ".png": return "image/png";
-    case ".svg": return "image/svg+xml";
-    case ".webp": return "image/webp";
-    default: return "application/octet-stream";
-  }
-}
-
-function normalizeUserName(name: string): string {
-  return name.replace(/\s*\(CGSI\)\s*$/i, "").trim() || name.trim();
 }

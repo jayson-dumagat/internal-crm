@@ -1,16 +1,21 @@
 import type { NextFunction, Request, Response } from "express";
-import crypto from "node:crypto";
-import { putObject } from "../../config/storage";
-import { entraConfig } from "../../config/entra";
 import { sessionCookieClearOptions } from "../../config/session";
 import { entraService } from "../../services/entra.service";
 import { AppDataSource } from "../../database/data-source";
 import { User } from "../users/user.entity";
-import { UserStatus } from "../users/user.types";
-import type { EntraUser } from "./auth.types";
 import { toAccessPolicySnapshot } from "../access/access-control";
 import { getDatabaseEffectivePermissions } from "../access/access-permission.service";
 import { UserAccessPolicy } from "../access/user-access-policy.entity";
+import {
+  buildFrontendCallbackUrl,
+  clearPendingAuth,
+  destroySession,
+  getQueryString,
+  regenerateSession,
+  saveSession,
+  timingSafeEqual,
+} from "./auth.helpers";
+import { syncAuthenticatedUser } from "./auth.service";
 
 const AUTH_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -193,51 +198,6 @@ export async function handleEntraCallback(
   }
 }
 
-async function syncAuthenticatedUser(
-  authenticatedUser: EntraUser,
-  profilePhoto: { data: Buffer; contentType: string } | null,
-): Promise<void> {
-  const repository = AppDataSource.getRepository(User);
-  let user = await repository.findOne({
-    where: {
-      entraTenantId: authenticatedUser.tenantId,
-      entraObjectId: authenticatedUser.entraObjectId,
-    },
-  });
-
-  const values = {
-    entraTenantId: authenticatedUser.tenantId,
-    entraObjectId: authenticatedUser.entraObjectId,
-    email: authenticatedUser.email || authenticatedUser.username,
-    displayName: authenticatedUser.name,
-    entraRoles: authenticatedUser.roles,
-    lastLoginAt: new Date(),
-    lastSyncedAt: new Date(),
-  };
-
-  if (user) {
-    if (user.status !== UserStatus.ACTIVE || !user.isAccessEnabled) {
-      throw new Error("Your CDEX account is not enabled for access.");
-    }
-    Object.assign(user, values);
-  } else {
-    user = repository.create({
-      ...values,
-      status: UserStatus.ACTIVE,
-      isAccessEnabled: true,
-    });
-  }
-
-  if (profilePhoto) {
-    const objectKey = `users/${authenticatedUser.entraObjectId}/avatar`;
-    await putObject(objectKey, profilePhoto.data, profilePhoto.contentType);
-    user.avatarUrl = objectKey;
-    user.avatarContentType = profilePhoto.contentType;
-  }
-
-  await repository.save(user);
-}
-
 export async function getCurrentSession(
   req: Request,
   res: Response,
@@ -317,96 +277,3 @@ export function getMicrosoftLogoutUrl(
   });
 }
 
-function getQueryString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function timingSafeEqual(
-  receivedValue: string,
-  storedValue: string,
-): boolean {
-  const received = Buffer.from(receivedValue);
-  const stored = Buffer.from(storedValue);
-
-  return (
-    received.length === stored.length &&
-    crypto.timingSafeEqual(received, stored)
-  );
-}
-
-function buildFrontendCallbackUrl(params: {
-  success: boolean;
-  error?: string;
-  message?: string;
-}): string {
-  const url = new URL(
-    "/signin",
-    entraConfig.frontendUrl,
-  );
-
-  if (params.success) {
-    url.searchParams.set("login", "success");
-  }
-
-  if (params.error) {
-    url.searchParams.set("error", params.error);
-  }
-
-  // Avoid placing sensitive token or account data in the URL.
-  if (params.message) {
-    url.searchParams.set(
-      "message",
-      params.message.slice(0, 300),
-    );
-  }
-
-  return url.toString();
-}
-
-function saveSession(req: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    req.session.save((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
-function regenerateSession(req: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    req.session.regenerate((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
-function destroySession(req: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    req.session.destroy((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
-async function clearPendingAuth(req: Request): Promise<void> {
-  if (!req.session.entraAuth) {
-    return;
-  }
-
-  delete req.session.entraAuth;
-  await saveSession(req);
-}

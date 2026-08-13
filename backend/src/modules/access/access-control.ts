@@ -1,19 +1,20 @@
-/** Permission codes are persisted in the permissions table. This type is kept
- * as a string so new permissions can be added without a code deployment. */
-export type AccessPermission = string;
+import type {
+  AccessPermission,
+  AccessPolicySnapshot,
+  DataScope,
+  FieldRule,
+  ResourceAssignments,
+  ResourceKey,
+} from "../../shared/types/access";
 
-export type FieldRule = "visible" | "hidden";
-export type DataScope = "all" | "assigned" | "own";
-export type ResourceKey = "leads" | "companies" | "contacts" | "tasks" | "notes" | "activities";
-export type ResourceAssignments = Partial<Record<ResourceKey, string[]>>;
-
-export interface AccessPolicySnapshot {
-  allowedPermissions: string[];
-  deniedPermissions: string[];
-  fieldRules: Record<string, FieldRule>;
-  dataScopes: Record<string, DataScope>;
-  resourceAssignments: ResourceAssignments;
-}
+export type {
+  AccessPermission,
+  AccessPolicySnapshot,
+  DataScope,
+  FieldRule,
+  ResourceAssignments,
+  ResourceKey,
+} from "../../shared/types/access";
 
 export const accessResourceCatalog = [
   { key: "leads", label: "Leads" },

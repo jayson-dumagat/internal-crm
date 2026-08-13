@@ -1,16 +1,25 @@
+/**
+ * This file seperates from the index.ts.
+ * The benefit of this is that the server can be started and stopped independently of the application 
+ * logic, which is useful for testing and development.
+*/
+
 import "reflect-metadata";
 
 import cors from "cors";
 import express from "express";
 import session from "express-session";
 import helmet from "helmet";
-import morgan from "morgan";
+import { createLogger } from "./shared/utils/logger";
 
 import { env } from "./config/env";
 import { sessionStore } from "./config/redis";
 import { sessionCookieOptions } from "./config/session";
 import { handleEntraCallback } from "./modules/auth/auth.controller";
 import { apiRouter } from "./routes";
+import { morganMiddleware } from "./middleware/http-logger";
+
+const appLogger = createLogger("app");
 
 export const app = express();
 
@@ -30,7 +39,7 @@ app.use(
   }),
 );
 
-app.use(morgan("dev"));
+app.use(morganMiddleware);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,7 +57,6 @@ app.use(
   }),
 );
 
-// Microsoft Entra redirects to the backend origin registered for this app.
 app.get("/", handleEntraCallback);
 
 app.get("/health", (_req, res) => {
@@ -75,7 +83,11 @@ app.use(
     res: express.Response,
     _next: express.NextFunction,
   ) => {
-    console.error(err);
+    appLogger.error("Unhandled application error", {
+      error: err,
+      method: _req.method,
+      url: _req.originalUrl,
+    });
 
     res.status(500).json({
       success: false,

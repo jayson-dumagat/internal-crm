@@ -1,13 +1,17 @@
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 import type { NextFunction, Request, Response } from "express";
 
 import { AppDataSource } from "../../database/data-source";
 import { getObject, putObject, removeObject, statObject } from "../../config/storage";
+import {
+  mimeExtension as sharedMimeExtension,
+  resolveImageContentType as sharedResolveImageContentType,
+} from "../../shared/utils/media";
 import { Contact } from "../contacts/contact.entity";
 import { Company } from "./company.entity";
 import { createCompanySchema, updateCompanySchema } from "./company.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { toCompanyContactSummary, toCompanyDto } from "./company.mapper";
 
 const companyRepository = () => AppDataSource.getRepository(Company);
 const contactRepository = () => AppDataSource.getRepository(Contact);
@@ -34,10 +38,7 @@ export async function listCompanies(
     for (const contact of contacts) {
       if (!contact.companyId || !visibleCompanyIds.has(contact.companyId)) continue;
       const companyContacts = contactsByCompany.get(contact.companyId) ?? [];
-      companyContacts.push({
-        name: contact.name,
-        avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      });
+      companyContacts.push(toCompanyContactSummary(contact));
       contactsByCompany.set(contact.companyId, companyContacts);
     }
 
@@ -125,10 +126,7 @@ export async function updateCompany(
     const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
 
     res.status(200).json({
-      data: toCompanyDto(savedCompany, contacts.map((contact) => ({
-        name: contact.name,
-        avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      })), req),
+      data: toCompanyDto(savedCompany, contacts.map(toCompanyContactSummary), req),
     });
   } catch (error) {
     next(error);
@@ -191,8 +189,8 @@ export async function uploadCompanyLogo(
       return;
     }
 
-    const contentType = resolveImageContentType(req.file);
-    const objectKey = `companies/${company.id}/${randomUUID()}${mimeExtension(contentType)}`;
+    const contentType = sharedResolveImageContentType(req.file);
+    const objectKey = `companies/${company.id}/${randomUUID()}${sharedMimeExtension(contentType)}`;
     await putObject(objectKey, req.file.buffer, contentType);
 
     const previousObjectKey = company.logoUrl;
@@ -208,10 +206,7 @@ export async function uploadCompanyLogo(
 
     const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
     res.status(200).json({
-      data: toCompanyDto(savedCompany, contacts.map((contact) => ({
-        name: contact.name,
-        avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
-      })), req),
+      data: toCompanyDto(savedCompany, contacts.map(toCompanyContactSummary), req),
     });
   } catch (error) {
     next(error);
@@ -255,65 +250,5 @@ export async function getCompanyLogo(
     objectStream.pipe(res);
   } catch (error) {
     next(error);
-  }
-}
-
-function toCompanyDto(
-  company: Company,
-  contacts: Array<{ name: string; avatar: string | null }>,
-  req?: Request,
-) {
-  const canSee = (field: string) => !req || canViewField(req, field);
-  const dto = {
-    id: company.id,
-    name: canSee("companies.name") ? company.name : "Restricted",
-    industry: company.industry ?? "—",
-    location: company.location ?? "—",
-    employees: company.employees ?? "—",
-    revenue: company.revenue ?? "—",
-    contacts: canSee("companies.contacts") ? contacts : [],
-    website: company.website ?? "—",
-    customerSince: company.customerSince ?? "—",
-    tags: canSee("companies.tags") ? company.tags ?? [] : [],
-    status: company.status,
-    lastActivity: company.updatedAt
-      ? company.updatedAt.toISOString().slice(0, 10)
-      : "—",
-    logoUrl: canSee("companies.name") && company.logoUrl ? `/api/v1/companies/${company.id}/logo` : null,
-  };
-
-  if (!canSee("companies.revenue")) dto.revenue = "Restricted";
-  if (!canSee("companies.industry")) dto.industry = "Restricted";
-  if (!canSee("companies.location")) dto.location = "Restricted";
-  if (!canSee("companies.employees")) dto.employees = "Restricted";
-  if (!canSee("companies.website")) dto.website = "Restricted";
-  if (!canSee("companies.customerSince")) dto.customerSince = "Restricted";
-  if (!canSee("companies.status")) dto.status = "Restricted";
-
-  return {
-    ...dto,
-    customerSince: canSee("companies.customerSince") ? company.customerSince : null,
-    lastActivity: company.updatedAt?.toISOString() ?? null,
-  };
-}
-
-function mimeExtension(mimeType: string): string {
-  const extension = mimeType.split("/")[1]?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return extension ? `.${extension}` : ".bin";
-}
-
-function resolveImageContentType(file: Express.Multer.File): string {
-  if (file.mimetype.startsWith("image/")) {
-    return file.mimetype;
-  }
-
-  switch (path.extname(file.originalname).toLowerCase()) {
-    case ".gif": return "image/gif";
-    case ".jpeg":
-    case ".jpg": return "image/jpeg";
-    case ".png": return "image/png";
-    case ".svg": return "image/svg+xml";
-    case ".webp": return "image/webp";
-    default: return "application/octet-stream";
   }
 }

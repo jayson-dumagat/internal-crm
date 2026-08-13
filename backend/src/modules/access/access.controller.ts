@@ -1,6 +1,4 @@
 import type { NextFunction, Request, Response } from "express";
-import { z } from "zod";
-
 import { AppDataSource } from "../../database/data-source.js";
 import { Activity } from "../activities/activity.entity.js";
 import { Company } from "../companies/company.entity.js";
@@ -20,6 +18,7 @@ import {
 } from "./access-control.js";
 import { applyPermissionPolicy, getDatabaseEffectivePermissions, getDatabasePermissionCatalog, getDatabasePermissionsForRoles } from "./access-permission.service.js";
 import { UserAccessPolicy } from "./user-access-policy.entity.js";
+import { accessPolicySchema } from "./access.schema.js";
 
 const userRepository = () => AppDataSource.getRepository(User);
 const policyRepository = () => AppDataSource.getRepository(UserAccessPolicy);
@@ -34,13 +33,6 @@ const resourceRepositories = {
 const fieldSet = new Set<string>(accessFieldCatalog.map((field) => field.key));
 const scopeMap = new Map(accessScopeCatalog.map((scope) => [scope.key, new Set(scope.options)]));
 
-const policySchema = z.object({
-  allowedPermissions: z.array(z.string()).max(500).default([]),
-  deniedPermissions: z.array(z.string()).max(500).default([]),
-  fieldRules: z.record(z.string(), z.enum(["visible", "hidden"])).default({}),
-  dataScopes: z.record(z.string(), z.enum(["all", "assigned", "own"])).default({}),
-  resourceAssignments: z.record(z.string(), z.array(z.string().uuid()).max(5000)).default({}),
-}).strict();
 
 export async function getAccessCatalog(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -134,7 +126,7 @@ export async function updateAccessPolicy(req: Request, res: Response, next: Next
       return;
     }
 
-    const parsed = policySchema.safeParse(req.body);
+    const parsed = accessPolicySchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ success: false, message: "Please check the access policy fields.", errors: parsed.error.issues });
       return;

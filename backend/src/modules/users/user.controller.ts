@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { getObject, statObject } from "../../config/storage";
 import { AppDataSource } from "../../database/data-source";
+import { normalizeUserName } from "../../shared/utils/names";
 import { User } from "./user.entity";
 import { UserStatus } from "./user.types";
 
@@ -118,8 +119,4 @@ function toUserDto(user: User) {
       : null,
     isCurrentUser: false,
   };
-}
-
-function normalizeUserName(name: string): string {
-  return name.replace(/\s*\(CGSI\)\s*$/i, "").trim() || name.trim();
 }
