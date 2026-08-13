@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { CreateTaskInput, TaskRecord } from "../api/crm";
+import type { TaskRecord } from "../api/crm";
+import type { CreateTaskInput } from "../types/Crm";
 import {
   useCreateTask,
   useDeleteTask,
@@ -20,12 +21,9 @@ import KanbanBoard, {
   type TaskKanbanStatus,
 } from "../components/task/kanban/KanbanBoard";
 import TaskTableView from "../components/task/TaskTableView";
-import { formatDisplayDate } from "../utils/date";
-import type { Task as ListTask } from "../components/task/task-list/types/Task";
-import type { Task as KanbanTask } from "../components/task/kanban/types/types";
-
-import type { TaskView } from "../types/Tasks";
+import type { KanbanTask, ListTask, TaskView } from "../types/Tasks";
 import { useCan } from "../hooks/auth/useCan";
+import { filterTasks, toKanbanTask, toListTask } from "../utils/tasks";
 const taskViews: Array<{ id: TaskView; label: string }> = [
   { id: "list", label: "List" },
   { id: "kanban", label: "Kanban" },
@@ -55,52 +53,9 @@ export default function Tasks() {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [newTaskStatus, setNewTaskStatus] = useState<TaskKanbanStatus>("not-started");
-  const filteredTasks = useMemo(
-    () =>
-      tasks.filter(
-        (task) =>
-          (statusFilter === "All" || task.status === statusFilter) &&
-          (!searchTerm.trim() ||
-            [
-              task.title,
-              task.description,
-              task.type,
-              task.priority,
-              task.status,
-              task.assignee?.name,
-            ]
-              .join(" ")
-              .toLowerCase()
-              .includes(searchTerm.trim().toLowerCase())),
-      ),
-    [searchTerm, statusFilter, tasks],
-  );
-  const listTasks: ListTask[] = filteredTasks
-    
-    .map((task) => ({
-      id: task.id,
-      title: task.title,
-      isChecked: task.status === "completed",
-      dueDate: formatDisplayDate(task.dueAt),
-      commentCount: 0,
-      category: task.type,
-      userAvatar: task.assignee?.avatar ?? "/images/user/owner.png",
-      status: task.status,
-      toggleChecked: () => undefined,
-    }));
-  const kanbanTasks: KanbanTask[] = filteredTasks
-    .map((task) => ({
-      id: task.id,
-      title: task.title,
-      dueDate: formatDisplayDate(task.dueAt),
-      comments: 0,
-      assignee: task.assignee?.avatar ?? "/images/user/owner.png",
-      assigneeName: task.assignee?.name ?? "Unassigned",
-      status: task.status,
-      priority: task.priority,
-      projectDesc: task.description ?? undefined,
-      category: { name: task.type, color: "brand" },
-    }));
+  const filteredTasks = useMemo(() => filterTasks(tasks, searchTerm, statusFilter), [searchTerm, statusFilter, tasks]);
+  const listTasks: ListTask[] = filteredTasks.map(toListTask);
+  const kanbanTasks: KanbanTask[] = filteredTasks.map(toKanbanTask);
 
   const openNewTask = (status: TaskKanbanStatus = "not-started") => {
     if (!canCreate) return;

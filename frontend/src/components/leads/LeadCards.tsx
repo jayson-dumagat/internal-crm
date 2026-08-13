@@ -1,34 +1,12 @@
 import Badge from "../ui/badge/Badge";
 import Avatar from "../ui/avatar/Avatar";
-import type { Lead } from "../../pages/CrmLeads/Leads";
+import type { Lead } from "../../types/Leads";
 import { formatDisplayDate } from "../../utils/date";
-
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
+import { leadInterestBadgeColor, leadStatusBadgeColor } from "../../utils/leads";
 
 type LeadCardsProps = {
   leads: Lead[];
   onSelectLead: (lead: Lead) => void;
-};
-
-const statusBadgeColor: Record<Lead["status"], BadgeColor> = {
-  New: "info",
-  Contacted: "light",
-  Qualified: "primary",
-  Converted: "success",
-  Lost: "error",
-};
-
-const interestBadgeColor: Record<Lead["interestLevel"], BadgeColor> = {
-  High: "success",
-  Medium: "warning",
-  Low: "light",
 };
 
 export default function LeadCards({ leads, onSelectLead }: LeadCardsProps) {
@@ -53,7 +31,7 @@ export default function LeadCards({ leads, onSelectLead }: LeadCardsProps) {
 
                   <Badge
                     variant="light"
-                    color={statusBadgeColor[lead.status]}
+                    color={leadStatusBadgeColor[lead.status]}
                     size="sm"
                   >
                     {lead.status}
@@ -94,7 +72,7 @@ function LeadInterestField({ value }: { value: Lead["interestLevel"] }) {
   return (
     <div>
       <p className="mb-1 text-xs text-gray-400 dark:text-gray-500">Interest</p>
-      <Badge variant="light" color={interestBadgeColor[value]} size="sm">
+      <Badge variant="light" color={leadInterestBadgeColor[value]} size="sm">
         {value}
       </Badge>
     </div>

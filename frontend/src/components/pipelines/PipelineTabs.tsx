@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 
-import type { PipelineView } from "./types";
+import type { PipelineView } from "../../types/Pipelines";
 
 interface PipelineTabsProps {
   views: PipelineView[];

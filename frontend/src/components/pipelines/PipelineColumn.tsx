@@ -9,7 +9,7 @@ import type {
   PipelineLead,
   PipelineStage,
   StageColor,
-} from "./types";
+} from "../../types/Pipelines";
 
 type BadgeColor =
   | "primary"

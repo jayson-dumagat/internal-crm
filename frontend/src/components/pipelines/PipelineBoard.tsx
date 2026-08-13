@@ -26,7 +26,7 @@ import type {
   PipelineLead,
   PipelineStage,
   PipelineView,
-} from "./types";
+} from "../../types/Pipelines";
 import { useCan } from "../../hooks/auth/useCan";
 import { pipelineNameSchema } from "../../validations/pipeline";
 

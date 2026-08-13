@@ -20,27 +20,15 @@ export type PipelineLead = {
   id: string;
   viewId: PipelineViewId;
   stageId: PipelineStageId;
-
   name: string;
   avatar: string;
   role: string;
-
   email: string;
   phone: string;
-
   company: string;
   source: string;
-
-  owner: {
-    name: string;
-    avatar: string;
-  };
-
-  assignedTo: {
-    name: string;
-    avatar: string;
-  };
-
+  owner: { name: string; avatar: string };
+  assignedTo: { name: string; avatar: string };
   progress: number;
   dateCreated: string;
   lastActivity: string;

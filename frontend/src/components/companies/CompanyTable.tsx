@@ -23,38 +23,11 @@ import { formatDisplayDate } from "../../utils/date";
 import SearchField from "../search/SearchField";
 import { useCan } from "../../hooks/auth/useCan";
 import Checkbox from "../form/input/Checkbox";
-import Sheet from "../ui/sheet/Sheet";
-
-type CompanyStatus = "Active" | "Prospect" | "Dormant";
-type SortKey =
-  | "name"
-  | "industry"
-  | "location"
-  | "employees"
-  | "revenue"
-  | "website"
-  | "customerSince"
-  | "status"
-  | "lastActivity";
-
-type Company = {
-  id: string | number;
-  name: string;
-  logoUrl?: string | null;
-  industry: string;
-  location: string;
-  employees: string;
-  revenue: string;
-  contacts: Array<{ name: string; avatar: string | null }>;
-  website: string;
-  customerSince: string | null;
-  tags: string[];
-  status: CompanyStatus;
-  lastActivity: string | null;
-};
+import type { Company, CompanySortKey } from "../../types/Companies";
+import CompanyDetailsSheet from "./CompanyDetailsSheet";
 
 const columns: Array<{
-  key: SortKey | "contacts" | "tags" | "actions";
+  key: CompanySortKey | "contacts" | "tags" | "actions";
   label: string;
   width: number;
 }> = [
@@ -94,7 +67,7 @@ export default function CompanyTable() {
   const canCreate = useCan("companies.create");
   const canUpdate = useCan("companies.update");
   const canDelete = useCan("companies.delete");
-  const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
+  const [sort, setSort] = useState<{ key: CompanySortKey; descending: boolean }>({
     key: "name",
     descending: false,
   });
@@ -138,7 +111,7 @@ export default function CompanyTable() {
     visibleRows.length > 0 &&
     visibleRows.every((row) => selected.includes(row.id));
 
-  const changeSort = (key: SortKey) => {
+  const changeSort = (key: CompanySortKey) => {
     setSort((current) => ({
       key,
       descending: current.key === key ? !current.descending : false,
@@ -238,7 +211,7 @@ export default function CompanyTable() {
                       </span>
                     ) : (
                       <button
-                        onClick={() => changeSort(column.key as SortKey)}
+                        onClick={() => changeSort(column.key as CompanySortKey)}
                         className="w-full text-left text-theme-xs font-medium text-gray-700 dark:text-gray-400"
                       >
                         {column.label}
@@ -515,9 +488,7 @@ export default function CompanyTable() {
         }}
         company={editingCompany}
       />
-      <Sheet isOpen={Boolean(viewCompany)} onClose={() => setViewCompany(null)} title={viewCompany?.name ?? "Company details"} description="Review company relationship information." side="right" className="w-full sm:max-w-2xl">
-        {viewCompany && <div className="space-y-5"><div className="flex items-center gap-3"><Avatar src={viewCompany.logoUrl} alt={viewCompany.name} size="large" colorKey={`company-${viewCompany.id}`} /><div><h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{viewCompany.name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{viewCompany.industry}</p></div></div><div className="grid gap-4 sm:grid-cols-2">{[["Location", viewCompany.location], ["Employees", viewCompany.employees], ["Revenue", viewCompany.revenue], ["Website", viewCompany.website], ["Customer since", formatDisplayDate(viewCompany.customerSince)], ["Status", viewCompany.status], ["Last activity", formatDisplayDate(viewCompany.lastActivity)], ["Contacts", String(viewCompany.contacts.length)]].map(([label, value]) => <div key={label}><p className="text-xs text-gray-400">{label}</p><p className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p></div>)}</div><button type="button" disabled={!canUpdate} onClick={() => { setEditingCompany(viewCompany as unknown as CompanyRecord); setViewCompany(null); setIsAddCompanyOpen(true); }} className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-40">Edit company</button></div>}
-      </Sheet>
+      <CompanyDetailsSheet company={viewCompany} canUpdate={canUpdate} onClose={() => setViewCompany(null)} onEdit={(company) => { setEditingCompany(company); setViewCompany(null); setIsAddCompanyOpen(true); }} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import type { Task } from "./types/Task";
+import type { ListTask as Task } from "../../../types/Tasks";
 
 interface TaskItemProps extends Task { readOnly: boolean; onDragStateChange: (taskId: string | null) => void }
 

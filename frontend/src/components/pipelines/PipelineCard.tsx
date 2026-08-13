@@ -3,7 +3,7 @@ import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 import Avatar from "../ui/avatar/Avatar";
 
-import type { PipelineLead } from "./types";
+import type { PipelineLead } from "../../types/Pipelines";
 
 interface PipelineCardProps {
   lead: PipelineLead;

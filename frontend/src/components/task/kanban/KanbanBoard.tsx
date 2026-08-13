@@ -2,8 +2,8 @@ import { useCallback, useEffect } from "react";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 import Column from "./Column";
-import type { Task } from "./types/types";
-import type { TaskStatus } from "../../../api/crm";
+import type { KanbanTask as Task } from "../../../types/Tasks";
+import type { TaskStatus } from "../../../types/Tasks";
 
 export type TaskKanbanStatus = TaskStatus;
 

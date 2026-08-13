@@ -11,9 +11,7 @@ import { useCreateContact, useUpdateContact, useUploadContactAvatar, useUsersQue
 import Sheet from "../ui/sheet/Sheet";
 import Avatar from "../ui/avatar/Avatar";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
-import { InfoIcon } from "../../icons";
-
-const inputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
+import { CrmFormField as FormField, CrmInfoSection as FormSection, crmInputClassName as inputClassName, crmPrimaryButtonClassName as primaryButtonClassName, crmSecondaryButtonClassName as secondaryButtonClassName } from "../crm/FormPrimitives";
 
 const clientTypeOptions = ["Retail Investor", "High Net Worth Individual", "Institutional Investor", "Corporate Client", "Partner / Introducer"] as const;
 const riskProfileOptions = ["Conservative", "Balanced", "Aggressive"] as const;
@@ -246,14 +244,3 @@ export default function AddContactSheet({
     </Sheet>
   );
 }
-
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error-500">{error}</span>}</label>;
-}
-
-function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <section className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><span title={description} aria-label={description} className="inline-flex cursor-help text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400"><InfoIcon className="size-4" /></span></div>{children}</section>;
-}
-
-const secondaryButtonClassName = "inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]";
-const primaryButtonClassName = "inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50";

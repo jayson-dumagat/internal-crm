@@ -3,29 +3,30 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { DateSelectArg, EventClickArg, EventInput, EventDropArg } from "@fullcalendar/core";
+import type {
+  DateSelectArg,
+  EventClickArg,
+  EventInput,
+  EventDropArg,
+} from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 
 import PageMeta from "../components/common/PageMeta";
 import AppBreadcrumb from "../components/common/AppBreadcrumb";
-import { PlusIcon } from "../icons";
-import type { CreateTaskInput, TaskRecord } from "../api/crm";
-import { useCreateTask, useTasksQuery, useUpdateTask } from "../hooks/crm/useCrmDirectory";
+import type { TaskRecord } from "../api/crm";
+import type { CreateTaskInput } from "../types/Crm";
+import {
+  useCreateTask,
+  useTasksQuery,
+  useUpdateTask,
+} from "../hooks/crm/useCrmDirectory";
 import TaskFormSheet from "../components/task/TaskFormSheet";
 import { useCan } from "../hooks/auth/useCan";
-
-const priorityColors: Record<TaskRecord["priority"], string> = {
-  low: "#12b76a",
-  medium: "#465fff",
-  high: "#f79009",
-  urgent: "#f04438",
-};
-
-function selectionDateTime(value: string, allDay: boolean) {
-  return allDay ? `${value}T09:00` : dayjs(value).format("YYYY-MM-DDTHH:mm");
-}
+import CalendarEventContent from "../components/calendar/CalendarEventContent";
+import CalendarToolbar from "../components/calendar/CalendarToolbar";
+import { calendarPriorityColors, selectionDateTime } from "../utils/calendar";
 
 export default function Calendar() {
   const calendarRef = useRef<FullCalendar>(null);
@@ -42,21 +43,27 @@ export default function Calendar() {
   const [initialDueAt, setInitialDueAt] = useState<string | null>(null);
 
   const events = useMemo<EventInput[]>(
-    () => tasks
-      .filter((task) => task.kind === "event" && task.status !== "blocked" && (task.startAt || task.dueAt))
-      .map((task) => {
-        const color = task.color ?? priorityColors[task.priority];
-        return {
-          id: task.id,
-          title: task.title,
-          start: task.startAt ?? task.dueAt ?? undefined,
-          end: task.dueAt ?? undefined,
-          allDay: false,
-          backgroundColor: color,
-          borderColor: color,
-          extendedProps: { calendar: task.priority, lead: task.lead?.name },
-        };
-      }),
+    () =>
+      tasks
+        .filter(
+          (task) =>
+            task.kind === "event" &&
+            task.status !== "blocked" &&
+            (task.startAt || task.dueAt),
+        )
+        .map((task) => {
+          const color = task.color ?? calendarPriorityColors[task.priority];
+          return {
+            id: task.id,
+            title: task.title,
+            start: task.startAt ?? task.dueAt ?? undefined,
+            end: task.dueAt ?? undefined,
+            allDay: false,
+            backgroundColor: color,
+            borderColor: color,
+            extendedProps: { calendar: task.priority, lead: task.lead?.name },
+          };
+        }),
     [tasks],
   );
 
@@ -100,19 +107,32 @@ export default function Calendar() {
     if (!editing && !canCreate) return;
     try {
       if (editing) {
-        await updateTask.mutateAsync({ id: editing.id, input: { ...input, kind: "event" } });
+        await updateTask.mutateAsync({
+          id: editing.id,
+          input: { ...input, kind: "event" },
+        });
         toast.success("Calendar event updated.");
       } else {
-        await createTask.mutateAsync({ ...input, kind: "event", type: input.type ?? "meeting" });
+        await createTask.mutateAsync({
+          ...input,
+          kind: "event",
+          type: input.type ?? "meeting",
+        });
         toast.success("Calendar event added.");
       }
       closeForm();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to save calendar event.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to save calendar event.",
+      );
     }
   };
 
-  const persistEventRange = async (change: EventDropArg | EventResizeDoneArg) => {
+  const persistEventRange = async (
+    change: EventDropArg | EventResizeDoneArg,
+  ) => {
     if (!canUpdate || !change.event.start) {
       change.revert();
       return;
@@ -128,33 +148,36 @@ export default function Calendar() {
       toast.success("Event schedule updated.");
     } catch (error) {
       change.revert();
-      toast.error(error instanceof Error ? error.message : "Unable to update event schedule.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to update event schedule.",
+      );
     }
   };
 
   return (
     <>
-      <PageMeta title="CDEX Calendar | Caballes-Go Securities, Inc." description="Schedule and manage relationship activities." />
+      <PageMeta
+        title="CDEX Calendar | Caballes-Go Securities, Inc."
+        description="Schedule and manage relationship activities."
+      />
       <AppBreadcrumb pageName="Calendar" />
       <section className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <div className="flex justify-end border-b border-gray-100 px-4 py-2.5 dark:border-white/[0.05] sm:px-5">
-          <button
-            type="button"
-            disabled={!canCreate}
-            title={canCreate ? "Add Event" : "Read-only access"}
-            onClick={() => openNewEvent()}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <PlusIcon className="size-4" />
-            <span className="hidden sm:inline">Add Event</span>
-          </button>
-        </div>
+        <CalendarToolbar
+          canCreate={canCreate}
+          onAddEvent={() => openNewEvent()}
+        />
         <div className="custom-calendar">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
-            headerToolbar={{ left: "prev,next", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" }}
+            headerToolbar={{
+              left: "prev,next",
+              center: "title",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
+            }}
             events={events}
             selectable
             selectMirror
@@ -168,10 +191,20 @@ export default function Calendar() {
             eventClick={handleEventClick}
             eventDrop={(change) => void persistEventRange(change)}
             eventResize={(change) => void persistEventRange(change)}
-            eventContent={renderEventContent}
+            eventContent={(eventInfo) => (
+              <CalendarEventContent
+                timeText={eventInfo.timeText}
+                title={eventInfo.event.title}
+                backgroundColor={eventInfo.event.backgroundColor}
+              />
+            )}
           />
         </div>
-        {tasksQuery.isError && <p className="border-t border-gray-100 px-5 py-3 text-sm text-error-500 dark:border-white/[0.05]">{tasksQuery.error.message}</p>}
+        {tasksQuery.isError && (
+          <p className="border-t border-gray-100 px-5 py-3 text-sm text-error-500 dark:border-white/[0.05]">
+            {tasksQuery.error.message}
+          </p>
+        )}
       </section>
       <TaskFormSheet
         isOpen={isFormOpen}
@@ -185,15 +218,5 @@ export default function Calendar() {
         isPending={createTask.isPending || updateTask.isPending}
       />
     </>
-  );
-}
-
-function renderEventContent(eventInfo: { timeText: string; event: { title: string; backgroundColor?: string } }) {
-  const color = eventInfo.event.backgroundColor ?? "#465fff";
-  return (
-    <div className="flex min-w-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs text-white" style={{ backgroundColor: color }}>
-      {eventInfo.timeText && <span className="shrink-0 font-medium">{eventInfo.timeText}</span>}
-      <span className="truncate">{eventInfo.event.title}</span>
-    </div>
   );
 }

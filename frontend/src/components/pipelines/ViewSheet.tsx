@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 
 import Sheet from "../ui/sheet/Sheet";
 
-import type { PipelineView } from "./types";
+import type { PipelineView } from "../../types/Pipelines";
 import { pipelineNameSchema, type PipelineNameValues } from "../../validations/pipeline";
 
 interface ViewSheetProps {

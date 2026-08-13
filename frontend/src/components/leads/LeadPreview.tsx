@@ -7,22 +7,14 @@ import Badge from "../ui/badge/Badge";
 import Sheet from "../ui/sheet/Sheet";
 import LexicalNoteEditor from "../notes/LexicalNoteEditor";
 
-import type { Lead } from "../../pages/CrmLeads/Leads";
+import type { Lead } from "../../types/Leads";
+import { leadStatusBadgeColor, normalizePhone } from "../../utils/leads";
 import { CalendarAltIcon, EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon, TaskIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
 import { useActivitiesQuery, useCreateNote, useNotesQuery, useTasksQuery } from "../../hooks/crm/useCrmDirectory";
 import type { TaskRecord } from "../../api/crm";
 import { toast } from "sonner";
 import { useCan } from "../../hooks/auth/useCan";
-
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
 
 type LeadPreviewTab = "activity" | "notes" | "tasks" | "events";
 
@@ -60,14 +52,6 @@ const leadStages: Array<Lead["status"]> = [
   "Qualified",
   "Converted",
 ];
-
-const statusBadgeColor: Record<Lead["status"], BadgeColor> = {
-  New: "info",
-  Contacted: "light",
-  Qualified: "primary",
-  Converted: "success",
-  Lost: "error",
-};
 
 export default function LeadPreview({
   lead,
@@ -135,7 +119,7 @@ function LeadSummary({
 
               <Badge
                 variant="light"
-                color={statusBadgeColor[lead.status]}
+                color={leadStatusBadgeColor[lead.status]}
                 size="sm"
               >
                 {lead.status}
@@ -398,7 +382,6 @@ function ActivityTab({ lead }: { lead: Lead }) {
     </div>
   );
 }
-
 const eventStatusLabels: Record<TaskRecord["status"], string> = {
   "not-started": "Not started",
   "in-progress": "In progress",
@@ -407,7 +390,7 @@ const eventStatusLabels: Record<TaskRecord["status"], string> = {
   blocked: "Blocked",
 };
 
-const eventStatusColors: Record<TaskRecord["status"], BadgeColor> = {
+const eventStatusColors: Record<TaskRecord["status"], "primary" | "success" | "error" | "warning" | "info" | "light" | "dark"> = {
   "not-started": "light",
   "in-progress": "info",
   completed: "success",
@@ -422,7 +405,7 @@ const taskPriorityLabels: Record<TaskRecord["priority"], string> = {
   urgent: "Urgent",
 };
 
-const taskPriorityColors: Record<TaskRecord["priority"], BadgeColor> = {
+const taskPriorityColors: Record<TaskRecord["priority"], "primary" | "success" | "error" | "warning" | "info" | "light" | "dark"> = {
   low: "light",
   medium: "info",
   high: "warning",
@@ -472,7 +455,6 @@ function TasksTab({ lead }: { lead: Lead }) {
     </div>
   );
 }
-
 function TaskRow({ task }: { task: TaskRecord }) {
   return (
     <article className="flex gap-3 rounded-xl border border-gray-100 p-3.5 dark:border-white/[0.05]">
@@ -819,8 +801,4 @@ function NotesTab({ lead }: { lead: Lead }) {
       </div>
     </div>
   );
-}
-
-function normalizePhone(phone: string) {
-  return phone.replace(/[^\d+]/g, "");
 }

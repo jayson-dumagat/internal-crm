@@ -9,19 +9,11 @@ import {
 } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import Avatar from "../ui/avatar/Avatar";
-import type { Lead } from "../../pages/CrmLeads/Leads";
+import type { Lead } from "../../types/Leads";
 import { EyeIcon, SquarePenIcon, TrashBinIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
 import Checkbox from "../form/input/Checkbox";
-
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
+import { leadInterestBadgeColor, leadStatusBadgeColor, normalizePhone } from "../../utils/leads";
 
 type LeadTableProps = {
   leads: Lead[];
@@ -34,20 +26,6 @@ type LeadTableProps = {
   onDeleteLead: (lead: Lead) => void;
   canUpdate: boolean;
   canDelete: boolean;
-};
-
-const statusBadgeColor: Record<Lead["status"], BadgeColor> = {
-  New: "info",
-  Contacted: "light",
-  Qualified: "primary",
-  Converted: "success",
-  Lost: "error",
-};
-
-const interestBadgeColor: Record<Lead["interestLevel"], BadgeColor> = {
-  High: "success",
-  Medium: "warning",
-  Low: "light",
 };
 
 const headerCellClass =
@@ -247,7 +225,7 @@ export default function LeadTable({
                   <LeadBodyCell className="w-[150px]">
                     <Badge
                       variant="light"
-                      color={statusBadgeColor[lead.status]}
+                      color={leadStatusBadgeColor[lead.status]}
                       size="sm"
                     >
                       {lead.status}
@@ -257,7 +235,7 @@ export default function LeadTable({
                   <LeadBodyCell className="w-[170px]">
                     <Badge
                       variant="light"
-                      color={interestBadgeColor[lead.interestLevel]}
+                      color={leadInterestBadgeColor[lead.interestLevel]}
                       size="sm"
                     >
                       {lead.interestLevel}
@@ -334,7 +312,6 @@ export default function LeadTable({
     </div>
   );
 }
-
 function TableHeaderCell({
   children,
   className = "",
@@ -353,7 +330,6 @@ function TableHeaderCell({
     </TableCell>
   );
 }
-
 function LeadBodyCell({
   children,
   className = "",
@@ -380,8 +356,4 @@ function PersonCell({ avatar, name }: { avatar: string | null; name: string }) {
       </span>
     </div>
   );
-}
-
-function normalizePhone(phone: string) {
-  return phone.replace(/[^\d+]/g, "");
 }

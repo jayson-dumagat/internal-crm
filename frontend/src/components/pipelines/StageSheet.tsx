@@ -7,7 +7,7 @@ import Sheet from "../ui/sheet/Sheet";
 import type {
   PipelineStage,
   StageColor,
-} from "./types";
+} from "../../types/Pipelines";
 import { pipelineStageSchema, type PipelineStageValues } from "../../validations/pipeline";
 
 interface StageSheetProps {

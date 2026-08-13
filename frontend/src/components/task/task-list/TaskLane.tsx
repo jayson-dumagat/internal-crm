@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import TaskItem from "./TaskItem";
-import type { Task } from "./types/Task";
+import type { ListTask as Task } from "../../../types/Tasks";
 
 interface TaskLaneProps {
   lane: string;

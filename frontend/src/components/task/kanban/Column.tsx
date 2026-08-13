@@ -3,7 +3,7 @@ import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element
 
 import Badge from "../../ui/badge/Badge";
 import TaskItem from "./TaskItem";
-import type { Task } from "./types/types";
+import type { KanbanTask as Task } from "../../../types/Tasks";
 import type { TaskKanbanStatus } from "./KanbanBoard";
 
 interface ColumnProps {

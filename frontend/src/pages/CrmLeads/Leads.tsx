@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { toast } from "sonner";
 
-import type { CreateLeadInput, LeadRecord } from "../../api/crm";
+import type { LeadRecord } from "../../api/crm";
+import type { CreateLeadInput } from "../../types/Crm";
+import type { Lead, LeadStatus } from "../../types/Leads";
 import { useContactsQuery, useCreateLead, useDeleteLead, useLeadsQuery, useUpdateLead } from "../../hooks/crm/useCrmDirectory";
 import { ExportIcon, FilterIcon, PlusIcon } from "../../icons";
 import AppBreadcrumb from "../../components/common/AppBreadcrumb";
@@ -14,10 +16,7 @@ import LeadTable from "../../components/leads/LeadTable";
 import PageMeta from "../../components/common/PageMeta";
 import SearchField from "../../components/ui/search/Search";
 import { useCan } from "../../hooks/auth/useCan";
-
-export type LeadStatus = LeadRecord["status"];
-export type InterestLevel = LeadRecord["interestLevel"];
-export type Lead = LeadRecord & { companyLogo?: string | null };
+import { downloadCsv } from "../../utils/csv";
 
 const leadColumn = createColumnHelper<Lead>();
 const leadColumns = [
@@ -102,10 +101,11 @@ export default function Leads() {
   };
 
   const exportLeads = () => {
-    const rows = [["Name", "Email", "Company", "Status", "Interest", "Created"], ...filteredLeads.map((lead) => [lead.name, lead.email, lead.company, lead.status, lead.interestLevel, lead.dateCreated])];
-    const csv = rows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "cdex-leads.csv"; anchor.click(); URL.revokeObjectURL(url);
+    downloadCsv(
+      "cdex-leads.csv",
+      ["Name", "Email", "Company", "Status", "Interest", "Created"],
+      filteredLeads.map((lead) => [lead.name, lead.email, lead.company, lead.status, lead.interestLevel, lead.dateCreated]),
+    );
   };
 
   return <>

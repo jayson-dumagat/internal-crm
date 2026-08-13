@@ -22,23 +22,26 @@ import {
   createNote,
   updateNote,
   deleteNote,
-  type CreateLeadInput,
-  type UpdateLeadInput,
-  type CreateNoteInput,
-  type UpdateNoteInput,
-  type CreateActivityInput,
   getTasks,
   createTask,
   updateTask,
   updateTaskStatus,
   deleteTask,
-  type CreateTaskInput,
-  type UpdateTaskInput,
-  type CreateCompanyInput,
-  type CreateContactInput,
-  type UpdateCompanyInput,
-  type UpdateContactInput,
 } from "../../api/crm";
+import type {
+  CreateActivityInput,
+  CreateCompanyInput,
+  CreateContactInput,
+  CreateLeadInput,
+  CreateNoteInput,
+  CreateTaskInput,
+  UpdateCompanyInput,
+  UpdateContactInput,
+  UpdateLeadInput,
+  UpdateNoteInput,
+  UpdateTaskInput,
+} from "../../types/Crm";
+import type { TaskStatus } from "../../types/Crm";
 import { getUsers } from "../../api/users";
 
 export const crmDirectoryKeys = {
@@ -280,7 +283,7 @@ export function useUpdateTask() {
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "not-started" | "in-progress" | "completed" | "overdue" | "blocked" }) => updateTaskStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => updateTaskStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });

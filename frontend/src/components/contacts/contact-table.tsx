@@ -36,43 +36,17 @@ import SearchField from "../search/SearchField";
 import { useSearch } from "../../hooks/useSearch";
 import { useDebounce } from "../../hooks/useDebounce";
 import Checkbox from "../form/input/Checkbox";
-import Sheet from "../ui/sheet/Sheet";
+import type {
+  Contact,
+  ContactBadgeColor,
+  ContactSortKey,
+  ContactStatus,
+  RelationshipLevel,
+  SortOrder,
+} from "../../types/Contacts";
+import ContactDetailsSheet from "./ContactDetailsSheet";
 
-type ContactStatus =
-  | "Customer"
-  | "Prospect"
-  | "KYC Pending"
-  | "Dormant"
-  | "Closed";
-type RelationshipLevel = "High" | "Medium" | "Low";
-type BadgeColor =
-  | "primary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "light"
-  | "dark";
-
-type Contact = {
-  id: string | number;
-  user: { image: string | null; name: string };
-  position: string;
-  company: { image: string | null; name: string };
-  relationship_level: RelationshipLevel;
-  contact: { email: string; phone: string };
-  owner: { image: string | null; name: string };
-  location: string;
-  status: ContactStatus;
-  last_activity: string | null;
-  company_id?: string | null;
-  type_of_client?: string | null;
-  risk_profile?: string | null;
-  preferred_contact_method?: string | null;
-  tags?: string[];
-};
-
-const statusBadgeColor: Record<ContactStatus, BadgeColor> = {
+const statusBadgeColor: Record<ContactStatus, ContactBadgeColor> = {
   Customer: "success",
   Prospect: "primary",
   "KYC Pending": "warning",
@@ -80,23 +54,11 @@ const statusBadgeColor: Record<ContactStatus, BadgeColor> = {
   Closed: "error",
 };
 
-const relationshipBadgeColor: Record<RelationshipLevel, BadgeColor> = {
+const relationshipBadgeColor: Record<RelationshipLevel, ContactBadgeColor> = {
   High: "success",
   Medium: "warning",
   Low: "light",
 };
-
-type SortKey =
-  | "name"
-  | "position"
-  | "company"
-  | "relationship_level"
-  | "contact"
-  | "owner"
-  | "location"
-  | "status"
-  | "last_activity";
-type SortOrder = "asc" | "desc";
 
 export default function ContactTable() {
   const { user: currentUser } = useAuth();
@@ -111,7 +73,7 @@ export default function ContactTable() {
   const hasContacts = (contactData ?? []).length > 0;
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortKey, setSortKey] = useState<ContactSortKey>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [selectedIds, setSelectedIds] = useState<Array<Contact["id"]>>([]);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
@@ -177,7 +139,7 @@ export default function ContactTable() {
     setCurrentPage(page);
   };
 
-  const handleSort = (key: SortKey) => {
+  const handleSort = (key: ContactSortKey) => {
     if (sortKey === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -318,7 +280,7 @@ export default function ContactTable() {
                       className="w-full cursor-pointer text-left"
                       onClick={() => {
                         if (key !== "actions") {
-                          handleSort(key as SortKey);
+                          handleSort(key as ContactSortKey);
                         }
                       }}
                     >
@@ -616,9 +578,7 @@ export default function ContactTable() {
         companiesLoading={companiesQuery.isLoading}
         contact={editingContact}
       />
-      <Sheet isOpen={Boolean(viewContact)} onClose={() => setViewContact(null)} title={viewContact?.user.name ?? "Contact details"} description="Review contact relationship information." side="right" className="w-full sm:max-w-2xl">
-        {viewContact && <div className="space-y-5"><div className="flex items-center gap-3"><Avatar src={viewContact.user.image} alt={viewContact.user.name} size="large" /><div><h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{viewContact.user.name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{viewContact.position}</p></div></div><div className="grid gap-4 sm:grid-cols-2">{[["Company", viewContact.company.name], ["Email", viewContact.contact.email], ["Phone", viewContact.contact.phone], ["Relationship owner", viewContact.owner.name], ["Location", viewContact.location], ["Status", viewContact.status], ["Last activity", formatDisplayDate(viewContact.last_activity)], ["Risk profile", viewContact.risk_profile || "Not provided"]].map(([label, value]) => <div key={label}><p className="text-xs text-gray-400">{label}</p><p className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p></div>)}</div><button type="button" disabled={!canUpdate} onClick={() => { setEditingContact(viewContact as unknown as ContactRecord); setViewContact(null); setIsAddContactOpen(true); }} className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-40">Edit contact</button></div>}
-      </Sheet>
+      <ContactDetailsSheet contact={viewContact} canUpdate={canUpdate} onClose={() => setViewContact(null)} onEdit={(contact) => { setEditingContact(contact); setViewContact(null); setIsAddContactOpen(true); }} />
     </div>
   );
 }

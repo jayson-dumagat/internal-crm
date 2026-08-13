@@ -3,10 +3,12 @@ import dayjs from "dayjs";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
-import type { CreateTaskInput, TaskRecord } from "../../api/crm";
+import type { TaskRecord } from "../../api/crm";
+import type { CreateTaskInput } from "../../types/Crm";
 import { taskFormSchema, type TaskFormValues } from "../../validations/crm";
 import { useLeadsQuery, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
+import { CrmFormField as Field, crmInputClassName as inputClassName } from "../crm/FormPrimitives";
 
 type Values = TaskFormValues;
 
@@ -15,9 +17,6 @@ const taskTypes: Values["type"][] = ["general", "call", "email", "meeting", "fol
 function normalizeTaskType(value: string): Values["type"] {
   return taskTypes.includes(value as Values["type"]) ? (value as Values["type"]) : "general";
 }
-
-const inputClassName =
-  "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
 
 function toInputDate(value: string | null | undefined) {
   return value ? dayjs(value).format("YYYY-MM-DDTHH:mm") : "";
@@ -224,8 +223,4 @@ export default function TaskFormSheet({
 
 function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return <section className="space-y-4 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05]"><div><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p></div>{children}</section>;
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error-500">{error}</span>}</label>;
 }

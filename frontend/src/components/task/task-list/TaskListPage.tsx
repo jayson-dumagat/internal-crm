@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import TaskLane from "./TaskLane";
-import type { Task } from "./types/Task";
-import type { TaskStatus } from "../../../api/crm";
+import type { ListTask as Task } from "../../../types/Tasks";
+import type { TaskStatus } from "../../../types/Tasks";
 
 const lanes: TaskStatus[] = ["not-started", "in-progress", "completed", "overdue", "blocked"];
 

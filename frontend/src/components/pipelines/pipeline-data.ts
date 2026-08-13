@@ -1,7 +1,7 @@
 import type {
   PipelineLead,
   PipelineView,
-} from "./types";
+} from "../../types/Pipelines";
 
 export const initialPipelineViews: PipelineView[] = [
   {
