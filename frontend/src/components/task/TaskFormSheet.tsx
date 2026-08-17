@@ -8,7 +8,7 @@ import type { CreateTaskInput } from "../../types/Crm";
 import { taskFormSchema, type TaskFormValues } from "../../validations/crm";
 import { useLeadsQuery, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
-import { CrmFormField as Field, crmInputClassName as inputClassName } from "../crm/FormPrimitives";
+import { CrmInfoSection as FormSection, CrmFormField as Field, crmInputClassName as inputClassName } from "../crm/FormPrimitives";
 
 type Values = TaskFormValues;
 
@@ -219,8 +219,4 @@ export default function TaskFormSheet({
       </form>
     </Sheet>
   );
-}
-
-function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <section className="space-y-4 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05]"><div><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p></div>{children}</section>;
 }

@@ -1,6 +1,21 @@
 import { AppDataSource } from "../../database/data-source";
 import { Activity } from "./activity.entity";
 
+const fullActivityLogRoles = new Set([
+  "crm.admin",
+  "admin",
+  "crm.manager",
+  "manager",
+]);
+
+/**
+ * Activity logs are personal by default. Only the administrator and manager
+ * Entra roles are allowed to review the tenant-wide audit stream.
+ */
+export function canViewTenantActivityLog(roles: readonly string[] = []): boolean {
+  return roles.some((role) => fullActivityLogRoles.has(role.trim().toLowerCase()));
+}
+
 export async function recordActivity(input: {
   tenantId: string;
   actorId?: string | null;

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Fieldset as ArkFieldset } from "@ark-ui/react";
 import { InfoIcon } from "../../icons";
 
 export const crmInputClassName = "h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -10,5 +11,9 @@ export function CrmFormField({ label, error, children }: { label: string; error?
 }
 
 export function CrmInfoSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
-  return <section className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">{title}</h3><span title={description} aria-label={description} className="inline-flex cursor-help text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400"><InfoIcon className="size-4" /></span></div>{children}</section>;
+  return <ArkFieldset.Root className="space-y-4 border-b border-gray-100 pb-6 last:border-b-0 last:pb-0 dark:border-white/[0.05]"><ArkFieldset.Legend className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-white/90"><span>{title}</span><span title={description} aria-label={description} className="inline-flex cursor-help text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400"><InfoIcon className="size-4" /></span></ArkFieldset.Legend>{children}</ArkFieldset.Root>;
+}
+
+export function CrmFieldsetSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return <ArkFieldset.Root className="space-y-4 rounded-xl border border-gray-100 p-4 dark:border-white/[0.05]"><ArkFieldset.Legend className="block text-sm font-semibold text-gray-800 dark:text-white/90">{title}</ArkFieldset.Legend><ArkFieldset.HelperText className="-mt-3 block text-xs text-gray-500 dark:text-gray-400">{description}</ArkFieldset.HelperText>{children}</ArkFieldset.Root>;
 }

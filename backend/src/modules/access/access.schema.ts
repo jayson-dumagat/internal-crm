@@ -11,3 +11,9 @@ export const accessPolicySchema = z
       .default({}),
   })
   .strict();
+
+export const accessRolePermissionsSchema = z
+  .object({
+    permissionCodes: z.array(z.string().trim().min(1)).max(500),
+  })
+  .strict();

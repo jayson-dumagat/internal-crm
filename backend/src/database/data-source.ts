@@ -16,9 +16,7 @@ export const AppDataSource = new DataSource({
 
   entities,
 
-  migrations: [
-    "dist/database/migrations/*.js",
-  ],
+  migrations: ["dist/database/migrations/*.js"],
 
   subscribers: [],
 

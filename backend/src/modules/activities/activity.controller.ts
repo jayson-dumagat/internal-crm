@@ -6,6 +6,7 @@ import { Activity } from "./activity.entity";
 import { createActivitySchema } from "./activity.schema";
 import { canAccessRecord, firstHiddenInput, hasResourceRestriction } from "../access/access-control";
 import { toActivityDto } from "./activity.mapper";
+import { canViewTenantActivityLog } from "./activity.service";
 
 const activityRepository = () => AppDataSource.getRepository(Activity);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -18,8 +19,30 @@ export async function listActivities(req: Request, res: Response, next: NextFunc
       return;
     }
 
+    const sessionUser = req.session.user;
+    const canViewAll = canViewTenantActivityLog(sessionUser?.roles ?? []);
+    let where: { tenantId: string; actorId?: string } = { tenantId };
+
+    if (!canViewAll) {
+      const actor = await userRepository().findOne({
+        where: {
+          entraTenantId: tenantId,
+          entraObjectId: sessionUser?.entraObjectId,
+        },
+        select: { id: true },
+      });
+
+      // Records without a matching CRM user cannot be attributed safely to
+      // the requester, so they are excluded from the personal activity view.
+      if (!actor) {
+        res.status(200).json({ data: [] });
+        return;
+      }
+      where = { tenantId, actorId: actor.id };
+    }
+
     const activities = await activityRepository().find({
-      where: { tenantId },
+      where,
       order: { createdAt: "DESC" },
       take: 500,
     });

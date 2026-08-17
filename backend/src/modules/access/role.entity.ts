@@ -26,10 +26,6 @@ export class Role {
   })
   name!: string;
 
-  /*
-   * Value expected in the Entra access token's roles claim.
-   * Example: CRM.Sales
-   */
   @Index({ unique: true })
   @Column({
     name: "entra_app_role_value",
@@ -51,9 +47,6 @@ export class Role {
   })
   isActive!: boolean;
 
-  @ManyToMany(
-    () => Permission,
-    (permission) => permission.roles,
-  )
+  @ManyToMany(() => Permission, (permission) => permission.roles)
   permissions!: Permission[];
 }

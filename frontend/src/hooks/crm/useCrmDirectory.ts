@@ -43,6 +43,7 @@ import type {
 } from "../../types/Crm";
 import type { TaskStatus } from "../../types/Crm";
 import { getUsers } from "../../api/users";
+import { useAuth } from "../auth/useAuth";
 
 export const crmDirectoryKeys = {
   all: ["crm-directory"] as const,
@@ -212,7 +213,17 @@ export function useDeleteLead() {
 }
 
 export function useActivitiesQuery() {
-  return useQuery({ queryKey: crmDirectoryKeys.activities(), queryFn: getActivities });
+  const { user } = useAuth();
+  const accessFingerprint = `${user?.entraObjectId ?? "anonymous"}:${(user?.roles ?? []).join(",")}:${(user?.permissions ?? []).join(",")}`;
+
+  return useQuery({
+    // Keep activity results isolated by user and current access grants. This
+    // prevents a cached tenant-wide log from being reused after a role change
+    // or when a different account signs in on the same browser.
+    queryKey: [...crmDirectoryKeys.activities(), accessFingerprint],
+    queryFn: getActivities,
+    enabled: Boolean(user),
+  });
 }
 
 export function useCreateActivity() {

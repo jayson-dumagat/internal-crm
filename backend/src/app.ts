@@ -1,8 +1,8 @@
 /**
  * This file seperates from the index.ts.
- * The benefit of this is that the server can be started and stopped independently of the application 
+ * The benefit of this is that the server can be started and stopped independently of the application
  * logic, which is useful for testing and development.
-*/
+ */
 
 import "reflect-metadata";
 
@@ -10,6 +10,8 @@ import cors from "cors";
 import express from "express";
 import session from "express-session";
 import helmet from "helmet";
+import swaggerUi from "swagger-ui-express";
+import * as swaggerDocument from "./swagger.json";
 import { createLogger } from "./shared/utils/logger";
 
 import { env } from "./config/env";
@@ -67,6 +69,8 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.use("/api/documentation", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 app.use("/api", apiRouter);
 
 app.use((_req, res) => {
@@ -75,6 +79,8 @@ app.use((_req, res) => {
     message: "Route not found",
   });
 });
+
+
 
 app.use(
   (

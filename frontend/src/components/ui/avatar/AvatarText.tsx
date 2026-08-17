@@ -3,6 +3,7 @@ interface AvatarTextProps {
   colorKey?: string;
   className?: string;
   size?: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge";
+  as?: "div" | "span";
 }
 
 const sizeClasses = {
@@ -14,7 +15,7 @@ const sizeClasses = {
   xxlarge: "h-16 w-16",
 };
 
-const AvatarText: React.FC<AvatarTextProps> = ({ name, colorKey, className = "", size = "medium" }) => {
+const AvatarText: React.FC<AvatarTextProps> = ({ name, colorKey, className = "", size = "medium", as = "div" }) => {
   // Generate initials from name
   const initials = name
     .split(" ")
@@ -42,14 +43,16 @@ const AvatarText: React.FC<AvatarTextProps> = ({ name, colorKey, className = "",
     return colors[index % colors.length];
   };
 
+  const Component = as;
+
   return (
-    <div
+    <Component
       className={`flex ${sizeClasses[size]} ${className} items-center justify-center rounded-full ${getColorClass(
         colorKey ?? name
       )}`}
     >
       <span className="text-sm font-medium">{initials}</span>
-    </div>
+    </Component>
   );
 };
 

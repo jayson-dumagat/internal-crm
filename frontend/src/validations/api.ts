@@ -215,6 +215,20 @@ export const accessCatalogSchema = z.object({
   resources: z.array(z.object({ key: z.string(), label: z.string() })),
 });
 
+export const accessRoleSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  entraAppRoleValue: z.string(),
+  description: z.string().nullable(),
+  isActive: z.boolean(),
+  permissionCodes: z.array(z.string()),
+});
+
+export const accessRolesResponseSchema = z.object({
+  data: z.array(accessRoleSchema),
+});
+
 export const accessPolicySchema = z.object({
   allowedPermissions: z.array(z.string()),
   deniedPermissions: z.array(z.string()),
@@ -257,6 +271,7 @@ export type AuthUser = z.infer<typeof authUserSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type UserRecord = z.infer<typeof userSchema>;
 export type AccessCatalog = z.infer<typeof accessCatalogSchema>;
+export type AccessRole = z.infer<typeof accessRoleSchema>;
 export type AccessUser = z.infer<typeof accessUserSchema>;
 export type AccessResources = z.infer<
   typeof accessResourcesResponseSchema

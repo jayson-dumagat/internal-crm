@@ -317,7 +317,7 @@ export default function CrmSidebar() {
 
   return (
     <aside
-      className={`fixed top-0 left-0 z-9999 flex h-dvh max-h-dvh flex-col overflow-hidden border-r border-gray-200 bg-gray-50 px-5 transition-all duration-300 ease-in-out overscroll-contain xl:translate-x-0 dark:border-gray-800 dark:bg-gray-900 ${
+      className={`fixed top-0 left-0 z-49 flex h-dvh max-h-dvh flex-col overflow-hidden border-r border-gray-200 bg-gray-50 px-5 transition-all duration-300 ease-in-out overscroll-contain xl:translate-x-0 dark:border-gray-800 dark:bg-gray-900 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       } ${
         isExpanded || isMobileOpen

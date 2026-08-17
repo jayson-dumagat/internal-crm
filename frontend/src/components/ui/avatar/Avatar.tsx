@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Avatar as ArkAvatar } from "@ark-ui/react";
 
 import AvatarText from "./AvatarText";
 
@@ -41,16 +41,28 @@ const Avatar: React.FC<AvatarProps> = ({
   size = "medium",
   status = "none",
 }) => {
-  const [failedSource, setFailedSource] = useState<string | null>(null);
-  const showInitials = !src || failedSource === src;
-
   return (
-    <div className={`relative  rounded-full ${sizeClasses[size]}`}>
-      {showInitials ? (
-        <AvatarText name={alt} colorKey={colorKey} size={size} className="!h-full !w-full" />
-      ) : (
-        <img src={src} alt={alt} onError={() => setFailedSource(src)} className="h-full w-full rounded-full object-cover" />
+    <ArkAvatar.Root
+      role="img"
+      aria-label={alt}
+      className={`relative overflow-hidden rounded-full ${sizeClasses[size]}`}
+    >
+      {src && (
+        <ArkAvatar.Image
+          src={src}
+          alt={alt}
+          className="h-full w-full rounded-full object-cover"
+        />
       )}
+      <ArkAvatar.Fallback className="block h-full w-full rounded-full">
+        <AvatarText
+          name={alt}
+          colorKey={colorKey}
+          size={size}
+          as="span"
+          className="!h-full !w-full"
+        />
+      </ArkAvatar.Fallback>
 
       {/* Status Indicator */}
       {status !== "none" && (
@@ -60,7 +72,7 @@ const Avatar: React.FC<AvatarProps> = ({
           } ${statusColorClasses[status] || ""}`}
         ></span>
       )}
-    </div>
+    </ArkAvatar.Root>
   );
 };
 

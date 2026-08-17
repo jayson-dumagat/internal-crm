@@ -145,7 +145,7 @@ export default function Tasks() {
               disabled={!canCreate}
               title={canCreate ? "Add Task" : "Read-only access"}
               onClick={() => openNewTask()}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-40"
+                              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <PlusIcon className="size-5" />
               <span className="hidden sm:inline">Add Task</span>

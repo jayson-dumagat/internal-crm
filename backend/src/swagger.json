@@ -1,0 +1,20 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+   "title": "CDEX API",
+   "version": "1.0.0",
+   "description": "API documentation for CGSI Internal CRM"
+ },
+ "paths": {
+   "/": {
+     "get": {
+       "summary": "Entra Callback",
+       "responses": {
+         "200": {
+           "description": "Successful response"
+         }
+       }
+     }
+   }
+ }
+}
