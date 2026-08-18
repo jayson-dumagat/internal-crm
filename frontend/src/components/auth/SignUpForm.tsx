@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import { signUpSchema, type SignUpValues } from "../../validations/auth";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
+import { useToast } from "../../hooks/useToast";
 
 export default function SignUpForm() {
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const form = useForm<SignUpValues>({

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { EyeCloseIcon, EyeIcon, MicrosoftIcon } from "../../icons";
 import {
   microsoftSignInSchema,
@@ -15,6 +14,7 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button";
+import { useToast } from "../../hooks/useToast";
 
 interface SignInFormProps {
   isCompletingSignIn?: boolean;
@@ -23,6 +23,7 @@ interface SignInFormProps {
 export default function SignInForm({
   isCompletingSignIn = false,
 }: SignInFormProps) {
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const microsoftSignInForm = useForm<MicrosoftSignInValues>({

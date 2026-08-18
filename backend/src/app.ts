@@ -45,8 +45,7 @@ app.use(morganMiddleware);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(
-  session({
+export const sessionMiddleware = session({
     name: "ccrms.sid",
     secret: env.JWT_SECRET,
     store: sessionStore,
@@ -56,8 +55,9 @@ app.use(
     cookie: {
       ...sessionCookieOptions,
     },
-  }),
-);
+});
+
+app.use(sessionMiddleware);
 
 app.get("/", handleEntraCallback);
 

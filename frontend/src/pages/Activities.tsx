@@ -109,7 +109,7 @@ export default function Activities() {
         description="Review security and CRM audit activity for CDEX."
       />
       <AppBreadcrumb pageName="Activities" />
-      <section className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <ActivityToolbar
           category={category}
           outcome={outcome}

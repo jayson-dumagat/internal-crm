@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import {
   ExportIcon,
   FilterIcon,
-  UploadIcon,
   PencilIcon,
   PlusIcon,
   TrashBinIcon,
   Building2Icon,
+  DownloadIcon,
 } from "../../icons";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useSearch } from "../../hooks/useSearch";
@@ -18,7 +18,7 @@ import {
   useCompaniesQuery,
   useDeleteCompany,
 } from "../../hooks/crm/useCrmDirectory";
-import { toast } from "sonner";
+import { useToast } from "../../hooks/useToast";
 import { formatDisplayDate } from "../../utils/date";
 import SearchField from "../search/SearchField";
 import { useCan } from "../../hooks/auth/useCan";
@@ -51,6 +51,7 @@ const statusColor = {
 } as const;
 
 export default function CompanyTable() {
+  const toast = useToast();
   const companiesQuery = useCompaniesQuery();
   const companyData = companiesQuery.data;
   const hasCompanies = (companyData ?? []).length > 0;
@@ -67,7 +68,10 @@ export default function CompanyTable() {
   const canCreate = useCan("companies.create");
   const canUpdate = useCan("companies.update");
   const canDelete = useCan("companies.delete");
-  const [sort, setSort] = useState<{ key: CompanySortKey; descending: boolean }>({
+  const [sort, setSort] = useState<{
+    key: CompanySortKey;
+    descending: boolean;
+  }>({
     key: "name",
     descending: false,
   });
@@ -143,7 +147,7 @@ export default function CompanyTable() {
               title={canCreate ? "Import companies" : "Read-only access"}
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
-              <UploadIcon />
+              <DownloadIcon />
             </button>
             <button
               type="button"
@@ -284,14 +288,14 @@ export default function CompanyTable() {
                     <tr
                       key={company.id}
                       onClick={() => setViewCompany(company)}
-                      className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                      className={`cursor-pointer hover:bg-gray-50/70 dark:hover:bg-white/[0.03] ${isSelected ? "bg-brand-50/60 dark:bg-brand-500/[0.06]" : ""}`}
                     >
                       <td
                         onClick={(event) => event.stopPropagation()}
-                        className="border border-gray-100 bg-white px-4 py-4 text-center dark:border-white/[0.05] dark:bg-gray-900"
+                        className="border border-gray-100 px-4 py-4 text-center dark:border-white/[0.05]"
                       >
                         <Checkbox
-                        checked={isSelected}
+                          checked={isSelected}
                           onChange={() =>
                             setSelected((current) =>
                               current.includes(company.id)
@@ -308,7 +312,7 @@ export default function CompanyTable() {
                       </td>
                       <td
                         onClick={(event) => event.stopPropagation()}
-                        className="border border-gray-100 bg-white px-4 py-4 dark:border-white/[0.05] dark:bg-gray-900"
+                        className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <Avatar
@@ -382,7 +386,10 @@ export default function CompanyTable() {
                         {formatDisplayDate(company.lastActivity)}
                       </td>
                       <td className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]">
-                        <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+                        <div
+                          className="flex gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             aria-label={`Delete ${company.name}`}
@@ -488,7 +495,16 @@ export default function CompanyTable() {
         }}
         company={editingCompany}
       />
-      <CompanyDetailsSheet company={viewCompany} canUpdate={canUpdate} onClose={() => setViewCompany(null)} onEdit={(company) => { setEditingCompany(company); setViewCompany(null); setIsAddCompanyOpen(true); }} />
+      <CompanyDetailsSheet
+        company={viewCompany}
+        canUpdate={canUpdate}
+        onClose={() => setViewCompany(null)}
+        onEdit={(company) => {
+          setEditingCompany(company);
+          setViewCompany(null);
+          setIsAddCompanyOpen(true);
+        }}
+      />
     </>
   );
 }

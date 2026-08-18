@@ -130,11 +130,9 @@ export async function uploadContactAvatar(
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiClient.post(`/contacts/${id}/avatar`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // Let Axios/browser set the multipart boundary. Setting Content-Type
+    // manually omits that boundary and causes Multer to reject the upload.
+    const response = await apiClient.post(`/contacts/${id}/avatar`, formData);
     return singleResponse(contactSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to upload contact image."));
@@ -148,11 +146,7 @@ export async function uploadCompanyLogo(
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiClient.post(`/companies/${id}/logo`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await apiClient.post(`/companies/${id}/logo`, formData);
     return singleResponse(companySchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to upload company logo."));
@@ -166,9 +160,7 @@ export async function uploadLeadAvatar(
   try {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiClient.post(`/leads/${id}/avatar`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await apiClient.post(`/leads/${id}/avatar`, formData);
     return singleResponse(leadSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to upload lead image."));

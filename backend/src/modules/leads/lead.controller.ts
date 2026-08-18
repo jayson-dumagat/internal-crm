@@ -305,7 +305,7 @@ export async function getLeadAvatar(req: Request, res: Response, next: NextFunct
 
     const objectStream = await getObject(lead.avatarUrl);
     res.setHeader("Content-Type", sharedInferImageContentType(lead.avatarUrl));
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Cache-Control", "private, no-store");
     objectStream.on("error", (error) => {
       if (res.headersSent) res.destroy(error);
       else next(error);

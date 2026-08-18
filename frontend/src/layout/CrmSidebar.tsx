@@ -20,6 +20,7 @@ import {
   TrophyIcon,
   NetworkIcon,
   KeyIcon,
+  CCWClockIcon,
 } from "../icons";
 
 type SubItem = {
@@ -132,7 +133,7 @@ const navGroups: NavGroup[] = [
         label: "Activities",
         path: "/activities",
         permission: "activities.read",
-        icon: <ListTodoIcon />,
+        icon: <CCWClockIcon />,
       },
     ],
   },

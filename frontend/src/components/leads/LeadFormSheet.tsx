@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "sonner";
 
 import type { LeadRecord } from "../../api/crm";
 import type { CreateLeadInput } from "../../types/Crm";
@@ -10,6 +9,7 @@ import { leadFormSchema, type LeadFormValues } from "../../validations/crm";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { useCompaniesQuery, useUploadLeadAvatar, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
+import { useToast } from "../../hooks/useToast";
 import Avatar from "../ui/avatar/Avatar";
 import Sheet from "../ui/sheet/Sheet";
 import type { Lead } from "../../types/Leads";
@@ -28,6 +28,7 @@ export default function LeadFormSheet({
   onSubmit: (input: CreateLeadInput, lead?: Lead) => Promise<LeadRecord>;
   isPending: boolean;
 }) {
+  const toast = useToast();
   const { user: currentUser } = useAuth();
   const uploadAvatar = useUploadLeadAvatar();
   const usersQuery = useUsersQuery();

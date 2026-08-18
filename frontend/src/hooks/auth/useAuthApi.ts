@@ -16,11 +16,12 @@ export function useSessionQuery(options?: {
   refetchOnMount?: boolean | "always";
   staleTime?: number;
   refetchInterval?: number;
+  retry?: number | boolean;
 }) {
   return useQuery({
     queryKey: authKeys.session(),
     queryFn: getCurrentSession,
-    retry: false,
+    retry: options?.retry ?? 1,
     staleTime: options?.staleTime ?? 30_000,
     refetchInterval: options?.refetchInterval,
     refetchOnMount: options?.refetchOnMount ?? false,

@@ -21,7 +21,8 @@ export default function ProtectedRoute({
 
   const sessionQuery = useSessionQuery({
     refetchOnMount: "always",
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
+    retry: 2,
   });
 
   useEffect(() => {
@@ -31,10 +32,10 @@ export default function ProtectedRoute({
   }, [sessionQuery.data, setUser]);
 
   useEffect(() => {
-    if (sessionQuery.isError) {
+    if (sessionQuery.isError && !sessionQuery.data) {
       clearUser();
     }
-  }, [clearUser, sessionQuery.isError]);
+  }, [clearUser, sessionQuery.data, sessionQuery.isError]);
 
   if (sessionQuery.isPending) {
     return (
@@ -56,7 +57,7 @@ export default function ProtectedRoute({
     );
   }
 
-  if (sessionQuery.isError) {
+  if (sessionQuery.isError && !sessionQuery.data) {
     return (
       <Navigate
         to="/signin"

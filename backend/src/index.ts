@@ -8,7 +8,9 @@
  * 
 */
 
-import { app } from "./app";
+import { createServer } from "node:http";
+import { Server as SocketIOServer } from "socket.io";
+import { app, sessionMiddleware } from "./app";
 import { env } from "./config/env";
 import {
   connectRedis,
@@ -16,6 +18,7 @@ import {
 } from "./config/redis";
 import { AppDataSource } from "./database/data-source";
 import { ensureObjectStorageBucket } from "./config/storage";
+import { registerRealtimeServer } from "./services/realtime";
 
 async function bootstrap() {
   try {
@@ -39,7 +42,26 @@ async function bootstrap() {
     await ensureObjectStorageBucket();
     console.log("Object storage ready.");
 
-    const server = app.listen(env.PORT, "0.0.0.0", () => {
+    const server = createServer(app);
+    const io = new SocketIOServer(server, {
+      cors: { origin: env.FRONTEND_ORIGIN, credentials: true },
+    });
+    io.engine.use(sessionMiddleware as never);
+    io.use((socket, next) => {
+      const sessionUser = (socket.request as typeof socket.request & { session?: { user?: { tenantId?: string } } }).session?.user;
+      if (!sessionUser?.tenantId) {
+        next(new Error("Authentication required"));
+        return;
+      }
+      socket.data.sessionUser = sessionUser;
+      next();
+    });
+    io.on("connection", (socket) => {
+      const tenantId = socket.data.sessionUser?.tenantId as string;
+      socket.join(`tenant:${tenantId}`);
+    });
+    registerRealtimeServer(io);
+    server.listen(env.PORT, "0.0.0.0", () => {
       console.log(`CRM API running on port ${env.PORT}`);
     });
 
@@ -47,6 +69,7 @@ async function bootstrap() {
       console.log("Shutting down...");
 
       server.close(async () => {
+        await io.close();
         if (AppDataSource.isInitialized) {
           await AppDataSource.destroy();
         }

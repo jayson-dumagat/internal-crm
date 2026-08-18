@@ -20,7 +20,7 @@ export default function NotesToolbar({
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <SearchField />
         <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
-          <div className="hidden relative min-w-0 flex-1 sm:flex-none">
+          <div className="relative hidden min-w-0 flex-1 sm:flex-none">
             <FilterIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" />
             <select
               value={category}
@@ -39,14 +39,14 @@ export default function NotesToolbar({
             </select>
           </div>
           <button
-              type="button"
-              title="Filter"
-              onClick={() => {}}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-            >
-              <FilterIcon />
-              <span className="hidden sm:inline">Filter</span>
-            </button>
+            type="button"
+            title="Filter"
+            onClick={() => {}}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+          >
+            <FilterIcon />
+            <span className="hidden sm:inline">Filter</span>
+          </button>
           <button
             type="button"
             disabled={!canCreate}

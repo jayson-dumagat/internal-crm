@@ -2,7 +2,7 @@ import type { NoteRecord } from "../../api/crm";
 import { formatDisplayDate } from "../../utils/date";
 import Avatar from "../ui/avatar/Avatar";
 import Badge from "../ui/badge/Badge";
-import { PencilIcon, TrashBinIcon } from "../../icons";
+import { TrashBinIcon } from "../../icons";
 
 const categoryColor = {
   Client: "primary",
@@ -44,7 +44,7 @@ export default function NoteCard({
           onOpen(note);
         }
       }}
-      className="group flex min-h-48 cursor-pointer flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-theme-xs transition hover:border-gray-200 hover:shadow-theme-sm focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-white/[0.05] dark:bg-gray-900 dark:hover:border-white/[0.08]"
+      className="group flex min-h-48 cursor-pointer flex-col rounded-xl border border-gray-100 bg-white p-4 shadow-theme-xs transition hover:border-gray-200 hover:shadow-theme-sm focus:outline-none focus-visible:shadow-theme-sm dark:border-white/[0.05] dark:bg-gray-900 dark:hover:border-white/[0.08]"
     >
       <div className="flex items-start justify-between gap-3">
         <Badge variant="light" color={categoryColor[note.category]} size="sm">{note.category}</Badge>
@@ -67,7 +67,6 @@ export default function NoteCard({
           <Avatar src={related?.avatar ?? null} alt={note.relatedTo || "General"} size="xsmall" colorKey={note.relatedTo || note.id} />
           <h2 className="line-clamp-2 text-base font-semibold text-gray-800 dark:text-white/90">{note.title}</h2>
         </div>
-        <PencilIcon className="mt-0.5 size-4 shrink-0 text-gray-300 opacity-0 transition group-hover:opacity-100 dark:text-gray-600" />
       </div>
       {note.contentHtml ? (
         <div className="mt-2 line-clamp-3 text-sm leading-6 text-gray-500 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: note.contentHtml }} />

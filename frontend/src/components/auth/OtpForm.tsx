@@ -2,11 +2,12 @@ import React, { useRef, useState } from "react";
 import { Link } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import Label from "../form/Label";
 import { otpSchema, type OtpValues } from "../../validations/auth";
+import { useToast } from "../../hooks/useToast";
 
 export default function OtpForm() {
+  const toast = useToast();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef<HTMLInputElement[]>([]);
   const form = useForm<OtpValues>({

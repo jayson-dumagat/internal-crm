@@ -5,12 +5,13 @@ import { User } from "../users/user.entity";
 import { Lead } from "./lead.entity";
 import { LeadInterestLevel, LeadStatus } from "./lead.types";
 import { titleCase } from "../../shared/utils/names";
+import { maskSensitive } from "../../shared/utils/privacy";
 
 export function toLeadDto(lead: Lead, req?: Request) {
   const canSee = (field: string) => !req || canViewField(req, field);
   const dto = {
     id: lead.id,
-    name: canSee("leads.name") ? formatLeadName(lead) : "Restricted",
+    name: canSee("leads.name") ? formatLeadName(lead) : maskSensitive(formatLeadName(lead)),
     avatar:
       canSee("leads.name") && lead.avatarUrl
         ? `/api/v1/leads/${lead.id}/avatar`
@@ -21,7 +22,7 @@ export function toLeadDto(lead: Lead, req?: Request) {
     phone: lead.phone ?? "—",
     company: lead.companyName ?? "Individual",
     source: lead.source ?? "Manual",
-    annualRevenue: lead.annualRevenue ?? undefined,
+    annualRevenue: lead.annualRevenue ?? "—",
     owner: canSee("leads.owner") ? toUserDto(lead.owner) : toUserDto(null),
     ownerId: lead.owner?.entraObjectId ?? null,
     status: titleCase(lead.status),
@@ -42,13 +43,13 @@ export function toLeadDto(lead: Lead, req?: Request) {
       : toUserDto(null),
   };
 
-  if (!canSee("leads.email")) dto.email = "Restricted";
-  if (!canSee("leads.phone")) dto.phone = "Restricted";
-  if (!canSee("leads.company")) dto.company = "Restricted";
-  if (!canSee("leads.address")) dto.address = "Restricted";
-  if (!canSee("leads.revenue")) dto.annualRevenue = undefined;
-  if (!canSee("leads.role")) dto.role = "Restricted";
-  if (!canSee("leads.source")) dto.source = "Restricted";
+  if (!canSee("leads.email")) dto.email = maskSensitive(lead.email);
+  if (!canSee("leads.phone")) dto.phone = maskSensitive(lead.phone);
+  if (!canSee("leads.company")) dto.company = maskSensitive(lead.companyName);
+  if (!canSee("leads.address")) dto.address = maskSensitive(dto.address);
+  if (!canSee("leads.revenue")) dto.annualRevenue = maskSensitive(lead.annualRevenue);
+  if (!canSee("leads.role")) dto.role = maskSensitive(lead.jobTitle);
+  if (!canSee("leads.source")) dto.source = maskSensitive(lead.source);
   if (!canSee("leads.status")) dto.status = "Restricted";
   if (!canSee("leads.interestLevel")) dto.interestLevel = "Restricted";
   if (!canSee("leads.dateCreated")) dto.dateCreated = "";

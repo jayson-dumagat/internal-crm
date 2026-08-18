@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import type { TaskRecord } from "../api/crm";
 import type { CreateTaskInput } from "../types/Crm";
@@ -12,7 +11,10 @@ import {
 } from "../hooks/crm/useCrmDirectory";
 import AppBreadcrumb from "../components/common/AppBreadcrumb";
 import PageMeta from "../components/common/PageMeta";
-import SearchField from "../components/ui/search/Search";
+import SearchField from "../components/search/SearchField";
+import { useDebounce } from "../hooks/useDebounce";
+import { useSearch } from "../hooks/useSearch";
+import { useToast } from "../hooks/useToast";
 import TabButton from "../components/ui/tabs/TabButton";
 import { FilterIcon, PlusIcon } from "../icons";
 import TaskFormSheet from "../components/task/TaskFormSheet";
@@ -31,6 +33,7 @@ const taskViews: Array<{ id: TaskView; label: string }> = [
 ];
 
 export default function Tasks() {
+  const toast = useToast();
   const tasksQuery = useTasksQuery();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -45,15 +48,20 @@ export default function Tasks() {
     [tasksQuery.data],
   );
   const [activeView, setActiveView] = useState<TaskView>("list");
-  const [searchTerm, setSearchTerm] = useState("");
+  const { search } = useSearch();
   const [statusFilter, setStatusFilter] = useState<
     TaskRecord["status"] | "All"
   >("All");
   const [showFilters, setShowFilters] = useState(false);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
-  const [newTaskStatus, setNewTaskStatus] = useState<TaskKanbanStatus>("not-started");
-  const filteredTasks = useMemo(() => filterTasks(tasks, searchTerm, statusFilter), [searchTerm, statusFilter, tasks]);
+  const [newTaskStatus, setNewTaskStatus] =
+    useState<TaskKanbanStatus>("not-started");
+  const debouncedSearch = useDebounce(search, 400);
+  const filteredTasks = useMemo(
+    () => filterTasks(tasks, debouncedSearch, statusFilter),
+    [debouncedSearch, statusFilter, tasks],
+  );
   const listTasks: ListTask[] = filteredTasks.map(toListTask);
   const kanbanTasks: KanbanTask[] = filteredTasks.map(toKanbanTask);
 
@@ -118,18 +126,12 @@ export default function Tasks() {
     <>
       <PageMeta
         title="CDEX Tasks"
-        description="Client relationship tasks, follow-ups, and workflow boards for CDEX."
+        description="Client relationship tasks, follow-ups, and workflow boards."
       />
       <AppBreadcrumb pageName="Tasks" />
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-2.5 sm:pr-5 md:flex-row md:items-center md:justify-between dark:border-white/[0.05]">
-          <SearchField
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-            placeholder="Search tasks..."
-            containerClassName="min-w-0 flex-1 md:w-[280px] md:flex-none"
-            className="!h-9 !py-2 !pr-3.5 !pl-10"
-          />
+          <SearchField/>
           <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
             <button
               type="button"
@@ -145,7 +147,7 @@ export default function Tasks() {
               disabled={!canCreate}
               title={canCreate ? "Add Task" : "Read-only access"}
               onClick={() => openNewTask()}
-                              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
             >
               <PlusIcon className="size-5" />
               <span className="hidden sm:inline">Add Task</span>
@@ -199,26 +201,38 @@ export default function Tasks() {
             <TaskListPage
               embedded
               tasks={listTasks}
-              onStatusChange={canUpdateStatus ? (id, status) => {
-                const task = tasks.find((item) => item.id === id);
-                if (task) void changeStatus(task, status);
-              } : undefined}
+              onStatusChange={
+                canUpdateStatus
+                  ? (id, status) => {
+                      const task = tasks.find((item) => item.id === id);
+                      if (task) void changeStatus(task, status);
+                    }
+                  : undefined
+              }
             />
           )}
           {activeView === "kanban" && (
             <KanbanBoard
               tasks={kanbanTasks}
-              onStatusChange={canUpdateStatus ? (id, status) => {
-                const task = tasks.find((item) => item.id === id);
-                if (task) void changeStatus(task, status);
-              } : undefined}
-              onEditTask={canUpdate ? (id) => {
-                const task = tasks.find((item) => item.id === id);
-                if (task) {
-                  setEditingTask(task);
-                  setIsTaskFormOpen(true);
-                }
-              } : undefined}
+              onStatusChange={
+                canUpdateStatus
+                  ? (id, status) => {
+                      const task = tasks.find((item) => item.id === id);
+                      if (task) void changeStatus(task, status);
+                    }
+                  : undefined
+              }
+              onEditTask={
+                canUpdate
+                  ? (id) => {
+                      const task = tasks.find((item) => item.id === id);
+                      if (task) {
+                        setEditingTask(task);
+                        setIsTaskFormOpen(true);
+                      }
+                    }
+                  : undefined
+              }
               onAddTask={canCreate ? openNewTask : undefined}
             />
           )}
@@ -230,10 +244,8 @@ export default function Tasks() {
                 setIsTaskFormOpen(true);
               }}
               onDelete={removeTask}
-              onStatusChange={changeStatus}
               canUpdate={canUpdate}
               canDelete={canDelete}
-              canUpdateStatus={canUpdateStatus}
             />
           )}
         </div>

@@ -11,7 +11,6 @@ import type {
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import dayjs from "dayjs";
-import { toast } from "sonner";
 
 import PageMeta from "../components/common/PageMeta";
 import AppBreadcrumb from "../components/common/AppBreadcrumb";
@@ -26,9 +25,11 @@ import TaskFormSheet from "../components/task/TaskFormSheet";
 import { useCan } from "../hooks/auth/useCan";
 import CalendarEventContent from "../components/calendar/CalendarEventContent";
 import CalendarToolbar from "../components/calendar/CalendarToolbar";
-import { calendarPriorityColors, selectionDateTime } from "../utils/calendar";
+import { selectionDateTime, taskEventColor } from "../utils/calendar";
+import { useToast } from "../hooks/useToast";
 
 export default function Calendar() {
+  const toast = useToast();
   const calendarRef = useRef<FullCalendar>(null);
   const tasksQuery = useTasksQuery();
   const createTask = useCreateTask();
@@ -52,7 +53,7 @@ export default function Calendar() {
             (task.startAt || task.dueAt),
         )
         .map((task) => {
-          const color = task.color ?? calendarPriorityColors[task.priority];
+          const color = taskEventColor(task);
           return {
             id: task.id,
             title: task.title,

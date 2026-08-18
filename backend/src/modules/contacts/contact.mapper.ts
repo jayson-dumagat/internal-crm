@@ -5,6 +5,7 @@ import { normalizeUserName } from "../../shared/utils/names";
 import { Company } from "../companies/company.entity";
 import { Contact } from "./contact.entity";
 import { User } from "../users/user.entity";
+import { maskSensitive } from "../../shared/utils/privacy";
 
 export function toContactDto(
   contact: Contact,
@@ -21,7 +22,7 @@ export function toContactDto(
         canSee("contacts.name") && contact.avatarUrl
           ? `/api/v1/contacts/${contact.id}/avatar`
           : null,
-      name: canSee("contacts.name") ? contact.name : "Restricted",
+      name: canSee("contacts.name") ? contact.name : maskSensitive(contact.name),
     },
     position: contact.role ?? "—",
     company: {
@@ -31,11 +32,11 @@ export function toContactDto(
           : null,
       name: canSee("contacts.company")
         ? company?.name ?? contact.companyName ?? "Individual"
-        : "Restricted",
+        : maskSensitive(company?.name ?? contact.companyName),
     },
     relationship_level: contact.relationshipLevel,
     contact: {
-      email: canSee("contacts.email") ? contact.email : "Restricted",
+      email: canSee("contacts.email") ? contact.email : maskSensitive(contact.email),
       phone: contact.phone ?? "—",
     },
     owner: {
@@ -45,7 +46,7 @@ export function toContactDto(
           : null,
       name: canSee("contacts.owner")
         ? normalizeUserName(owner?.displayName ?? contact.relationshipOwner ?? "Unassigned")
-        : "Restricted",
+        : maskSensitive(owner?.displayName ?? contact.relationshipOwner),
     },
     relationship_owner_id: contact.relationshipOwnerId,
     location: contact.location ?? "—",
@@ -59,9 +60,9 @@ export function toContactDto(
     tags: canSee("contacts.tags") ? contact.tags ?? [] : [],
   };
 
-  if (!canSee("contacts.phone")) dto.contact.phone = "Restricted";
-  if (!canSee("contacts.location")) dto.location = "Restricted";
-  if (!canSee("contacts.position")) dto.position = "Restricted";
+  if (!canSee("contacts.phone")) dto.contact.phone = maskSensitive(contact.phone);
+  if (!canSee("contacts.location")) dto.location = maskSensitive(contact.location);
+  if (!canSee("contacts.position")) dto.position = maskSensitive(contact.role);
   if (!canSee("contacts.relationshipLevel")) dto.relationship_level = "Restricted";
   if (!canSee("contacts.status")) dto.status = "Restricted";
   if (!canSee("contacts.lastActivity")) dto.last_activity = null;

@@ -137,8 +137,10 @@ import { ReactComponent as NetworkIcon } from "./network-icon.svg?react"
 import { ReactComponent as MicrosoftIcon } from "./micrososft-icon.svg?react"
 import { ReactComponent as PanelLeftOpenIcon } from "./panel-left-open.svg?react";
 import { ReactComponent as PanelLeftCloseIcon } from "./panel-left-close.svg?react";
+import { ReactComponent as CCWClockIcon } from "./ccw-clock.svg?react"
 
 export {
+  CCWClockIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   MicrosoftIcon,

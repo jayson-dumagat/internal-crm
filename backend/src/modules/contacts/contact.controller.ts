@@ -328,7 +328,7 @@ export async function getContactAvatar(
 
     const objectStream = await getObject(contact.avatarUrl);
     res.setHeader("Content-Type", contact.avatarContentType ?? "application/octet-stream");
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Cache-Control", "private, no-store");
     objectStream.on("error", (error) => {
       if (res.headersSent) {
         res.destroy(error);

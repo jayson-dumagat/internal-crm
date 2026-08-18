@@ -1,10 +1,10 @@
 import { useState } from "react";
-import ComponentCard from "../../common/ComponentCard.tsx";
-import Label from "../Label.tsx";
-import Input from "../input/InputField.tsx";
-import Select from "../Select.tsx";
-import { EyeCloseIcon, EyeIcon, TimeIcon } from "../../../icons/index.ts";
-import DatePicker from "../date-picker.tsx";
+import ComponentCard from "../../common/ComponentCard";
+import Label from "../Label";
+import Input from "../input/InputField";
+import Select from "../Select";
+import { EyeCloseIcon, EyeIcon, TimeIcon } from "../../../icons/index";
+import DatePicker from "../date-picker";
 
 export default function DefaultInputs() {
   const [showPassword, setShowPassword] = useState(false);

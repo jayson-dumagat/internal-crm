@@ -1,5 +1,5 @@
-import { toast } from "sonner";
 import Notification from "../ui/notification/Notfication";
+import { useToast } from "../../hooks/useToast";
 
 interface AuthToastProps {
   toastId: string | number;
@@ -14,12 +14,13 @@ export default function AuthToast({
   title,
   description,
 }: AuthToastProps) {
+  const { dismiss } = useToast();
   return (
     <Notification
       variant={variant}
       title={title}
       description={description}
-      onClose={() => toast.dismiss(toastId)}
+      onClose={() => dismiss(toastId)}
     />
   );
 }

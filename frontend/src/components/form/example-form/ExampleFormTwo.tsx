@@ -1,12 +1,12 @@
 import { useState } from "react";
-import ComponentCard from "../../common/ComponentCard.tsx";
-import Label from "../Label.tsx";
-import Input from "../input/InputField.tsx";
-import Select from "../Select.tsx";
-import Radio from "../input/Radio.tsx";
-import Form from "../Form.tsx";
-import Button from "../../ui/button/Button.tsx";
-import DatePicker from "../date-picker.tsx";
+import ComponentCard from "../../common/ComponentCard";
+import Label from "../Label";
+import Input from "../input/InputField";
+import Select from "../Select";
+import Radio from "../input/Radio";
+import Form from "../Form";
+import Button from "../../ui/button/Button";
+import DatePicker from "../date-picker";
 
 export default function ExampleFormTwo() {
   const [selectedOption, setSelectedOption] = useState<string>("Free");

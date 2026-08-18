@@ -29,6 +29,7 @@ import {
   accessPolicySchema,
   accessRolePermissionsSchema,
 } from "./access.schema.js";
+import { emitPermissionUpdate } from "../../services/realtime.js";
 
 const userRepository = () => AppDataSource.getRepository(User);
 const policyRepository = () => AppDataSource.getRepository(UserAccessPolicy);
@@ -155,6 +156,9 @@ export async function updateAccessRolePermissions(
     if (!updatedRole) {
       res.status(404).json({ success: false, message: "Role was not found after saving." });
       return;
+    }
+    if (req.session.user?.tenantId) {
+      emitPermissionUpdate(req.session.user.tenantId);
     }
     res.status(200).json({ data: toAccessRoleDto(updatedRole) });
   } catch (error) {
@@ -430,6 +434,8 @@ export async function updateAccessPolicy(
         req.session.save((error) => (error ? reject(error) : resolve())),
       );
     }
+
+    emitPermissionUpdate(sessionUser.tenantId, targetId);
 
     res.status(200).json({ data: await toAccessUserDto(target, policy, req) });
   } catch (error) {

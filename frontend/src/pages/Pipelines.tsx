@@ -1,6 +1,6 @@
-import PageMeta from "../../components/common/PageMeta";
-import PipelineBoard from "../../components/pipelines/PipelineBoard";
-import AppBreadcrumb from "../../components/common/AppBreadcrumb";
+import PageMeta from "../components/common/PageMeta";
+import PipelineBoard from "../components/pipelines/PipelineBoard";
+import AppBreadcrumb from "../components/common/AppBreadcrumb";
 
 export default function Pipelines() {
   return (

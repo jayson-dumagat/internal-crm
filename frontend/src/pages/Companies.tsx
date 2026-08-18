@@ -1,6 +1,6 @@
-import CompanyTable from "../../components/companies/CompanyTable";
-import AppBreadcrumb from "../../components/common/AppBreadcrumb";
-import PageMeta from "../../components/common/PageMeta";
+import CompanyTable from "../components/companies/CompanyTable";
+import AppBreadcrumb from "../components/common/AppBreadcrumb";
+import PageMeta from "../components/common/PageMeta";
 
 export default function Companies() {
   return (

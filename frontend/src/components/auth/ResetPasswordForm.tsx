@@ -1,12 +1,13 @@
 import { Link } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import { resetPasswordSchema, type ResetPasswordValues } from "../../validations/auth";
+import { useToast } from "../../hooks/useToast";
 
 export default function ResetPasswordForm() {
+  const toast = useToast();
   const form = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { email: "" },

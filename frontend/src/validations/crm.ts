@@ -96,6 +96,11 @@ export const taskFormSchema = z
     startAt: optionalDateTimeLocal,
     dueAt: optionalDateTimeLocal,
     reminderAt: optionalDateTimeLocal,
+    startDate: z.string().trim().max(10).optional(),
+    endDate: z.string().trim().max(10).optional(),
+    startTime: z.string().trim().max(5).optional(),
+    endTime: z.string().trim().max(5).optional(),
+    reminderDate: z.string().trim().max(10).optional(),
     assigneeId: z.string().trim().max(150).optional(),
     leadId: z.string().trim().max(36).optional(),
   })

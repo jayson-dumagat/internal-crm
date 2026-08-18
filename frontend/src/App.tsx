@@ -93,11 +93,11 @@ import CrmLayout from "./layout/CrmLayout";
 import Dashboard from "./pages/CrmDashboard/Dashboard";
 import Tasks from "./pages/Tasks";
 //import Inbox from "./pages/CrmInbox/Inbox";
-import Leads from "./pages/CrmLeads/Leads";
-import Companies from "./pages/CrmCompanies/Companies";
-import Contacts from "./pages/CrmContacts/Contacts";
-import Pipelines from "./pages/CrmPipeline/Pipelines";
-import Notes from "./pages/CrmNotes/Notes";
+import Leads from "./pages/Leads";
+import Companies from "./pages/Companies";
+import Contacts from "./pages/Contacts";
+import Pipelines from "./pages/Pipelines";
+import Notes from "./pages/Notes";
 import Activities from "./pages/Activities";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PermissionRoute from "./components/auth/PermissionRoute";
@@ -118,17 +118,87 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<PermissionRoute permission="dashboard.read"><Dashboard /></PermissionRoute>} />
-            <Route path="/calendar" element={<PermissionRoute permission="calendar.read"><Calendar /></PermissionRoute>} />
-            <Route path="/contacts" element={<PermissionRoute permission="contacts.read"><Contacts /></PermissionRoute>} />
-            <Route path="/tasks" element={<PermissionRoute permission="tasks.read"><Tasks /></PermissionRoute>} />
-            <Route path="/notes" element={<PermissionRoute permission="notes.read"><Notes /></PermissionRoute>} />
+            <Route
+              path="/dashboard"
+              element={
+                <PermissionRoute permission="dashboard.read">
+                  <Dashboard />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <PermissionRoute permission="calendar.read">
+                  <Calendar />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <PermissionRoute permission="contacts.read">
+                  <Contacts />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <PermissionRoute permission="tasks.read">
+                  <Tasks />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/notes"
+              element={
+                <PermissionRoute permission="notes.read">
+                  <Notes />
+                </PermissionRoute>
+              }
+            />
             {/*<Route path="/inbox" element={<Inbox />} />*/}
-            <Route path="/leads" element={<PermissionRoute permission="leads.read"><Leads /></PermissionRoute>} />
-            <Route path="/companies" element={<PermissionRoute permission="companies.read"><Companies /></PermissionRoute>} />
-            <Route path="/pipelines" element={<PermissionRoute permission="pipelines.read"><Pipelines /></PermissionRoute>} />
-            <Route path="/activities" element={<PermissionRoute permission="activities.read"><Activities /></PermissionRoute>} />
-            <Route path="/access-control" element={<PermissionRoute permission="access.manage"><AccessControl /></PermissionRoute>} />
+            <Route
+              path="/leads"
+              element={
+                <PermissionRoute permission="leads.read">
+                  <Leads />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/companies"
+              element={
+                <PermissionRoute permission="companies.read">
+                  <Companies />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/pipelines"
+              element={
+                <PermissionRoute permission="pipelines.read">
+                  <Pipelines />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/activities"
+              element={
+                <PermissionRoute permission="activities.read">
+                  <Activities />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/access-control"
+              element={
+                <PermissionRoute permission="access.manage">
+                  <AccessControl />
+                </PermissionRoute>
+              }
+            />
           </Route>
 
           {/* Dashboard Layout */}

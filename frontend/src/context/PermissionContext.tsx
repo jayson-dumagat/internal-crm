@@ -1,7 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { io } from "socket.io-client";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../hooks/auth/useAuth";
 import type { AccessPermission } from "../config/rbac";
+import { authKeys } from "../hooks/auth/useAuthApi";
 
 export type PermissionResource = "leads" | "companies" | "contacts" | "tasks" | "notes" | "activities";
 export type PermissionField = string;
@@ -40,6 +43,25 @@ const PermissionContext = createContext<PermissionContextValue | null>(null);
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.entraObjectId) return;
+    const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const socketUrl = configuredApiUrl?.startsWith("http")
+      ? new URL(configuredApiUrl).origin
+      : window.location.origin;
+    const socket = io(socketUrl, { withCredentials: true, transports: ["websocket", "polling"] });
+    const handlePermissionUpdate = (event: { userId?: string | null }) => {
+      if (event.userId && event.userId !== user.entraObjectId) return;
+      queryClient.invalidateQueries({ queryKey: authKeys.session() });
+    };
+    socket.on("permissions.updated", handlePermissionUpdate);
+    return () => {
+      socket.off("permissions.updated", handlePermissionUpdate);
+      socket.disconnect();
+    };
+  }, [queryClient, user?.entraObjectId]);
   const value = useMemo<PermissionContextValue>(() => {
     const permissions = new Set(user?.permissions ?? []);
     const policy = user?.accessPolicy;

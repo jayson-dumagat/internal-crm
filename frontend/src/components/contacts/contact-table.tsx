@@ -27,7 +27,7 @@ import {
   useContactsQuery,
   useDeleteContact,
 } from "../../hooks/crm/useCrmDirectory";
-import { toast } from "sonner";
+import { useToast } from "../../hooks/useToast";
 import { formatDisplayDate } from "../../utils/date";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
@@ -61,6 +61,7 @@ const relationshipBadgeColor: Record<RelationshipLevel, ContactBadgeColor> = {
 };
 
 export default function ContactTable() {
+  const toast = useToast();
   const { user: currentUser } = useAuth();
   const canCreate = useCan("contacts.create");
   const canUpdate = useCan("contacts.update");
@@ -255,7 +256,11 @@ export default function ContactTable() {
                     label: "Relationship Level",
                     width: "w-[165px]",
                   },
-                  { key: "contact", label: "Contact Details", width: "w-[250px]" },
+                  {
+                    key: "contact",
+                    label: "Contact Details",
+                    width: "w-[250px]",
+                  },
                   {
                     key: "owner",
                     label: "Relationship Owner",
@@ -273,7 +278,7 @@ export default function ContactTable() {
                   <TableCell
                     key={`${key}-${label}`}
                     isHeader
-                    className={`overflow-hidden border border-gray-100 px-4 py-3 dark:border-white/[0.05] ${width} ${key === "name" ? "min-w-[250px] bg-white dark:bg-gray-900" : ""}`}
+                    className={`overflow-hidden border border-gray-100 px-4 py-3 dark:border-white/[0.05] ${width} ${key === "name" ? "min-w-[250px]" : ""}`}
                   >
                     <button
                       type="button"
@@ -356,13 +361,11 @@ export default function ContactTable() {
                     <TableRow
                       key={item.id}
                       onClick={() => setViewContact(item)}
-                      className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                      className={`cursor-pointer hover:bg-gray-50/70 dark:hover:bg-white/[0.03] ${isSelected ? "bg-brand-50/60 dark:bg-brand-500/[0.06]" : ""}`}
                     >
                       <TableCell
                         onClick={(event) => event.stopPropagation()}
-                        className={`w-[52px] max-w-[52px] min-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900 ${
-                          "bg-white dark:bg-gray-900"
-                        }`}
+                        className="w-[52px] max-w-[52px] min-w-[52px] border border-gray-100 px-4 py-3 text-center dark:border-white/[0.05]"
                       >
                         <Checkbox
                           aria-label={`Select ${item.user.name}`}
@@ -372,9 +375,7 @@ export default function ContactTable() {
                       </TableCell>
                       <TableCell
                         onClick={(event) => event.stopPropagation()}
-                        className={`w-[250px] min-w-[250px] border border-gray-100 bg-white px-4 py-3 whitespace-nowrap dark:border-white/[0.05] dark:bg-gray-900 ${
-                          "bg-white dark:bg-gray-900"
-                        }`}
+                        className="w-[250px] min-w-[250px] border border-gray-100 px-4 py-3 whitespace-nowrap dark:border-white/[0.05]"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar
@@ -467,7 +468,10 @@ export default function ContactTable() {
                         {formatDisplayDate(item.last_activity)}
                       </TableCell>
                       <TableCell className="w-[110px] overflow-hidden border border-gray-100 px-4 py-3 text-theme-sm font-normal whitespace-nowrap text-gray-800 dark:border-white/[0.05] dark:text-gray-400/90">
-                        <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                        <div
+                          className="flex items-center gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             aria-label={`Delete ${item.user.name}`}
@@ -578,7 +582,16 @@ export default function ContactTable() {
         companiesLoading={companiesQuery.isLoading}
         contact={editingContact}
       />
-      <ContactDetailsSheet contact={viewContact} canUpdate={canUpdate} onClose={() => setViewContact(null)} onEdit={(contact) => { setEditingContact(contact); setViewContact(null); setIsAddContactOpen(true); }} />
+      <ContactDetailsSheet
+        contact={viewContact}
+        canUpdate={canUpdate}
+        onClose={() => setViewContact(null)}
+        onEdit={(contact) => {
+          setEditingContact(contact);
+          setViewContact(null);
+          setIsAddContactOpen(true);
+        }}
+      />
     </div>
   );
 }

@@ -239,7 +239,9 @@ export async function getCompanyLogo(
       ?? metadata?.metaData?.["content-type"]
       ?? "application/octet-stream";
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    // The URL is stable while the object key changes after each upload.
+    // Do not let browsers keep displaying the previous logo.
+    res.setHeader("Cache-Control", "private, no-store");
     objectStream.on("error", (error) => {
       if (res.headersSent) {
         res.destroy(error);

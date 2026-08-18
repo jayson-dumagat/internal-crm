@@ -5,6 +5,7 @@ import { Lead } from "../leads/lead.entity";
 import { User } from "../users/user.entity";
 import { Task, TaskPriority, TaskStatus, TaskType } from "./task.entity";
 import { fromTaskStatus } from "./task.types";
+import { maskSensitive } from "../../shared/utils/privacy";
 
 export function toTaskDto(task: Task, req?: Request) {
   const canSee = (field: string) => !req || canViewField(req, field);
@@ -39,7 +40,8 @@ export function toTaskDto(task: Task, req?: Request) {
     updatedAt: task.updatedAt.toISOString(),
   };
 
-  if (!canSee("tasks.title")) dto.title = "Restricted";
+  if (!canSee("tasks.title")) dto.title = maskSensitive(task.title);
+  if (!canSee("tasks.description")) dto.description = maskSensitive(task.description);
   if (!canSee("tasks.type")) dto.type = TaskType.GENERAL;
   if (!canSee("tasks.status")) dto.status = "not-started";
   if (!canSee("tasks.priority")) dto.priority = TaskPriority.LOW;

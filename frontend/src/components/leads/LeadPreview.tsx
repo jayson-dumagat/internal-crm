@@ -13,8 +13,8 @@ import { CalendarAltIcon, EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon, Tas
 import { formatDisplayDate } from "../../utils/date";
 import { useActivitiesQuery, useCreateNote, useNotesQuery, useTasksQuery } from "../../hooks/crm/useCrmDirectory";
 import type { TaskRecord } from "../../api/crm";
-import { toast } from "sonner";
 import { useCan } from "../../hooks/auth/useCan";
+import { useToast } from "../../hooks/useToast";
 
 type LeadPreviewTab = "activity" | "notes" | "tasks" | "events";
 
@@ -208,7 +208,7 @@ function LeadSummary({
 
         <SummaryField
           label="Annual Revenue"
-          value={lead.annualRevenue || "Not provided"}
+          value={lead.annualRevenue || "—"}
           className="py-4 pl-4"
         />
       </div>
@@ -656,7 +656,7 @@ function SummaryField({
       <div
         className={`min-w-0 truncate text-sm font-medium text-gray-800 dark:text-white/90 ${valueClassName}`}
       >
-        {children ?? value ?? "Not provided"}
+        {children ?? value ?? "—"}
       </div>
     </div>
   );
@@ -732,6 +732,7 @@ function TabHeader({
 }
 
 function NotesTab({ lead }: { lead: Lead }) {
+  const toast = useToast();
   const [note, setNote] = useState("");
   const [noteHtml, setNoteHtml] = useState("");
   const [editorVersion, setEditorVersion] = useState(0);

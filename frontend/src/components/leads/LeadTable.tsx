@@ -13,7 +13,11 @@ import type { Lead } from "../../types/Leads";
 import { EyeIcon, SquarePenIcon, TrashBinIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
 import Checkbox from "../form/input/Checkbox";
-import { leadInterestBadgeColor, leadStatusBadgeColor, normalizePhone } from "../../utils/leads";
+import {
+  leadInterestBadgeColor,
+  leadStatusBadgeColor,
+  normalizePhone,
+} from "../../utils/leads";
 
 type LeadTableProps = {
   leads: Lead[];
@@ -128,23 +132,11 @@ export default function LeadTable({
                   aria-label={`View details for ${lead.name}`}
                   onClick={() => onSelectLead(lead)}
                   onKeyDown={(event) => handleRowKeyDown(event, lead)}
-                  className={[
-                    "group cursor-pointer transition-colors outline-none",
-                    "hover:bg-gray-50 focus-visible:bg-gray-50",
-                    "dark:hover:bg-white/[0.03] dark:focus-visible:bg-white/[0.03]",
-                    isSelected
-                      ? "bg-blue-light-50 dark:bg-blue-light-500/[0.08]"
-                      : "",
-                  ].join(" ")}
+                  className={`group cursor-pointer outline-none hover:bg-gray-50/70 focus-visible:bg-gray-50/70 dark:hover:bg-white/[0.03] dark:focus-visible:bg-white/[0.03] ${isSelected ? "bg-brand-50/60 dark:bg-brand-500/[0.06]" : ""}`}
                 >
                   <TableCell
                     onClick={stopRowClick}
-                    className={[
-                      `w-[52px] max-w-[52px] min-w-[52px] text-center ${bodyCellClass}`,
-                      isSelected
-                        ? "bg-blue-light-50 dark:bg-[#172033]"
-                        : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
-                    ].join(" ")}
+                    className="w-[52px] max-w-[52px] min-w-[52px] text-center"
                   >
                     <Checkbox
                       aria-label={`Select ${lead.name}`}
@@ -153,14 +145,7 @@ export default function LeadTable({
                     />
                   </TableCell>
 
-                  <TableCell
-                    className={[
-                      `w-[250px] min-w-[250px] overflow-hidden ${bodyCellClass}`,
-                      isSelected
-                        ? "bg-blue-light-50 dark:bg-[#172033]"
-                        : "bg-white group-hover:bg-gray-50 group-focus-visible:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-[#161c24] dark:group-focus-visible:bg-[#161c24]",
-                    ].join(" ")}
-                  >
+                  <LeadBodyCell className="w-[250px] min-w-[250px] overflow-hidden">
                     <div className="flex items-center gap-3">
                       <Avatar src={lead.avatar} alt={lead.name} />
 
@@ -174,14 +159,22 @@ export default function LeadTable({
                         </p>
                       </div>
                     </div>
-                  </TableCell>
+                  </LeadBodyCell>
 
                   <LeadBodyCell className="w-[200px]">
                     <p className="truncate">{lead.role}</p>
                   </LeadBodyCell>
 
                   <LeadBodyCell className="w-[220px]">
-                    <div className="flex min-w-0 items-center gap-2"><Avatar src={lead.companyLogo ?? null} alt={lead.company} size="xsmall" colorKey={`lead-company-${lead.company}`} /><p className="truncate">{lead.company}</p></div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Avatar
+                        src={lead.companyLogo ?? null}
+                        alt={lead.company}
+                        size="xsmall"
+                        colorKey={`lead-company-${lead.company}`}
+                      />
+                      <p className="truncate">{lead.company}</p>
+                    </div>
                   </LeadBodyCell>
 
                   <LeadBodyCell className="w-[280px]">

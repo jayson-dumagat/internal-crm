@@ -4,9 +4,14 @@ import type { NoteFormValues } from "../../validations/crm";
 import LexicalNoteEditor from "./LexicalNoteEditor";
 import Sheet from "../ui/sheet/Sheet";
 import type { NoteRelatedOption } from "./NoteCard";
-import { CrmFieldsetSection } from "../crm/FormPrimitives";
-
-const inputClassName = "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30";
+import ArkCombobox, { type ArkComboboxOption } from "../crm/ArkCombobox";
+import {
+  CrmFormField as Field,
+  CrmInfoSection as FormSection,
+  crmInputClassName as inputClassName,
+  crmPrimaryButtonClassName as primaryButtonClassName,
+  crmSecondaryButtonClassName as secondaryButtonClassName,
+} from "../crm/FormPrimitives";
 
 type NoteEditorSheetProps = {
   isOpen: boolean;
@@ -34,6 +39,16 @@ export default function NoteEditorSheet({
   const noteTitle = form.watch("title");
   const noteContent = form.watch("content");
   const readOnly = Boolean(selectedNote) && !canUpdate;
+  const categoryOptions: ArkComboboxOption[] = [
+    { value: "Client", label: "Client" },
+    { value: "Follow-up", label: "Follow-up" },
+    { value: "Investment", label: "Investment" },
+    { value: "Internal", label: "Internal" },
+  ];
+  const relatedToOptions: ArkComboboxOption[] = [
+    { value: "", label: "General" },
+    ...relatedOptions.map((item) => ({ value: item.value, label: item.label })),
+  ];
 
   return (
     <Sheet
@@ -44,23 +59,22 @@ export default function NoteEditorSheet({
       side="right"
       className="w-full sm:max-w-2xl xl:max-w-3xl"
     >
-      <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-        <CrmFieldsetSection title="Note details" description="Capture the note, classify it, and connect it to a CRM record.">
-          <Field label="Title" error={form.formState.errors.title?.message}>
+      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <FormSection title="Note details" description="Capture the note, classify it, and connect it to a CRM record.">
+          <Field label="Title" required error={form.formState.errors.title?.message}>
             <input disabled={readOnly} {...form.register("title")} maxLength={255} className={inputClassName} placeholder="Enter note title" autoFocus />
           </Field>
-          <Field label="Category" error={form.formState.errors.category?.message}>
-            <select disabled={readOnly} {...form.register("category")} className={inputClassName}>
-              <option>Client</option><option>Follow-up</option><option>Investment</option><option>Internal</option>
-            </select>
-          </Field>
-          <Field label="Related to" error={form.formState.errors.relatedTo?.message}>
-            <select disabled={readOnly} {...form.register("relatedTo")} className={inputClassName}>
-              <option value="">General</option>
-              {relatedOptions.map((item) => <option key={`${item.label}-${item.value}`} value={item.value}>{item.label}</option>)}
-            </select>
-          </Field>
-          <Field label="Note" error={form.formState.errors.content?.message}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Category" required error={form.formState.errors.category?.message}>
+              <input type="hidden" {...form.register("category")} />
+              <ArkCombobox value={form.watch("category")} options={categoryOptions} onChange={(value) => form.setValue("category", value as NoteFormValues["category"], { shouldValidate: true, shouldDirty: true })} placeholder="Search category" disabled={readOnly} />
+            </Field>
+            <Field label="Related to" error={form.formState.errors.relatedTo?.message}>
+              <input type="hidden" {...form.register("relatedTo")} />
+              <ArkCombobox value={form.watch("relatedTo") ?? ""} options={relatedToOptions} onChange={(value) => form.setValue("relatedTo", value, { shouldValidate: true, shouldDirty: true })} placeholder="Search records" disabled={readOnly} />
+            </Field>
+          </div>
+          <Field label="Note" required error={form.formState.errors.content?.message}>
             <LexicalNoteEditor
               key={selectedNote?.id ?? "new"}
               readOnly={readOnly}
@@ -71,24 +85,14 @@ export default function NoteEditorSheet({
               }}
             />
           </Field>
-        </CrmFieldsetSection>
+        </FormSection>
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
-          <button type="button" onClick={onClose} className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-400">Close</button>
-          <button type="submit" disabled={isPending || !noteTitle.trim() || !noteContent.trim() || (selectedNote ? !canUpdate : !canCreate)} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button>
+          <button type="submit" disabled={isPending || !noteTitle.trim() || !noteContent.trim() || (selectedNote ? !canUpdate : !canCreate)} className={primaryButtonClassName}>
             {isPending ? "Saving..." : selectedNote ? "Save changes" : "Add Note"}
           </button>
         </div>
       </form>
     </Sheet>
-  );
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
-      {children}
-      {error && <span className="mt-1 block text-xs text-error-500">{error}</span>}
-    </label>
   );
 }

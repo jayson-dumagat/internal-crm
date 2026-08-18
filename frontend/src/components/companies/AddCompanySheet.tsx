@@ -2,13 +2,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 
 import type { CompanyRecord } from "../../api/crm";
 import { companyFormSchema, type CompanyFormValues } from "../../validations/crm";
 import Sheet from "../ui/sheet/Sheet";
 import { useCreateCompany, useUpdateCompany, useUploadCompanyLogo } from "../../hooks/crm/useCrmDirectory";
 import Avatar from "../ui/avatar/Avatar";
+import ArkCombobox, { type ArkComboboxOption } from "../crm/ArkCombobox";
+import ArkDatePickerField from "../crm/ArkDatePickerField";
+import { useToast } from "../../hooks/useToast";
 import { CrmFormField as FormField, CrmInfoSection as FormSection, crmInputClassName as inputClassName, crmPrimaryButtonClassName as primaryButtonClassName, crmSecondaryButtonClassName as secondaryButtonClassName } from "../crm/FormPrimitives";
 
 export default function AddCompanySheet({
@@ -20,6 +22,7 @@ export default function AddCompanySheet({
   onClose: () => void;
   company?: CompanyRecord | null;
 }) {
+  const toast = useToast();
   const createCompany = useCreateCompany();
   const updateCompany = useUpdateCompany();
   const uploadLogo = useUploadCompanyLogo();
@@ -79,6 +82,11 @@ export default function AddCompanySheet({
   });
 
   const displayedLogo = logoFile ? logoPreview : company?.logoUrl ?? null;
+  const statusOptions: ArkComboboxOption[] = [
+    { value: "Prospect", label: "Prospect" },
+    { value: "Active", label: "Active" },
+    { value: "Dormant", label: "Dormant" },
+  ];
   const closeSheet = () => {
     setLogoFile(null);
     setLogoPreview(null);
@@ -111,6 +119,9 @@ export default function AddCompanySheet({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : `Unable to ${company ? "update" : "add"} company.`);
     }
+  }, (errors) => {
+    const firstError = Object.values(errors)[0];
+    toast.error(typeof firstError?.message === "string" ? firstError.message : "Please check the highlighted company fields.");
   });
 
   return (
@@ -124,7 +135,7 @@ export default function AddCompanySheet({
     >
       <form onSubmit={submit} noValidate className="space-y-6">
         <FormSection title="Company identity" description="Identify the organization and its relationship status.">
-          <FormField label="Company Name" error={form.formState.errors.name?.message}>
+          <FormField label="Company Name" required error={form.formState.errors.name?.message}>
             <input {...form.register("name")} maxLength={255} className={inputClassName} placeholder="e.g. Northbridge Capital" autoFocus />
           </FormField>
           <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
@@ -137,7 +148,7 @@ export default function AddCompanySheet({
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Industry" error={form.formState.errors.industry?.message}><input {...form.register("industry")} maxLength={200} className={inputClassName} placeholder="Investment Management" /></FormField>
-            <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Active</option><option>Dormant</option></select></FormField>
+            <FormField label="Status" required error={form.formState.errors.status?.message}><input type="hidden" {...form.register("status")} /><ArkCombobox value={form.watch("status")} options={statusOptions} onChange={(value) => form.setValue("status", value as CompanyFormValues["status"], { shouldValidate: true, shouldDirty: true })} placeholder="Search status" /></FormField>
           </div>
         </FormSection>
 
@@ -148,7 +159,7 @@ export default function AddCompanySheet({
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Revenue" error={form.formState.errors.revenue?.message}><input {...form.register("revenue")} maxLength={100} className={inputClassName} placeholder="PHP 850M" /></FormField>
-            <FormField label="Customer Since"><input type="date" {...form.register("customerSince")} className={inputClassName} /></FormField>
+            <FormField label="Customer Since" error={form.formState.errors.customerSince?.message}><ArkDatePickerField startValue={form.watch("customerSince") ?? ""} min="1900-01-01" max="2100-12-31" onChange={(date) => form.setValue("customerSince", date, { shouldValidate: true, shouldDirty: true })} placeholder="Customer since" /></FormField>
           </div>
         </FormSection>
 

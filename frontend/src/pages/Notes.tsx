@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useDebounce } from "../../hooks/useDebounce";
+import { useDebounce } from "../hooks/useDebounce";
+import { useToast } from "../hooks/useToast";
 
-import type { NoteRecord } from "../../api/crm";
-import { noteFormSchema, type NoteFormValues } from "../../validations/crm";
+import type { NoteRecord } from "../api/crm";
+import { noteFormSchema, type NoteFormValues } from "../validations/crm";
 import {
   useCompaniesQuery,
   useContactsQuery,
@@ -14,16 +14,16 @@ import {
   useLeadsQuery,
   useNotesQuery,
   useUpdateNote,
-} from "../../hooks/crm/useCrmDirectory";
-import AppBreadcrumb from "../../components/common/AppBreadcrumb";
-import PageMeta from "../../components/common/PageMeta";
-import Pagination from "../../components/pagination/Pagination";
-import { useCan } from "../../hooks/auth/useCan";
-import { useSearch } from "../../hooks/useSearch";
-import NoteGrid from "../../components/notes/NoteGrid";
-import NotesToolbar from "../../components/notes/NotesToolbar";
-import type { NoteRelatedOption } from "../../components/notes/NoteCard";
-import NoteEditorSheet from "../../components/notes/NoteEditorSheet";
+} from "../hooks/crm/useCrmDirectory";
+import AppBreadcrumb from "../components/common/AppBreadcrumb";
+import PageMeta from "../components/common/PageMeta";
+import Pagination from "../components/pagination/Pagination";
+import { useCan } from "../hooks/auth/useCan";
+import { useSearch } from "../hooks/useSearch";
+import NoteGrid from "../components/notes/NoteGrid";
+import NotesToolbar from "../components/notes/NotesToolbar";
+import type { NoteRelatedOption } from "../components/notes/NoteCard";
+import NoteEditorSheet from "../components/notes/NoteEditorSheet";
 
 type NoteCategory = NoteRecord["category"];
 const emptyValues: NoteFormValues = {
@@ -35,6 +35,7 @@ const emptyValues: NoteFormValues = {
 };
 
 export default function Notes() {
+  const toast = useToast();
   const notesQuery = useNotesQuery();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
@@ -160,8 +161,16 @@ export default function Notes() {
         description="Manage client and relationship notes."
       />
       <AppBreadcrumb pageName="Notes" />
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <NotesToolbar category={category} canCreate={canCreate} onCategoryChange={(value) => { setCategory(value); setCurrentPage(1); }} onAdd={openNewNote} />
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <NotesToolbar
+          category={category}
+          canCreate={canCreate}
+          onCategoryChange={(value) => {
+            setCategory(value);
+            setCurrentPage(1);
+          }}
+          onAdd={openNewNote}
+        />
         {notesQuery.isLoading && (
           <p className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-white/[0.05]">
             Loading notes...
@@ -173,7 +182,14 @@ export default function Notes() {
           </p>
         )}
         <div className="p-4 sm:p-5">
-          <NoteGrid notes={visibleNotes} relatedOptions={relatedOptions as NoteRelatedOption[]} canDelete={canDelete} isLoading={notesQuery.isLoading} onOpen={openNote} onDelete={(note) => void removeNote(note)} />
+          <NoteGrid
+            notes={visibleNotes}
+            relatedOptions={relatedOptions as NoteRelatedOption[]}
+            canDelete={canDelete}
+            isLoading={notesQuery.isLoading}
+            onOpen={openNote}
+            onDelete={(note) => void removeNote(note)}
+          />
         </div>
         <div className="flex justify-center border-t border-gray-100 px-4 sm:justify-end dark:border-white/[0.05]">
           <Pagination

@@ -101,7 +101,7 @@ export async function getUserAvatar(
       "Content-Type",
       user.avatarContentType ?? objectInfo.metaData["content-type"] ?? "image/jpeg",
     );
-    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Cache-Control", "private, no-store");
     objectStream.on("error", next);
     objectStream.pipe(res);
   } catch (error) {

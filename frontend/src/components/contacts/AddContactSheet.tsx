@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm, useWatch } from "react-hook-form";
-import { toast } from "sonner";
 
 import type { CompanyRecord, ContactRecord } from "../../api/crm";
 import { contactFormSchema, type ContactFormValues } from "../../validations/crm";
@@ -10,7 +9,9 @@ import { useAuth } from "../../hooks/auth/useAuth";
 import { useCreateContact, useUpdateContact, useUploadContactAvatar, useUsersQuery } from "../../hooks/crm/useCrmDirectory";
 import Sheet from "../ui/sheet/Sheet";
 import Avatar from "../ui/avatar/Avatar";
+import ArkCombobox, { type ArkComboboxOption } from "../crm/ArkCombobox";
 import { CURRENT_USER_AVATAR, formatUserDisplayName } from "../../utils/user";
+import { useToast } from "../../hooks/useToast";
 import { CrmFormField as FormField, CrmInfoSection as FormSection, crmInputClassName as inputClassName, crmPrimaryButtonClassName as primaryButtonClassName, crmSecondaryButtonClassName as secondaryButtonClassName } from "../crm/FormPrimitives";
 
 const clientTypeOptions = ["Retail Investor", "High Net Worth Individual", "Institutional Investor", "Corporate Client", "Partner / Introducer"] as const;
@@ -50,6 +51,7 @@ export default function AddContactSheet({
   companiesLoading: boolean;
   contact?: ContactRecord | null;
 }) {
+  const toast = useToast();
   const { user: currentUser } = useAuth();
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
@@ -129,6 +131,18 @@ export default function AddContactSheet({
   const selectedOwner = ownerOptions.find((owner) => owner.id === selectedOwnerId);
   const contactName = useWatch({ control: form.control, name: "name" });
   const displayedAvatar = avatarFile ? avatarPreview : contact?.user.image ?? null;
+  const ownerComboboxOptions: ArkComboboxOption[] = [
+    { value: "", label: "Unassigned" },
+    ...ownerOptions.map((owner) => ({
+      value: owner.id,
+      label: `${owner.id === currentUser?.entraObjectId ? "Me" : owner.name}${owner.id !== currentUser?.entraObjectId && owner.email ? ` — ${owner.email}` : ""}`,
+    })),
+  ];
+  const relationshipLevelOptions: ArkComboboxOption[] = ["High", "Medium", "Low"].map((value) => ({ value, label: value }));
+  const statusOptions: ArkComboboxOption[] = ["Prospect", "Customer", "KYC Pending", "Dormant", "Closed"].map((value) => ({ value, label: value }));
+  const clientTypeComboboxOptions: ArkComboboxOption[] = [{ value: "", label: "Select type" }, ...clientTypeOptions.map((value) => ({ value, label: value }))];
+  const riskComboboxOptions: ArkComboboxOption[] = [{ value: "", label: "Select profile" }, ...riskProfileOptions.map((value) => ({ value, label: value }))];
+  const contactMethodComboboxOptions: ArkComboboxOption[] = [{ value: "", label: "Select method" }, ...preferredContactMethodOptions.map((value) => ({ value, label: value }))];
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { "image/*": [] },
     maxSize: 5 * 1024 * 1024,
@@ -188,7 +202,7 @@ export default function AddContactSheet({
     <Sheet isOpen={isOpen} onClose={closeSheet} title={contact ? "Edit Contact" : "Add Contact"} description={contact ? "Update this client or relationship details." : "Add a client or relationship to your directory."} side="right" className="w-full sm:max-w-2xl xl:max-w-3xl">
       <form onSubmit={submit} noValidate className="space-y-6">
         <FormSection title="Basic information" description="Identify the contact and their organization.">
-          <FormField label="Name" error={form.formState.errors.name?.message}><input {...form.register("name")} maxLength={255} className={inputClassName} placeholder="Full name" autoFocus /></FormField>
+          <FormField label="Name" required error={form.formState.errors.name?.message}><input {...form.register("name")} minLength={1} maxLength={255} className={inputClassName} placeholder="Full name" autoFocus /></FormField>
           <div {...getRootProps()} className={`flex cursor-pointer items-center gap-4 rounded-xl border border-dashed px-4 py-3 transition ${isDragActive ? "border-brand-500 bg-brand-50/60 dark:border-brand-400 dark:bg-brand-500/10" : "border-gray-300 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-brand-800 dark:hover:bg-white/[0.03]"}`}>
             <input {...getInputProps()} />
             <Avatar src={displayedAvatar} alt={contactName || "Contact"} colorKey="contact-avatar" size="large" />
@@ -199,7 +213,7 @@ export default function AddContactSheet({
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Role / Job Title" error={form.formState.errors.role?.message}><input {...form.register("role")} maxLength={200} className={inputClassName} placeholder="Managing Director" /></FormField>
-            <FormField label="Company"><select {...form.register("companyId")} disabled={companiesLoading} className={inputClassName}><option value="">Individual / not linked</option>{companiesLoading ? <option disabled>Loading companies...</option> : companies.map((company) => <option key={company.id} value={String(company.id)}>{company.name}</option>)}</select></FormField>
+            <FormField label="Company"><input type="hidden" {...form.register("companyId")} /><ArkCombobox value={form.watch("companyId") ?? ""} options={[{ value: "", label: "Individual / not linked" }, ...companies.map((company) => ({ value: String(company.id), label: company.name }))]} onChange={(value) => form.setValue("companyId", value, { shouldValidate: true, shouldDirty: true })} placeholder={companiesLoading ? "Loading companies..." : "Search companies"} disabled={companiesLoading} /></FormField>
           </div>
         </FormSection>
 
@@ -214,25 +228,20 @@ export default function AddContactSheet({
         <FormSection title="Relationship management" description="Assign ownership and track the current relationship state.">
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Relationship Owner" error={form.formState.errors.relationshipOwnerId?.message}>
-              <div className="relative">
-                {selectedOwner && <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center"><Avatar src={selectedOwner.avatarUrl} alt={selectedOwner.name} size="xsmall" colorKey={`owner-${selectedOwner.id}`} /></span>}
-                <select {...form.register("relationshipOwnerId")} disabled={usersQuery.isLoading} className={`${inputClassName} ${selectedOwner ? "pl-11" : ""}`}>
-                  <option value="">Unassigned</option>
-                  {usersQuery.isLoading ? <option disabled>Loading users...</option> : ownerOptions.map((owner) => <option key={owner.id} value={owner.id}>{owner.id === currentUser?.entraObjectId ? "Me" : owner.name}{owner.id !== currentUser?.entraObjectId && owner.email ? ` — ${owner.email}` : ""}</option>)}
-                </select>
-              </div>
+              <input type="hidden" {...form.register("relationshipOwnerId")} />
+              <ArkCombobox value={selectedOwnerId ?? ""} options={ownerComboboxOptions} startAdornment={selectedOwner ? <Avatar src={selectedOwner.avatarUrl} alt={selectedOwner.name} size="xsmall" colorKey={`owner-${selectedOwner.id}`} /> : undefined} onChange={(value) => form.setValue("relationshipOwnerId", value, { shouldValidate: true, shouldDirty: true })} placeholder={usersQuery.isLoading ? "Loading users..." : "Search relationship owners"} disabled={usersQuery.isLoading} />
             </FormField>
-            <FormField label="Relationship Level" error={form.formState.errors.relationshipLevel?.message}><select {...form.register("relationshipLevel")} className={inputClassName}><option>High</option><option>Medium</option><option>Low</option></select></FormField>
+            <FormField label="Relationship Level" required error={form.formState.errors.relationshipLevel?.message}><input type="hidden" {...form.register("relationshipLevel")} /><ArkCombobox value={form.watch("relationshipLevel")} options={relationshipLevelOptions} onChange={(value) => form.setValue("relationshipLevel", value as ContactFormValues["relationshipLevel"], { shouldValidate: true, shouldDirty: true })} placeholder="Search relationship level" /></FormField>
           </div>
-          <FormField label="Status"><select {...form.register("status")} className={inputClassName}><option>Prospect</option><option>Customer</option><option>KYC Pending</option><option>Dormant</option><option>Closed</option></select></FormField>
+          <FormField label="Status" required><input type="hidden" {...form.register("status")} /><ArkCombobox value={form.watch("status")} options={statusOptions} onChange={(value) => form.setValue("status", value as ContactFormValues["status"], { shouldValidate: true, shouldDirty: true })} placeholder="Search status" /></FormField>
         </FormSection>
 
         <FormSection title="Investor profile" description="Capture client classification, suitability, and communication preferences.">
           <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Type of Client" error={form.formState.errors.typeOfClient?.message}><select {...form.register("typeOfClient")} className={inputClassName}><option value="">Select type</option><option>Retail Investor</option><option>High Net Worth Individual</option><option>Institutional Investor</option><option>Corporate Client</option><option>Partner / Introducer</option></select></FormField>
-            <FormField label="Risk Profile" error={form.formState.errors.riskProfile?.message}><select {...form.register("riskProfile")} className={inputClassName}><option value="">Select profile</option><option>Conservative</option><option>Balanced</option><option>Aggressive</option></select></FormField>
+            <FormField label="Type of Client" error={form.formState.errors.typeOfClient?.message}><input type="hidden" {...form.register("typeOfClient")} /><ArkCombobox value={form.watch("typeOfClient") ?? ""} options={clientTypeComboboxOptions} onChange={(value) => form.setValue("typeOfClient", value as ContactFormValues["typeOfClient"], { shouldValidate: true, shouldDirty: true })} placeholder="Search client type" /></FormField>
+            <FormField label="Risk Profile" error={form.formState.errors.riskProfile?.message}><input type="hidden" {...form.register("riskProfile")} /><ArkCombobox value={form.watch("riskProfile") ?? ""} options={riskComboboxOptions} onChange={(value) => form.setValue("riskProfile", value as ContactFormValues["riskProfile"], { shouldValidate: true, shouldDirty: true })} placeholder="Search risk profile" /></FormField>
           </div>
-          <FormField label="Preferred Contact Method" error={form.formState.errors.preferredContactMethod?.message}><select {...form.register("preferredContactMethod")} className={inputClassName}><option value="">Select method</option><option>Email</option><option>Phone</option><option>Meeting</option><option>Video Call</option></select></FormField>
+          <FormField label="Preferred Contact Method" error={form.formState.errors.preferredContactMethod?.message}><input type="hidden" {...form.register("preferredContactMethod")} /><ArkCombobox value={form.watch("preferredContactMethod") ?? ""} options={contactMethodComboboxOptions} onChange={(value) => form.setValue("preferredContactMethod", value as ContactFormValues["preferredContactMethod"], { shouldValidate: true, shouldDirty: true })} placeholder="Search contact method" /></FormField>
         </FormSection>
 
         <FormSection title="Organization" description="Add labels that make this contact easier to find and segment.">

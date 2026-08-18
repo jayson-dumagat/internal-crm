@@ -12,7 +12,6 @@ export const apiClient = axios.create({
   timeout: 15_000,
   headers: {
     Accept: "application/json",
-    "Content-Type": "application/json",
   },
 });
 
@@ -22,7 +21,9 @@ apiClient.interceptors.response.use(
     if (
       typeof window !== "undefined" &&
       axios.isAxiosError(error) &&
-      error.response?.status === 401
+      error.response?.status === 401 &&
+      (String(error.config?.url ?? "").includes("/auth/session") ||
+        error.response?.data?.error === "authentication_session_missing")
     ) {
       window.dispatchEvent(new Event("auth:session-expired"));
     }

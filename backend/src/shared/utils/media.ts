@@ -2,6 +2,17 @@ import path from "node:path";
 
 /** Returns a safe object-storage extension for a MIME type. */
 export function mimeExtension(mimeType: string): string {
+  const knownExtensions: Record<string, string> = {
+    "image/gif": ".gif",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/svg+xml": ".svg",
+    "image/webp": ".webp",
+  };
+  if (knownExtensions[mimeType.toLowerCase()]) {
+    return knownExtensions[mimeType.toLowerCase()];
+  }
+
   const extension = mimeType
     .split("/")[1]
     ?.toLowerCase()
