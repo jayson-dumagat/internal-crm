@@ -15,6 +15,7 @@ import { Contact } from "./contact.entity";
 import { createContactSchema, updateContactSchema } from "./contact.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import { toContactDto } from "./contact.mapper";
+import { getListQuery, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const contactRepository = () => AppDataSource.getRepository(Contact);
 const companyRepository = () => AppDataSource.getRepository(Company);
@@ -32,6 +33,7 @@ export async function listContacts(
       return;
     }
 
+    const query = getListQuery(req, 25);
     const [contacts, companies, users] = await Promise.all([
       contactRepository().find({ where: { tenantId }, order: { createdAt: "DESC" } }),
       companyRepository().find({ where: { tenantId } }),
@@ -41,6 +43,16 @@ export async function listContacts(
     const visibleContacts = contacts.filter((contact) => canAccessRecord(req, "contacts", contact.id)).filter((contact) => getDataScope(req, "contacts") === "own"
       ? contact.createdById === req.session.user?.entraObjectId
       : true);
+    const filteredContacts = visibleContacts.filter((contact) => matchesStatus(contact.status, query.status))
+      .filter((contact) => matchesQuery(contact.role, query.role))
+      .filter((contact) => matchesQuery(contact.companyName, query.company))
+      .filter((contact) => matchesQuery(contact.location, query.location))
+      .filter((contact) => !query.relationshipOwner || contact.relationshipOwnerId === query.relationshipOwner || matchesQuery(contact.relationshipOwner, query.relationshipOwner))
+      .filter((contact) => matchesQuery(contact.relationshipLevel, query.relationshipLevel))
+      .filter((contact) => matchesQuery(contact.typeOfClient, query.clientType))
+      .filter((contact) => matchesQuery(contact.riskProfile, query.riskProfile))
+      .filter((contact) => matchesSearch([contact.name, contact.role, contact.companyName, contact.email, contact.phone, contact.relationshipOwner, contact.location, contact.status].join(" "), query.search));
+    const page = paginate(filteredContacts, query);
     const ownersById = new Map(users.map((user) => [user.entraObjectId, user]));
     const ownersByName = new Map(
       users.flatMap((user) => [
@@ -50,7 +62,7 @@ export async function listContacts(
     );
 
     res.status(200).json({
-      data: visibleContacts.map((contact) =>
+      data: page.data.map((contact) =>
         toContactDto(
           contact,
           contact.companyId ? companiesById.get(contact.companyId) : undefined,
@@ -62,6 +74,7 @@ export async function listContacts(
           req,
         ),
       ),
+      meta: page.meta,
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import type { TaskRecord } from "../api/crm";
 import type { CreateTaskInput } from "../types/Crm";
@@ -8,6 +9,8 @@ import {
   useTasksQuery,
   useUpdateTask,
   useUpdateTaskStatus,
+  useLeadsQuery,
+  useUsersQuery,
 } from "../hooks/crm/useCrmDirectory";
 import AppBreadcrumb from "../components/common/AppBreadcrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -26,6 +29,9 @@ import TaskTableView from "../components/task/TaskTableView";
 import type { KanbanTask, ListTask, TaskView } from "../types/Tasks";
 import { useCan } from "../hooks/auth/useCan";
 import { filterTasks, toKanbanTask, toListTask } from "../utils/tasks";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import { DataLoadingSkeleton } from "../components/common/PageLoadingSkeleton";
+import CrmFilterControls, { toFilterOptions, toIdFilterOptions } from "../components/crm/CrmFilterControls";
 const taskViews: Array<{ id: TaskView; label: string }> = [
   { id: "list", label: "List" },
   { id: "kanban", label: "Kanban" },
@@ -35,6 +41,8 @@ const taskViews: Array<{ id: TaskView; label: string }> = [
 export default function Tasks() {
   const toast = useToast();
   const tasksQuery = useTasksQuery();
+  const usersQuery = useUsersQuery();
+  const leadsQuery = useLeadsQuery(false);
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const updateTaskStatus = useUpdateTaskStatus();
@@ -49,15 +57,30 @@ export default function Tasks() {
   );
   const [activeView, setActiveView] = useState<TaskView>("list");
   const { search } = useSearch();
-  const [statusFilter, setStatusFilter] = useState<
-    TaskRecord["status"] | "All"
-  >("All");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<TaskRecord["status"] | "All">((searchParams.get("status") as TaskRecord["status"] | "All") || "All");
   const [showFilters, setShowFilters] = useState(false);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [newTaskStatus, setNewTaskStatus] =
     useState<TaskKanbanStatus>("not-started");
+  const [deleteCandidate, setDeleteCandidate] = useState<TaskRecord | null>(null);
   const debouncedSearch = useDebounce(search, 400);
+  useEffect(() => {
+    if (searchParams.get("kind") === "task") return;
+    const next = new URLSearchParams(searchParams);
+    next.set("kind", "task");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+    if (key === "status") setStatusFilter((value || "All") as TaskRecord["status"] | "All");
+  };
   const filteredTasks = useMemo(
     () => filterTasks(tasks, debouncedSearch, statusFilter),
     [debouncedSearch, statusFilter, tasks],
@@ -111,7 +134,6 @@ export default function Tasks() {
   };
   const removeTask = async (task: TaskRecord) => {
     if (!canDelete) return;
-    if (!window.confirm(`Delete ${task.title}?`)) return;
     try {
       await deleteTask.mutateAsync(task.id);
       toast.success("Task deleted successfully.");
@@ -156,22 +178,24 @@ export default function Tasks() {
         </div>
         {showFilters && (
           <div className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(
-                  event.target.value as TaskRecord["status"] | "All",
-                )
-              }
-              className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-            >
-              <option value="All">All statuses</option>
-              <option value="not-started">Not started</option>
-              <option value="in-progress">In progress</option>
-              <option value="completed">Completed</option>
-              <option value="overdue">Overdue / Delayed</option>
-              <option value="blocked">Blocked</option>
-            </select>
+            <CrmFilterControls
+              filters={[
+                { key: "type", label: "Type", value: searchParams.get("type") ?? "", options: toFilterOptions(["general", "call", "email", "meeting", "follow_up", "document", "review"]) },
+                { key: "priority", label: "Priority", value: searchParams.get("priority") ?? "", options: toFilterOptions(["low", "medium", "high", "urgent"]) },
+                { key: "assignedTo", label: "Assigned to", value: searchParams.get("assignedTo") ?? "", options: toIdFilterOptions((usersQuery.data ?? []).map((user) => ({ id: user.id, name: user.isCurrentUser ? "Me" : user.name }))) },
+                { key: "relatedTo", label: "Related lead", value: searchParams.get("relatedTo") ?? "", options: toIdFilterOptions((leadsQuery.data ?? []).map((lead) => ({ id: lead.id, name: lead.name }))) },
+                { key: "status", label: "Status", value: searchParams.get("status") ?? "", options: toFilterOptions(["not-started", "in-progress", "completed", "overdue", "blocked"]) },
+              ]}
+              dateFrom={searchParams.get("dateFrom") ?? ""}
+              dateTo={searchParams.get("dateTo") ?? ""}
+              onChange={updateFilter}
+              onDateChange={(from, to) => {
+                const next = new URLSearchParams(searchParams);
+                if (from) next.set("dateFrom", from); else next.delete("dateFrom");
+                if (to) next.set("dateTo", to); else next.delete("dateTo");
+                setSearchParams(next);
+              }}
+            />
           </div>
         )}
         <div className="bg-gray-50/60 px-4 sm:px-5 dark:bg-white/[0.02]">
@@ -187,9 +211,9 @@ export default function Tasks() {
           </nav>
         </div>
         {tasksQuery.isLoading && (
-          <p className="border-t border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-white/[0.05]">
-            Loading tasks...
-          </p>
+          <div className="border-t border-gray-100 text-sm text-gray-500 dark:border-white/[0.05]">
+            <DataLoadingSkeleton rows={5} />
+          </div>
         )}
         {tasksQuery.isError && (
           <p className="border-t border-gray-100 px-4 py-3 text-sm text-error-500 dark:border-white/[0.05]">
@@ -243,7 +267,7 @@ export default function Tasks() {
                 setEditingTask(task);
                 setIsTaskFormOpen(true);
               }}
-              onDelete={removeTask}
+              onDelete={(task) => setDeleteCandidate(task)}
               canUpdate={canUpdate}
               canDelete={canDelete}
             />
@@ -260,6 +284,18 @@ export default function Tasks() {
         }}
         onSubmit={saveTask}
         isPending={createTask.isPending || updateTask.isPending}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deleteCandidate)}
+        title="Delete task?"
+        description={deleteCandidate ? `This will permanently remove “${deleteCandidate.title}”.` : ""}
+        isPending={deleteTask.isPending}
+        onCancel={() => setDeleteCandidate(null)}
+        onConfirm={async () => {
+          if (!deleteCandidate) return;
+          await removeTask(deleteCandidate);
+          setDeleteCandidate(null);
+        }}
       />
     </>
   );

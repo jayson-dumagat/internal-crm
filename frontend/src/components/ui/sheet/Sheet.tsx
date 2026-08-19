@@ -66,8 +66,8 @@ export default function Sheet({
         restoreFocus
         preventScroll
       >
-        <ArkDrawer.Backdrop className="fixed inset-0 z-99998 bg-black/50 transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
-        <ArkDrawer.Positioner className="fixed inset-0 z-99999">
+        <ArkDrawer.Backdrop className="pointer-events-none fixed inset-0 z-99998 bg-black/50 transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100" />
+        <ArkDrawer.Positioner className="pointer-events-none fixed inset-0 z-99999 data-[state=open]:pointer-events-auto">
           <ArkDrawer.Content
             aria-label={title ?? "Dialog"}
             data-side={side}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   ExportIcon,
   FilterIcon,
@@ -25,6 +25,8 @@ import { useCan } from "../../hooks/auth/useCan";
 import Checkbox from "../form/input/Checkbox";
 import type { Company, CompanySortKey } from "../../types/Companies";
 import CompanyDetailsSheet from "./CompanyDetailsSheet";
+import { useSearchParams } from "react-router";
+import { DataLoadingSkeleton } from "../common/PageLoadingSkeleton";
 
 const columns: Array<{
   key: CompanySortKey | "contacts" | "tags" | "actions";
@@ -50,7 +52,7 @@ const statusColor = {
   Dormant: "light",
 } as const;
 
-export default function CompanyTable() {
+const CompanyTable = memo(function CompanyTable() {
   const toast = useToast();
   const companiesQuery = useCompaniesQuery();
   const companyData = companiesQuery.data;
@@ -68,6 +70,10 @@ export default function CompanyTable() {
   const canCreate = useCan("companies.create");
   const canUpdate = useCan("companies.update");
   const canDelete = useCan("companies.delete");
+  const canImport = useCan("companies.import");
+  const canExport = useCan("companies.export");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get("status") ?? "All";
   const [sort, setSort] = useState<{
     key: CompanySortKey;
     descending: boolean;
@@ -77,10 +83,54 @@ export default function CompanyTable() {
   });
 
   const debouncedSearch = useDebounce(search, 400);
+  const searchTerm = useMemo(
+    () => debouncedSearch.trim().toLowerCase(),
+    [debouncedSearch],
+  );
 
-  const rows = useMemo(() => {
-    const term = debouncedSearch.trim().toLowerCase();
-    const filtered = term
+  const filteredRows = useMemo(() => {
+    return (companyData ?? []).filter((company) => {
+      const matchesStatus =
+        statusFilter === "All" || company.status === statusFilter;
+      const matchesSearch = searchTerm
+        ? [
+            company.name,
+            company.industry,
+            company.location,
+            company.website,
+            company.status,
+            company.tags.join(" "),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(searchTerm)
+        : true;
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [companyData, searchTerm, statusFilter]);
+
+  const rows = useMemo(
+    () => [...filteredRows].sort((a, b) => {
+      const result = String(a[sort.key]).localeCompare(
+        String(b[sort.key]),
+        undefined,
+        {
+          numeric: true,
+          sensitivity: "base",
+        },
+      );
+      return sort.descending ? -result : result;
+    }),
+    [filteredRows, sort.descending, sort.key],
+  );
+
+  /*
+   * Search and status filtering are deliberately derived with useMemo rather
+   * than performed during render. This keeps typing from repeatedly scanning
+   * and sorting the full directory while the debounced query is unchanged.
+   */
+  /* const filtered = term
       ? (companyData ?? []).filter((company) =>
           [
             company.name,
@@ -94,23 +144,13 @@ export default function CompanyTable() {
             .toLowerCase()
             .includes(term),
         )
-      : (companyData ?? []);
-
-    return [...filtered].sort((a, b) => {
-      const result = String(a[sort.key]).localeCompare(
-        String(b[sort.key]),
-        undefined,
-        {
-          numeric: true,
-          sensitivity: "base",
-        },
-      );
-      return sort.descending ? -result : result;
-    });
-  }, [companyData, debouncedSearch, sort.descending, sort.key]);
+      : (companyData ?? []); */
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
-  const visibleRows = rows.slice((page - 1) * pageSize, page * pageSize);
+  const visibleRows = useMemo(
+    () => rows.slice((page - 1) * pageSize, page * pageSize),
+    [page, pageSize, rows],
+  );
   const allVisibleSelected =
     visibleRows.length > 0 &&
     visibleRows.every((row) => selected.includes(row.id));
@@ -137,23 +177,40 @@ export default function CompanyTable() {
         <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-2.5 sm:pr-5 md:flex-row md:items-center md:justify-between dark:border-white/[0.05]">
           <SearchField />
           <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
-            <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
-              <FilterIcon /> Filter
-            </button>
+            <label className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+              <FilterIcon />
+              <select
+                value={statusFilter}
+                onChange={(event) => {
+                  const next = new URLSearchParams(searchParams);
+                  if (event.target.value === "All") next.delete("status");
+                  else next.set("status", event.target.value);
+                  next.delete("page");
+                  setSearchParams(next);
+                }}
+                className="bg-transparent outline-none dark:bg-gray-800"
+              >
+                <option value="All">All statuses</option>
+                <option value="Active">Active</option>
+                <option value="Prospect">Prospect</option>
+                <option value="Dormant">Dormant</option>
+              </select>
+            </label>
             <button
               type="button"
-              disabled={!canCreate}
+              disabled={!canImport}
               aria-label="Import companies"
-              title={canCreate ? "Import companies" : "Read-only access"}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              title={canImport ? "Import companies" : "Permission required"}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:[&_svg]:opacity-50 disabled:hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:disabled:border-gray-800 dark:disabled:bg-gray-900 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-900"
             >
               <DownloadIcon />
             </button>
             <button
               type="button"
               aria-label="Export companies"
-              title="Export companies"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              title={canExport ? "Export companies" : "Permission required"}
+              disabled={!canExport}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:[&_svg]:opacity-50 disabled:hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:disabled:border-gray-800 dark:disabled:bg-gray-900 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-900"
             >
               <ExportIcon />
             </button>
@@ -232,7 +289,7 @@ export default function CompanyTable() {
                     colSpan={columns.length + 2}
                     className="border border-gray-100 px-4 py-10 text-center text-sm text-gray-500 dark:border-white/[0.05] dark:text-gray-400"
                   >
-                    Loading companies...
+                    <DataLoadingSkeleton rows={4} />
                   </td>
                 </tr>
               ) : companiesQuery.isError ? (
@@ -311,7 +368,6 @@ export default function CompanyTable() {
                         />
                       </td>
                       <td
-                        onClick={(event) => event.stopPropagation()}
                         className="border border-gray-100 px-4 py-4 dark:border-white/[0.05]"
                       >
                         <div className="flex min-w-0 items-center gap-3">
@@ -507,4 +563,6 @@ export default function CompanyTable() {
       />
     </>
   );
-}
+});
+
+export default CompanyTable;

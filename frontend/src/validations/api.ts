@@ -112,6 +112,7 @@ export const noteSchema = z.object({
   contentHtml: z.string().nullable(),
   category: z.enum(["Client", "Follow-up", "Investment", "Internal"]),
   relatedTo: z.string(),
+  relatedAvatar: z.string().nullable().optional(),
   author: z.string(),
   authorAvatar: z.string().nullable(),
   createdAt: z.string(),

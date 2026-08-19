@@ -7,6 +7,7 @@ import { createActivitySchema } from "./activity.schema";
 import { canAccessRecord, firstHiddenInput, hasResourceRestriction } from "../access/access-control";
 import { toActivityDto } from "./activity.mapper";
 import { canViewTenantActivityLog } from "./activity.service";
+import { getListQuery, matchesDateRange, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const activityRepository = () => AppDataSource.getRepository(Activity);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -41,12 +42,22 @@ export async function listActivities(req: Request, res: Response, next: NextFunc
       where = { tenantId, actorId: actor.id };
     }
 
+    const query = getListQuery(req, 50);
     const activities = await activityRepository().find({
       where,
       order: { createdAt: "DESC" },
       take: 500,
     });
-    res.status(200).json({ data: activities.filter((activity) => canAccessRecord(req, "activities", activity.id)).map((activity) => toActivityDto(activity, req)) });
+    const visible = activities.filter((activity) => canAccessRecord(req, "activities", activity.id))
+      .filter((activity) => !query.category || activity.category === query.category)
+      .filter((activity) => matchesStatus(activity.outcome, query.outcome ?? query.status))
+      .filter((activity) => matchesDateRange(activity.createdAt, query.dateFrom, query.dateTo))
+      .filter((activity) => matchesQuery(activity.actorName, query.actor))
+      .filter((activity) => matchesQuery(activity.action, query.action))
+      .filter((activity) => matchesQuery(activity.target, query.target))
+      .filter((activity) => matchesSearch([activity.actorName, activity.action, activity.target, activity.category, activity.outcome, activity.ipAddress].join(" "), query.search));
+    const page = paginate(visible, query);
+    res.status(200).json({ data: page.data.map((activity) => toActivityDto(activity, req)), meta: page.meta });
   } catch (error) {
     next(error);
   }

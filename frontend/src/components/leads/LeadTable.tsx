@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { memo, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import {
   Table,
@@ -38,7 +38,7 @@ const headerCellClass =
 const bodyCellClass =
   "border border-gray-100 px-3.5 py-3 text-theme-sm text-gray-800 dark:border-white/[0.05] dark:text-gray-400";
 
-export default function LeadTable({
+const LeadTable = memo(function LeadTable({
   leads,
   selectedIds,
   isCurrentPageSelected,
@@ -78,7 +78,7 @@ export default function LeadTable({
           <TableRow>
             <TableCell
               isHeader
-              className={`w-[52px] max-w-[52px] min-w-[52px] bg-white text-center dark:bg-gray-900 ${headerCellClass}`}
+              className="w-[52px] max-w-[52px] min-w-[52px] border border-gray-100 bg-white px-4 py-3 text-center dark:border-white/[0.05] dark:bg-gray-900"
             >
               <Checkbox
                 aria-label="Select all leads on this page"
@@ -136,7 +136,7 @@ export default function LeadTable({
                 >
                   <TableCell
                     onClick={stopRowClick}
-                    className="w-[52px] max-w-[52px] min-w-[52px] text-center"
+                    className="w-[52px] max-w-[52px] min-w-[52px] border border-gray-100 px-4 py-3 text-center dark:border-white/[0.05]"
                   >
                     <Checkbox
                       aria-label={`Select ${lead.name}`}
@@ -304,7 +304,9 @@ export default function LeadTable({
       </Table>
     </div>
   );
-}
+});
+
+export default LeadTable;
 function TableHeaderCell({
   children,
   className = "",

@@ -62,9 +62,9 @@ function defaults(task: TaskRecord | null, defaultStatus: Values["status"], init
   };
 }
 
-export default function TaskFormSheet({ isOpen, task, defaultStatus = "not-started", initialStartAt, initialDueAt, mode = "task", readOnly = false, onClose, onSubmit, isPending }: {
+export default function TaskFormSheet({ isOpen, task, defaultStatus = "not-started", initialStartAt, initialDueAt, mode = "task", readOnly = false, canDelete, onDelete, onClose, onSubmit, isPending }: {
   isOpen: boolean; task: TaskRecord | null; defaultStatus?: Values["status"]; initialStartAt?: string | null; initialDueAt?: string | null; mode?: "task" | "event"; readOnly?: boolean;
-  onClose: () => void; onSubmit: (input: CreateTaskInput, task?: TaskRecord) => Promise<void>; isPending: boolean;
+  canDelete?: boolean; onDelete?: () => void; onClose: () => void; onSubmit: (input: CreateTaskInput, task?: TaskRecord) => Promise<void>; isPending: boolean;
 }) {
   const usersQuery = useUsersQuery();
   const leadsQuery = useLeadsQuery();
@@ -119,7 +119,7 @@ export default function TaskFormSheet({ isOpen, task, defaultStatus = "not-start
           <Field label="Status" required error={form.formState.errors.status?.message}><input type="hidden" {...form.register("status")} /><ArkCombobox value={form.watch("status")} options={statusOptions} onChange={(value) => form.setValue("status", value as Values["status"], { shouldValidate: true, shouldDirty: true })} placeholder="Search status" /></Field>
         </FormSection>
       </fieldset>
-      <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]"><button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button><button type="submit" disabled={isPending || readOnly} className={primaryButtonClassName}>{readOnly ? "View only" : isPending ? "Saving..." : task ? `Save ${subject}` : `Add ${subject}`}</button></div>
+      <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">{task && onDelete && <button type="button" onClick={onDelete} disabled={!canDelete || isPending || readOnly} className="mr-auto h-10 rounded-lg border border-error-200 px-4 text-sm font-medium text-error-600 hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-error-500/30 dark:hover:bg-error-500/10">Delete</button>}<button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button><button type="submit" disabled={isPending || readOnly} className={primaryButtonClassName}>{readOnly ? "View only" : isPending ? "Saving..." : task ? `Save ${subject}` : `Add ${subject}`}</button></div>
     </form>
   </Sheet>;
 }

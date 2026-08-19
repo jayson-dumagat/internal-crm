@@ -21,6 +21,7 @@ import {
   toLeadDto as mapLeadDto,
   toLeadStatus as mapLeadStatus,
 } from "./lead.mapper";
+import { getListQuery, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const leadRepository = () => AppDataSource.getRepository(Lead);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -53,6 +54,7 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       res.status(401).json({ success: false, message: "Authentication is required." });
       return;
     }
+    const query = getListQuery(req, 25);
     const leads = await leadRepository().find({
       where: { owner: { entraTenantId: req.session.user.tenantId } },
       relations: { owner: true, assignedTo: true },
@@ -64,7 +66,14 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       : scope === "assigned"
         ? lead.owner?.entraObjectId === req.session.user?.entraObjectId || lead.assignedTo?.entraObjectId === req.session.user?.entraObjectId
         : true);
-    res.status(200).json({ data: visibleLeads.map((lead) => mapLeadDto(lead, req)) });
+    const filtered = visibleLeads.filter((lead) => matchesStatus(lead.status, query.status))
+      .filter((lead) => matchesQuery(lead.jobTitle, query.role))
+      .filter((lead) => matchesQuery(lead.companyName, query.company))
+      .filter((lead) => !query.assignedTo || lead.assignedTo?.entraObjectId === query.assignedTo || matchesQuery(lead.assignedTo?.displayName, query.assignedTo))
+      .filter((lead) => matchesQuery(lead.interestLevel, query.interestLevel))
+      .filter((lead) => matchesSearch([formatLeadNameDto(lead), lead.email, lead.phone, lead.companyName, lead.jobTitle, lead.source, lead.status, lead.interestLevel].join(" "), query.search));
+    const page = paginate(filtered, query);
+    res.status(200).json({ data: page.data.map((lead) => mapLeadDto(lead, req)), meta: page.meta });
   } catch (error) {
     next(error);
   }

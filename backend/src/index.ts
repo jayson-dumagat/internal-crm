@@ -19,6 +19,7 @@ import {
 import { AppDataSource } from "./database/data-source";
 import { ensureObjectStorageBucket } from "./config/storage";
 import { registerRealtimeServer } from "./services/realtime";
+import { startNotificationSubscriber, stopNotificationSubscriber } from "./services/notifications";
 
 async function bootstrap() {
   try {
@@ -61,6 +62,7 @@ async function bootstrap() {
       socket.join(`tenant:${tenantId}`);
     });
     registerRealtimeServer(io);
+    await startNotificationSubscriber();
     server.listen(env.PORT, "0.0.0.0", () => {
       console.log(`CRM API running on port ${env.PORT}`);
     });
@@ -74,6 +76,7 @@ async function bootstrap() {
           await AppDataSource.destroy();
         }
 
+        await stopNotificationSubscriber();
         await disconnectRedis();
 
         process.exit(0);

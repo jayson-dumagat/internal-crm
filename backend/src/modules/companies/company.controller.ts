@@ -12,6 +12,7 @@ import { Company } from "./company.entity";
 import { createCompanySchema, updateCompanySchema } from "./company.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import { toCompanyContactSummary, toCompanyDto } from "./company.mapper";
+import { getListQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const companyRepository = () => AppDataSource.getRepository(Company);
 const contactRepository = () => AppDataSource.getRepository(Contact);
@@ -24,6 +25,7 @@ export async function listCompanies(
   try {
     const tenantId = req.session.user?.tenantId;
     if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
+    const query = getListQuery(req, 25);
     const [companies, contacts] = await Promise.all([
       companyRepository().find({ where: { tenantId }, order: { createdAt: "DESC" } }),
       contactRepository().find({ where: { tenantId }, order: { createdAt: "ASC" } }),
@@ -32,7 +34,10 @@ export async function listCompanies(
     const visibleCompanies = companies.filter((company) => canAccessRecord(req, "companies", company.id)).filter((company) => getDataScope(req, "companies") === "own"
       ? company.createdById === req.session.user?.entraObjectId
       : true);
-    const visibleCompanyIds = new Set(visibleCompanies.map((company) => company.id));
+    const filteredCompanies = visibleCompanies.filter((company) => matchesStatus(company.status, query.status))
+      .filter((company) => matchesSearch([company.name, company.industry, company.location, company.website, company.status, company.tags.join(" ")].join(" "), query.search));
+    const page = paginate(filteredCompanies, query);
+    const visibleCompanyIds = new Set(page.data.map((company) => company.id));
     const contactsByCompany = new Map<string, Array<{ name: string; avatar: string | null }>>();
 
     for (const contact of contacts) {
@@ -43,7 +48,8 @@ export async function listCompanies(
     }
 
     res.status(200).json({
-      data: visibleCompanies.map((company) => toCompanyDto(company, contactsByCompany.get(company.id) ?? [], req)),
+      data: page.data.map((company) => toCompanyDto(company, contactsByCompany.get(company.id) ?? [], req)),
+      meta: page.meta,
     });
   } catch (error) {
     next(error);

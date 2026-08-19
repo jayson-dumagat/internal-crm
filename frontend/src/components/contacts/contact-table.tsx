@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ import {
   useCompaniesQuery,
   useContactsQuery,
   useDeleteContact,
+  useUsersQuery,
 } from "../../hooks/crm/useCrmDirectory";
 import { useToast } from "../../hooks/useToast";
 import { formatDisplayDate } from "../../utils/date";
@@ -45,6 +46,12 @@ import type {
   SortOrder,
 } from "../../types/Contacts";
 import ContactDetailsSheet from "./ContactDetailsSheet";
+import { useSearchParams } from "react-router";
+import { DataLoadingSkeleton } from "../common/PageLoadingSkeleton";
+import CrmFilterControls, {
+  toFilterOptions,
+  toIdFilterOptions,
+} from "../crm/CrmFilterControls";
 
 const statusBadgeColor: Record<ContactStatus, ContactBadgeColor> = {
   Customer: "success",
@@ -60,16 +67,21 @@ const relationshipBadgeColor: Record<RelationshipLevel, ContactBadgeColor> = {
   Low: "light",
 };
 
-export default function ContactTable() {
+const ContactTable = memo(function ContactTable() {
   const toast = useToast();
   const { user: currentUser } = useAuth();
   const canCreate = useCan("contacts.create");
   const canUpdate = useCan("contacts.update");
   const canDelete = useCan("contacts.delete");
+  const canImport = useCan("contacts.import");
+  const canExport = useCan("contacts.export");
+  const [searchParams, setSearchParams] = useSearchParams();
   const { search } = useSearch();
   const debouncedSearch = useDebounce(search, 300);
   const contactsQuery = useContactsQuery();
-  const companiesQuery = useCompaniesQuery();
+  const contactOptionsQuery = useContactsQuery(false);
+  const companiesQuery = useCompaniesQuery(false);
+  const usersQuery = useUsersQuery();
   const contactData = contactsQuery.data;
   const hasContacts = (contactData ?? []).length > 0;
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,6 +95,15 @@ export default function ContactTable() {
   );
   const [viewContact, setViewContact] = useState<Contact | null>(null);
   const deleteContact = useDeleteContact();
+  const [showFilters, setShowFilters] = useState(false);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+  };
 
   const filteredData = useMemo(() => {
     return (contactData ?? []).filter((item) =>
@@ -149,9 +170,14 @@ export default function ContactTable() {
     }
   };
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const currentData = sortedData.slice(startIndex, endIndex);
+  const currentData = useMemo(
+    () =>
+      sortedData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage,
+      ),
+    [currentPage, itemsPerPage, sortedData],
+  );
   const isCurrentPageSelected =
     currentData.length > 0 &&
     currentData.every((item) => selectedIds.includes(item.id));
@@ -183,7 +209,9 @@ export default function ContactTable() {
           <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
             <button
               type="button"
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              onClick={() => setShowFilters((value) => !value)}
+              aria-expanded={showFilters}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
             >
               <FilterIcon />
               <span>Filter</span>
@@ -192,9 +220,9 @@ export default function ContactTable() {
             <button
               type="button"
               aria-label="Import contacts"
-              title={canCreate ? "Import contacts" : "Read-only access"}
-              disabled={!canCreate}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              title={canImport ? "Import contacts" : "Permission required"}
+              disabled={!canImport}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:[&_svg]:opacity-50 disabled:hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:disabled:border-gray-800 dark:disabled:bg-gray-900 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-900"
             >
               <DownloadIcon />
             </button>
@@ -202,8 +230,9 @@ export default function ContactTable() {
             <button
               type="button"
               aria-label="Export contacts"
-              title="Export contacts"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+              title={canExport ? "Export contacts" : "Permission required"}
+              disabled={!canExport}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:[&_svg]:opacity-50 disabled:hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:disabled:border-gray-800 dark:disabled:bg-gray-900 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-900"
             >
               <ExportIcon />
             </button>
@@ -224,6 +253,92 @@ export default function ContactTable() {
             </button>
           </div>
         </div>
+        {showFilters && (
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-white/[0.05]">
+            <CrmFilterControls
+              filters={[
+                {
+                  key: "role",
+                  label: "Role / job title",
+                  value: searchParams.get("role") ?? "",
+                  options: toFilterOptions(
+                    (contactOptionsQuery.data ?? []).map(
+                      (item) => item.position,
+                    ),
+                  ),
+                },
+                {
+                  key: "company",
+                  label: "Company",
+                  value: searchParams.get("company") ?? "",
+                  options: toFilterOptions(
+                    (companiesQuery.data ?? []).map((company) => company.name),
+                  ),
+                },
+                {
+                  key: "location",
+                  label: "Location",
+                  value: searchParams.get("location") ?? "",
+                  options: toFilterOptions(
+                    (contactOptionsQuery.data ?? []).map(
+                      (item) => item.location,
+                    ),
+                  ),
+                },
+                {
+                  key: "relationshipOwner",
+                  label: "Relationship owner",
+                  value: searchParams.get("relationshipOwner") ?? "",
+                  options: toIdFilterOptions(
+                    (usersQuery.data ?? []).map((user) => ({
+                      id: user.id,
+                      name: user.isCurrentUser ? "Me" : user.name,
+                    })),
+                  ),
+                },
+                {
+                  key: "relationshipLevel",
+                  label: "Relationship level",
+                  value: searchParams.get("relationshipLevel") ?? "",
+                  options: toFilterOptions(["High", "Medium", "Low"]),
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  value: searchParams.get("status") ?? "",
+                  options: toFilterOptions([
+                    "Customer",
+                    "Prospect",
+                    "KYC Pending",
+                    "Dormant",
+                    "Closed",
+                  ]),
+                },
+                {
+                  key: "clientType",
+                  label: "Client type",
+                  value: searchParams.get("clientType") ?? "",
+                  options: toFilterOptions(
+                    (contactOptionsQuery.data ?? []).map(
+                      (item) => item.type_of_client ?? "",
+                    ),
+                  ),
+                },
+                {
+                  key: "riskProfile",
+                  label: "Risk profile",
+                  value: searchParams.get("riskProfile") ?? "",
+                  options: toFilterOptions(
+                    (contactOptionsQuery.data ?? []).map(
+                      (item) => item.risk_profile ?? "",
+                    ),
+                  ),
+                },
+              ]}
+              onChange={updateFilter}
+            />
+          </div>
+        )}
       </div>
 
       <div className="custom-scrollbar max-w-full overflow-x-auto">
@@ -304,7 +419,7 @@ export default function ContactTable() {
                     colSpan={10}
                     className="border border-gray-100 px-4 py-10 text-center text-sm text-gray-500 dark:border-white/[0.05] dark:text-gray-400"
                   >
-                    Loading contacts...
+                    <DataLoadingSkeleton rows={4} />
                   </TableCell>
                 </TableRow>
               ) : contactsQuery.isError ? (
@@ -373,10 +488,7 @@ export default function ContactTable() {
                           onChange={() => handleToggleSelected(item.id)}
                         />
                       </TableCell>
-                      <TableCell
-                        onClick={(event) => event.stopPropagation()}
-                        className="w-[250px] min-w-[250px] border border-gray-100 px-4 py-3 whitespace-nowrap dark:border-white/[0.05]"
-                      >
+                      <TableCell className="w-[250px] min-w-[250px] border border-gray-100 px-4 py-3 whitespace-nowrap dark:border-white/[0.05]">
                         <div className="flex items-center gap-3">
                           <Avatar
                             src={item.user.image}
@@ -594,4 +706,6 @@ export default function ContactTable() {
       />
     </div>
   );
-}
+});
+
+export default ContactTable;

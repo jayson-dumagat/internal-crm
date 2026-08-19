@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "../hooks/useDebounce";
@@ -14,6 +15,7 @@ import {
   useLeadsQuery,
   useNotesQuery,
   useUpdateNote,
+  useUsersQuery,
 } from "../hooks/crm/useCrmDirectory";
 import AppBreadcrumb from "../components/common/AppBreadcrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -24,6 +26,8 @@ import NoteGrid from "../components/notes/NoteGrid";
 import NotesToolbar from "../components/notes/NotesToolbar";
 import type { NoteRelatedOption } from "../components/notes/NoteCard";
 import NoteEditorSheet from "../components/notes/NoteEditorSheet";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import CrmFilterControls, { toFilterOptions } from "../components/crm/CrmFilterControls";
 
 type NoteCategory = NoteRecord["category"];
 const emptyValues: NoteFormValues = {
@@ -41,14 +45,16 @@ export default function Notes() {
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
   const { search } = useSearch();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const canCreate = useCan("notes.create");
   const canUpdate = useCan("notes.update");
   const canDelete = useCan("notes.delete");
   const notes = notesQuery.data ?? [];
-  const contactsQuery = useContactsQuery();
-  const companiesQuery = useCompaniesQuery();
-  const leadsQuery = useLeadsQuery();
+  const contactsQuery = useContactsQuery(false);
+  const companiesQuery = useCompaniesQuery(false);
+  const leadsQuery = useLeadsQuery(false);
+  const usersQuery = useUsersQuery();
   const debouncedSearch = useDebounce(search, 300);
   const relatedOptions = useMemo(
     () => [
@@ -70,10 +76,12 @@ export default function Notes() {
     ],
     [companiesQuery.data, contactsQuery.data, leadsQuery.data],
   );
-  const [category, setCategory] = useState<NoteCategory | "All">("All");
+  const [category, setCategory] = useState<NoteCategory | "All">((searchParams.get("category") as NoteCategory | "All") || "All");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedNote, setSelectedNote] = useState<NoteRecord | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<NoteRecord | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const noteForm = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
     defaultValues: emptyValues,
@@ -93,6 +101,16 @@ export default function Notes() {
   const totalPages = Math.max(Math.ceil(filteredNotes.length / 6), 1);
   const safePage = Math.min(currentPage, totalPages);
   const visibleNotes = filteredNotes.slice((safePage - 1) * 6, safePage * 6);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+    if (key === "category") setCategory((value || "All") as NoteCategory | "All");
+    setCurrentPage(1);
+  };
 
   const openNewNote = () => {
     if (!canCreate) return;
@@ -143,7 +161,7 @@ export default function Notes() {
     }
   };
   const removeNote = async (note: NoteRecord) => {
-    if (!canDelete || !window.confirm(`Delete ${note.title}?`)) return;
+    if (!canDelete) return;
     try {
       await deleteNote.mutateAsync(note.id);
       toast.success("Note deleted successfully.");
@@ -163,12 +181,29 @@ export default function Notes() {
       <AppBreadcrumb pageName="Notes" />
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <NotesToolbar
-          category={category}
           canCreate={canCreate}
-          onCategoryChange={(value) => {
-            setCategory(value);
-            setCurrentPage(1);
-          }}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((value) => !value)}
+          filters={
+            <CrmFilterControls
+              filters={[
+                { key: "category", label: "Category", value: searchParams.get("category") ?? "", options: toFilterOptions(["Client", "Follow-up", "Investment", "Internal"]) },
+                { key: "relatedTo", label: "Related to", value: searchParams.get("relatedTo") ?? "", options: toFilterOptions(relatedOptions.map((option) => option.value)) },
+                { key: "author", label: "Who made it", value: searchParams.get("author") ?? "", options: toFilterOptions((usersQuery.data ?? []).map((user) => user.name)) },
+              ]}
+              dateFrom={searchParams.get("dateFrom") ?? ""}
+              dateTo={searchParams.get("dateTo") ?? ""}
+              onChange={updateFilter}
+              onDateChange={(from, to) => {
+                const next = new URLSearchParams(searchParams);
+                if (from) next.set("dateFrom", from); else next.delete("dateFrom");
+                if (to) next.set("dateTo", to); else next.delete("dateTo");
+                next.delete("page");
+                setSearchParams(next);
+                setCurrentPage(1);
+              }}
+            />
+          }
           onAdd={openNewNote}
         />
         {notesQuery.isLoading && (
@@ -185,10 +220,8 @@ export default function Notes() {
           <NoteGrid
             notes={visibleNotes}
             relatedOptions={relatedOptions as NoteRelatedOption[]}
-            canDelete={canDelete}
             isLoading={notesQuery.isLoading}
             onOpen={openNote}
-            onDelete={(note) => void removeNote(note)}
           />
         </div>
         <div className="flex justify-center border-t border-gray-100 px-4 sm:justify-end dark:border-white/[0.05]">
@@ -206,9 +239,26 @@ export default function Notes() {
         form={noteForm}
         canCreate={canCreate}
         canUpdate={canUpdate}
+        canDelete={canDelete}
         isPending={createNote.isPending || updateNote.isPending}
         onClose={closeEditor}
         onSubmit={saveNote}
+        onDelete={() => {
+          if (selectedNote && canDelete) setDeleteCandidate(selectedNote);
+        }}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deleteCandidate)}
+        title="Delete note?"
+        description={deleteCandidate ? `This will permanently remove “${deleteCandidate.title}”.` : ""}
+        isPending={deleteNote.isPending}
+        onCancel={() => setDeleteCandidate(null)}
+        onConfirm={async () => {
+          if (!deleteCandidate) return;
+          await removeNote(deleteCandidate);
+          setDeleteCandidate(null);
+          closeEditor();
+        }}
       />
     </>
   );

@@ -53,9 +53,17 @@ export type {
   TaskRecord,
 } from "../validations/api";
 
-export async function getCompanies(): Promise<CompanyRecord[]> {
+export type CrmListQuery = Record<string, string | number | undefined>;
+
+function currentListQuery(): CrmListQuery {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  return Object.fromEntries(params.entries());
+}
+
+export async function getCompanies(params: CrmListQuery = currentListQuery()): Promise<CompanyRecord[]> {
   try {
-    const response = await apiClient.get("/companies");
+    const response = await apiClient.get("/companies", { params });
     return listResponse(companySchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load companies."));
@@ -88,9 +96,9 @@ export async function deleteCompany(id: CompanyRecord["id"]): Promise<void> {
   }
 }
 
-export async function getContacts(): Promise<ContactRecord[]> {
+export async function getContacts(params: CrmListQuery = currentListQuery()): Promise<ContactRecord[]> {
   try {
-    const response = await apiClient.get("/contacts");
+    const response = await apiClient.get("/contacts", { params });
     return listResponse(contactSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load contacts."));
@@ -167,9 +175,9 @@ export async function uploadLeadAvatar(
   }
 }
 
-export async function getLeads(): Promise<LeadRecord[]> {
+export async function getLeads(params: CrmListQuery = currentListQuery()): Promise<LeadRecord[]> {
   try {
-    const response = await apiClient.get("/leads");
+    const response = await apiClient.get("/leads", { params });
     return listResponse(leadSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load leads."));
@@ -202,9 +210,9 @@ export async function deleteLead(id: LeadRecord["id"]): Promise<void> {
   }
 }
 
-export async function getActivities(): Promise<ActivityRecord[]> {
+export async function getActivities(params: CrmListQuery = currentListQuery()): Promise<ActivityRecord[]> {
   try {
-    const response = await apiClient.get("/activities");
+    const response = await apiClient.get("/activities", { params });
     return listResponse(activitySchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load activities."));
@@ -220,9 +228,9 @@ export async function createActivity(input: CreateActivityInput): Promise<Activi
   }
 }
 
-export async function getNotes(): Promise<NoteRecord[]> {
+export async function getNotes(params: CrmListQuery = currentListQuery()): Promise<NoteRecord[]> {
   try {
-    const response = await apiClient.get("/notes");
+    const response = await apiClient.get("/notes", { params });
     return listResponse(noteSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load notes."));
@@ -255,9 +263,9 @@ export async function deleteNote(id: NoteRecord["id"]): Promise<void> {
   }
 }
 
-export async function getTasks(): Promise<TaskRecord[]> {
+export async function getTasks(params: CrmListQuery = currentListQuery()): Promise<TaskRecord[]> {
   try {
-    const response = await apiClient.get("/tasks");
+    const response = await apiClient.get("/tasks", { params });
     return listResponse(taskSchema).parse(response.data).data;
   } catch (error) {
     throw new Error(getApiErrorMessage(error, "Unable to load tasks."));

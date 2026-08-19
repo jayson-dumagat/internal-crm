@@ -1,8 +1,4 @@
-import {
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { SearchContext } from "./SearchContext";
 
@@ -13,7 +9,10 @@ type SearchProviderProps = {
 export const SearchProvider = ({
   children,
 }: SearchProviderProps) => {
-  const [search, setSearch] = useState("");
+  const [search, setSearchState] = useState(() => new URLSearchParams(window.location.search).get("search") ?? "");
+  const setSearch: React.Dispatch<React.SetStateAction<string>> = (value) => {
+    setSearchState(value);
+  };
 
   const value = useMemo(
     () => ({

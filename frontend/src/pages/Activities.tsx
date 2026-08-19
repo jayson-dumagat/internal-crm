@@ -17,16 +17,19 @@ import {
 } from "../types/Activities";
 import { downloadCsv } from "../utils/csv";
 import { groupByActivityDate } from "../utils/activity";
+import { useCan } from "../hooks/auth/useCan";
+import CrmFilterControls, { toFilterOptions } from "../components/crm/CrmFilterControls";
 
 export default function Activities() {
   const { search } = useSearch();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const activitiesQuery = useActivitiesQuery();
+  const canExport = useCan("activities.export");
   const events = activitiesQuery.data ?? [];
 
-  const [category, setCategory] = useState<ActivityCategoryFilter>("All");
-  const [outcome, setOutcome] = useState<ActivityOutcomeFilter>("All");
+  const [category, setCategory] = useState<ActivityCategoryFilter>((searchParams.get("category") as ActivityCategoryFilter) || "All");
+  const [outcome, setOutcome] = useState<ActivityOutcomeFilter>((searchParams.get("outcome") as ActivityOutcomeFilter) || "All");
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -34,21 +37,33 @@ export default function Activities() {
 
   const debouncedSearch = useDebounce(search, 400);
 
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+    setPage(1);
+    if (key === "category") setCategory((value || "All") as ActivityCategoryFilter);
+    if (key === "outcome") setOutcome((value || "All") as ActivityOutcomeFilter);
+  };
+
   const filteredEvents = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
     const targetFilter = (searchParams.get("target") ?? "")
       .trim()
       .toLowerCase();
     const actorFilter = (searchParams.get("actor") ?? "").trim().toLowerCase();
-    const dateFilter = searchParams.get("date");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
     return events.filter(
       (event) =>
         (category === "All" || event.category === category) &&
         (outcome === "All" || event.outcome === outcome) &&
         (!targetFilter || event.target.toLowerCase().includes(targetFilter)) &&
         (!actorFilter || event.actor.toLowerCase().includes(actorFilter)) &&
-        (!dateFilter ||
-          dayjs(event.timestamp).isSame(dayjs(dateFilter), "day")) &&
+        (!dateFrom || !dayjs(event.timestamp).isBefore(dayjs(dateFrom), "day")) &&
+        (!dateTo || !dayjs(event.timestamp).isAfter(dayjs(dateTo), "day")) &&
         (!term ||
           [
             event.id,
@@ -111,20 +126,32 @@ export default function Activities() {
       <AppBreadcrumb pageName="Activities" />
       <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <ActivityToolbar
-          category={category}
-          outcome={outcome}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((value) => !value)}
-          onCategoryChange={(value) => {
-            setCategory(value);
-            setPage(1);
-          }}
-          onOutcomeChange={(value) => {
-            setOutcome(value);
-            setPage(1);
-          }}
+          filters={
+            <CrmFilterControls
+              filters={[
+                { key: "category", label: "Category", value: searchParams.get("category") ?? "", options: toFilterOptions(activityCategories) },
+                { key: "outcome", label: "Outcome", value: searchParams.get("outcome") ?? "", options: toFilterOptions(["Success", "Warning", "Denied"]) },
+                { key: "actor", label: "Actor", value: searchParams.get("actor") ?? "", options: toFilterOptions(events.map((event) => event.actor)) },
+                { key: "action", label: "Action", value: searchParams.get("action") ?? "", options: toFilterOptions(events.map((event) => event.action)) },
+                { key: "target", label: "Target", value: searchParams.get("target") ?? "", options: toFilterOptions(events.map((event) => event.target)) },
+              ]}
+              dateFrom={searchParams.get("dateFrom") ?? ""}
+              dateTo={searchParams.get("dateTo") ?? ""}
+              onChange={updateFilter}
+              onDateChange={(from, to) => {
+                const next = new URLSearchParams(searchParams);
+                if (from) next.set("dateFrom", from); else next.delete("dateFrom");
+                if (to) next.set("dateTo", to); else next.delete("dateTo");
+                next.delete("page");
+                setSearchParams(next);
+                setPage(1);
+              }}
+            />
+          }
           onExport={exportAuditLog}
-          categories={activityCategories}
+          canExport={canExport}
         />
         {activitiesQuery.isLoading && (
           <p className="px-5 py-3 text-sm text-gray-500">

@@ -1,5 +1,6 @@
 import { AppDataSource } from "../../database/data-source";
 import { Activity } from "./activity.entity";
+import { publishNotification } from "../../services/notifications";
 
 const fullActivityLogRoles = new Set([
   "crm.admin",
@@ -28,7 +29,7 @@ export async function recordActivity(input: {
   ipAddress?: string | null;
   details?: string | null;
 }): Promise<void> {
-  await AppDataSource.getRepository(Activity).save(
+  const saved = await AppDataSource.getRepository(Activity).save(
     AppDataSource.getRepository(Activity).create({
       tenantId: input.tenantId,
       actorId: input.actorId ?? null,
@@ -42,4 +43,12 @@ export async function recordActivity(input: {
       details: input.details ?? null,
     }),
   );
+  await publishNotification({
+    tenantId: input.tenantId,
+    id: saved.id,
+    title: input.action,
+    message: `${input.actorName} ${input.action} ${input.target}`,
+    category: input.category,
+    createdAt: saved.createdAt,
+  }).catch((error) => console.error("Failed to publish CRM notification", error));
 }

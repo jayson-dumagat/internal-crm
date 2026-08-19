@@ -2,7 +2,14 @@ import multer from "multer";
 import type { NextFunction, Request, Response } from "express";
 import path from "node:path";
 
-const fallbackImageExtensions = new Set([".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
+const fallbackImageExtensions = new Set([
+  ".gif",
+  ".jpeg",
+  ".jpg",
+  ".png",
+  ".svg",
+  ".webp",
+]);
 
 const imageUpload = multer({
   storage: multer.memoryStorage(),
@@ -22,14 +29,19 @@ const imageUpload = multer({
   },
 });
 
-export function parseImageUpload(req: Request, res: Response, next: NextFunction): void {
+export function parseImageUpload(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
   imageUpload.single("file")(req, res, (error) => {
     if (error) {
       res.status(400).json({
         success: false,
-        message: error instanceof multer.MulterError
-          ? "The image must be 5 MB or smaller."
-          : "Please upload a valid image file.",
+        message:
+          error instanceof multer.MulterError
+            ? "The image must be 5 MB or smaller."
+            : "Please upload a valid image file.",
       });
       return;
     }

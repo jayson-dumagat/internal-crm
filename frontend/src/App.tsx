@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 //import Ecommerce from "./pages/Dashboard/Ecommerce";
 import Stocks from "./pages/saved/Dashboard/Stocks";
@@ -29,7 +30,7 @@ import Invoices from "./pages/saved/Invoices";
 import ComingSoon from "./pages/saved/OtherPage/ComingSoon";
 import FileManager from "./pages/saved/FileManager";
 //import Calendar from "./pages/Calendar";
-import Calendar from "./pages/Calendar";
+const Calendar = lazy(() => import("./pages/Calendar"));
 import BasicTables from "./pages/saved/Tables/BasicTables";
 import DataTables from "./pages/saved/Tables/DataTables";
 import PricingTables from "./pages/saved/PricingTables";
@@ -90,25 +91,27 @@ import TextGeneratorPage from "./pages/saved/Ai/Text/TextGenerator";
 import ImageGeneratorPage from "./pages/saved/Ai/Image/ImageGenerator";
 import CodeGeneratorPage from "./pages/saved/Ai/Code/CodeGenerator";
 import CrmLayout from "./layout/CrmLayout";
-import Dashboard from "./pages/CrmDashboard/Dashboard";
-import Tasks from "./pages/Tasks";
+const Dashboard = lazy(() => import("./pages/CrmDashboard/Dashboard"));
+const Tasks = lazy(() => import("./pages/Tasks"));
 //import Inbox from "./pages/CrmInbox/Inbox";
-import Leads from "./pages/Leads";
-import Companies from "./pages/Companies";
-import Contacts from "./pages/Contacts";
-import Pipelines from "./pages/Pipelines";
-import Notes from "./pages/Notes";
-import Activities from "./pages/Activities";
+const Leads = lazy(() => import("./pages/Leads"));
+const Companies = lazy(() => import("./pages/Companies"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Pipelines = lazy(() => import("./pages/Pipelines"));
+const Notes = lazy(() => import("./pages/Notes"));
+const Activities = lazy(() => import("./pages/Activities"));
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PermissionRoute from "./components/auth/PermissionRoute";
 import Unauthorized from "./pages/saved/OtherPage/Unauthorized";
-import AccessControl from "./pages/AccessControl";
+const AccessControl = lazy(() => import("./pages/AccessControl"));
+import PageLoadingSkeleton from "./components/common/PageLoadingSkeleton";
 
 export default function App() {
   return (
     <>
       <Router>
         <ScrollToTop />
+        <Suspense fallback={<PageLoadingSkeleton />}>
         <Routes>
           <Route path="/" element={<Navigate to="/signin" replace />} />
           <Route
@@ -383,6 +386,7 @@ export default function App() {
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
         </Routes>
+        </Suspense>
       </Router>
     </>
   );

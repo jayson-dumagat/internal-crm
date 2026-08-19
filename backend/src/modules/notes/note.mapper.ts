@@ -5,7 +5,7 @@ import { normalizeUserName } from "../../shared/utils/names";
 import { Note } from "./note.entity";
 import { maskSensitive } from "../../shared/utils/privacy";
 
-export function toNoteDto(note: Note, req?: Request) {
+export function toNoteDto(note: Note, req?: Request, relatedAvatar?: string | null) {
   const canSee = (field: string) => !req || canViewField(req, field);
   const dto = {
     id: note.id,
@@ -14,6 +14,7 @@ export function toNoteDto(note: Note, req?: Request) {
     contentHtml: canSee("notes.content") ? note.contentHtml : null,
     category: note.category,
     relatedTo: canSee("notes.relatedTo") ? note.relatedTo ?? "" : maskSensitive(note.relatedTo),
+    relatedAvatar: canSee("notes.relatedTo") ? relatedAvatar ?? null : null,
     author: canSee("notes.author") ? normalizeUserName(note.authorName) : maskSensitive(note.authorName),
     authorAvatar: canSee("notes.author") ? note.authorAvatarUrl : null,
     createdAt: note.createdAt.toISOString(),

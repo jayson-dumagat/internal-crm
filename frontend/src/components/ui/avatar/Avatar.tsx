@@ -45,7 +45,7 @@ const Avatar: React.FC<AvatarProps> = ({
     <ArkAvatar.Root
       role="img"
       aria-label={alt}
-      className={`relative overflow-hidden rounded-full ${sizeClasses[size]}`}
+      className={`relative shrink-0 overflow-hidden rounded-full ${sizeClasses[size]}`}
     >
       {src && (
         <ArkAvatar.Image

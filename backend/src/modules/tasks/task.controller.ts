@@ -10,6 +10,7 @@ import { toTaskDto } from "./task.mapper";
 import { toTaskStatus as mapTaskStatus } from "./task.types";
 import { Lead } from "../leads/lead.entity";
 import { canAccessRecord, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
+import { getListQuery, matchesDateRange, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const taskRepository = () => AppDataSource.getRepository(Task);
 const userRepository = () => AppDataSource.getRepository(User);
@@ -36,6 +37,7 @@ export async function listTasks(req: Request, res: Response, next: NextFunction)
   try {
     const tenantId = req.session.user?.tenantId;
     if (!tenantId) { res.status(401).json({ success: false, message: "Authentication is required." }); return; }
+    const query = getListQuery(req, 50);
     const tasks = await taskRepository().find({ where: { tenantId }, relations: { assignee: true, lead: true }, order: { dueAt: "ASC", createdAt: "DESC" } });
     const currentUser = await getCurrentUser(req);
     const scope = getDataScope(req, "tasks");
@@ -44,7 +46,21 @@ export async function listTasks(req: Request, res: Response, next: NextFunction)
       : scope === "assigned"
         ? task.createdById === currentUser?.id || task.assignee?.entraObjectId === req.session.user?.entraObjectId
         : true);
-    res.status(200).json({ data: visibleTasks.map((task) => toTaskDto(task, req)) });
+    const normalizedStatus = query.status?.replaceAll("-", "_");
+    const filtered = visibleTasks.filter((task) => matchesStatus(task.status, normalizedStatus))
+      .filter((task) => !query.kind || task.kind === query.kind)
+      .filter((task) => !query.type || task.type === query.type)
+      .filter((task) => !query.priority || task.priority === query.priority)
+      .filter((task) => !query.assignedTo || task.assignee?.entraObjectId === query.assignedTo || task.assignee?.displayName?.toLowerCase() === query.assignedTo.toLowerCase())
+      .filter((task) => !query.relatedTo || task.leadId === query.relatedTo || matchesQuery(task.lead ? `${task.lead.firstName} ${task.lead.lastName}` : "", query.relatedTo))
+      .filter((task) => !query.dateFrom && !query.dateTo
+        ? true
+        : matchesDateRange(task.startAt, query.dateFrom, query.dateTo)
+          || matchesDateRange(task.dueAt, query.dateFrom, query.dateTo)
+          || matchesDateRange(task.createdAt, query.dateFrom, query.dateTo))
+      .filter((task) => matchesSearch([task.title, task.description, task.type, task.priority, task.status, task.assignee?.displayName, task.lead ? `${task.lead.firstName} ${task.lead.lastName}` : ""].join(" "), query.search));
+    const page = paginate(filtered, query);
+    res.status(200).json({ data: page.data.map((task) => toTaskDto(task, req)), meta: page.meta });
   } catch (error) { next(error); }
 }
 

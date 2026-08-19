@@ -10,6 +10,8 @@ import type { CreateLeadInput } from "../types/Crm";
 import type { Lead, LeadStatus } from "../types/Leads";
 import {
   useContactsQuery,
+  useCompaniesQuery,
+  useUsersQuery,
   useCreateLead,
   useDeleteLead,
   useLeadsQuery,
@@ -29,6 +31,12 @@ import { downloadCsv } from "../utils/csv";
 import { useSearch } from "../hooks/useSearch";
 import { useDebounce } from "../hooks/useDebounce";
 import { useToast } from "../hooks/useToast";
+import { useSearchParams } from "react-router";
+import { DataLoadingSkeleton } from "../components/common/PageLoadingSkeleton";
+import CrmFilterControls, {
+  toFilterOptions,
+  toIdFilterOptions,
+} from "../components/crm/CrmFilterControls";
 
 const leadColumn = createColumnHelper<Lead>();
 const leadColumns = [
@@ -40,22 +48,29 @@ const leadColumns = [
 export default function Leads() {
   const toast = useToast();
   const { search } = useSearch();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">("All");
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">(
+    (searchParams.get("status") as LeadStatus | "All") || "All",
+  );
   const [showFilters, setShowFilters] = useState(false);
   const leadsQuery = useLeadsQuery();
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
-  const contactsQuery = useContactsQuery();
+  const contactsQuery = useContactsQuery(false);
+  const companiesQuery = useCompaniesQuery(false);
+  const usersQuery = useUsersQuery();
+  const allLeadsQuery = useLeadsQuery(false);
   const canCreate = useCan("leads.create");
   const canUpdate = useCan("leads.update");
   const canDelete = useCan("leads.delete");
+  const canExport = useCan("leads.export");
   const leadData = useMemo(() => {
     const contactsByEmail = new Map(
       (contactsQuery.data ?? []).map((contact) => [
@@ -80,6 +95,16 @@ export default function Leads() {
   useEffect(() => setCurrentPage(1), [search, statusFilter]);
 
   const debouncedSearch = useDebounce(search, 300);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+    if (key === "status")
+      setStatusFilter((value || "All") as LeadStatus | "All");
+  };
 
   const filteredLeads = useMemo(() => {
     const normalizedSearch = debouncedSearch.trim().toLowerCase();
@@ -199,7 +224,7 @@ export default function Leads() {
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="border-b border-gray-100 px-4 py-2.5 sm:pr-5 dark:border-white/[0.05]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <SearchField/>
+            <SearchField />
             <div className="flex shrink-0 items-center justify-end gap-2 [&_svg]:size-4">
               <button
                 type="button"
@@ -212,7 +237,9 @@ export default function Leads() {
               <button
                 type="button"
                 onClick={exportLeads}
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                disabled={!canExport}
+                title={canExport ? "Export leads" : "Permission required"}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none disabled:[&_svg]:opacity-50 disabled:hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:disabled:border-gray-800 dark:disabled:bg-gray-900 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-900"
               >
                 <ExportIcon /> Export
               </button>
@@ -229,27 +256,65 @@ export default function Leads() {
           </div>
           {showFilters && (
             <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/[0.05]">
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as LeadStatus | "All")
-                }
-                className="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-              >
-                <option value="All">All statuses</option>
-                <option>New</option>
-                <option>Contacted</option>
-                <option>Qualified</option>
-                <option>Converted</option>
-                <option>Lost</option>
-              </select>
+              <CrmFilterControls
+                filters={[
+                  {
+                    key: "role",
+                    label: "Role / job title",
+                    value: searchParams.get("role") ?? "",
+                    options: toFilterOptions(
+                      (allLeadsQuery.data ?? []).map((lead) => lead.role),
+                    ),
+                  },
+                  {
+                    key: "company",
+                    label: "Company",
+                    value: searchParams.get("company") ?? "",
+                    options: toFilterOptions(
+                      (companiesQuery.data ?? []).map(
+                        (company) => company.name,
+                      ),
+                    ),
+                  },
+                  {
+                    key: "assignedTo",
+                    label: "Assigned to",
+                    value: searchParams.get("assignedTo") ?? "",
+                    options: toIdFilterOptions(
+                      (usersQuery.data ?? []).map((user) => ({
+                        id: user.id,
+                        name: user.isCurrentUser ? "Me" : user.name,
+                      })),
+                    ),
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    value: searchParams.get("status") ?? "",
+                    options: toFilterOptions([
+                      "New",
+                      "Contacted",
+                      "Qualified",
+                      "Converted",
+                      "Lost",
+                    ]),
+                  },
+                  {
+                    key: "interestLevel",
+                    label: "Interest level",
+                    value: searchParams.get("interestLevel") ?? "",
+                    options: toFilterOptions(["High", "Medium", "Low"]),
+                  },
+                ]}
+                onChange={updateFilter}
+              />
             </div>
           )}
         </div>
         {leadsQuery.isLoading && (
-          <p className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-white/[0.05]">
-            Loading leads...
-          </p>
+          <div className="border-b border-gray-100 text-sm text-gray-500 dark:border-white/[0.05]">
+            <DataLoadingSkeleton rows={5} />
+          </div>
         )}
         {leadsQuery.isError && (
           <p className="border-b border-gray-100 px-4 py-3 text-sm text-error-500 dark:border-white/[0.05]">

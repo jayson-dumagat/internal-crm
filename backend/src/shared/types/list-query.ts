@@ -1,0 +1,27 @@
+export type ListQuery = {
+  search?: string;
+  status?: string;
+  category?: string;
+  outcome?: string;
+  kind?: string;
+  type?: string;
+  priority?: string;
+  assignedTo?: string;
+  relatedTo?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  author?: string;
+  actor?: string;
+  action?: string;
+  target?: string;
+  role?: string;
+  company?: string;
+  location?: string;
+  relationshipOwner?: string;
+  relationshipLevel?: string;
+  clientType?: string;
+  riskProfile?: string;
+  interestLevel?: string;
+  page: number;
+  pageSize: number;
+};

@@ -20,9 +20,11 @@ type NoteEditorSheetProps = {
   form: UseFormReturn<NoteFormValues>;
   canCreate: boolean;
   canUpdate: boolean;
+  canDelete: boolean;
   isPending: boolean;
   onClose: () => void;
   onSubmit: (values: NoteFormValues) => void;
+  onDelete?: () => void;
 };
 
 export default function NoteEditorSheet({
@@ -32,9 +34,11 @@ export default function NoteEditorSheet({
   form,
   canCreate,
   canUpdate,
+  canDelete,
   isPending,
   onClose,
   onSubmit,
+  onDelete,
 }: NoteEditorSheetProps) {
   const noteTitle = form.watch("title");
   const noteContent = form.watch("content");
@@ -87,6 +91,9 @@ export default function NoteEditorSheet({
           </Field>
         </FormSection>
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-5 dark:border-white/[0.05]">
+          {selectedNote && onDelete && (
+            <button type="button" onClick={onDelete} disabled={!canDelete || isPending} className="mr-auto h-10 rounded-lg border border-error-200 px-4 text-sm font-medium text-error-600 hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-error-500/30 dark:hover:bg-error-500/10">Delete</button>
+          )}
           <button type="button" onClick={onClose} className={secondaryButtonClassName}>Cancel</button>
           <button type="submit" disabled={isPending || !noteTitle.trim() || !noteContent.trim() || (selectedNote ? !canUpdate : !canCreate)} className={primaryButtonClassName}>
             {isPending ? "Saving..." : selectedNote ? "Save changes" : "Add Note"}

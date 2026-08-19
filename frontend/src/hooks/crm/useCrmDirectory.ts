@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -44,6 +45,24 @@ import type {
 import type { TaskStatus } from "../../types/Crm";
 import { getUsers } from "../../api/users";
 import { useAuth } from "../auth/useAuth";
+import { useSearch } from "../useSearch";
+import { useDebounce } from "../useDebounce";
+import { useLocation } from "react-router";
+import type { CrmListQuery } from "../../api/crm";
+
+function useCrmListParams(includeFilters = true): { params: CrmListQuery; key: string } {
+  const { search } = useSearch();
+  const debouncedSearch = useDebounce(search, 400);
+  const location = useLocation();
+  const params = useMemo<CrmListQuery>(() => {
+    if (!includeFilters) return {};
+    const urlParams = new URLSearchParams(location.search);
+    if (debouncedSearch.trim()) urlParams.set("search", debouncedSearch.trim());
+    else urlParams.delete("search");
+    return Object.fromEntries(urlParams.entries());
+  }, [debouncedSearch, includeFilters, location.search]);
+  return { params, key: includeFilters ? JSON.stringify(params) : "all" };
+}
 
 export const crmDirectoryKeys = {
   all: ["crm-directory"] as const,
@@ -56,17 +75,19 @@ export const crmDirectoryKeys = {
   tasks: () => [...crmDirectoryKeys.all, "tasks"] as const,
 };
 
-export function useCompaniesQuery() {
+export function useCompaniesQuery(includeFilters = true) {
+  const { params, key } = useCrmListParams(includeFilters);
   return useQuery({
-    queryKey: crmDirectoryKeys.companies(),
-    queryFn: getCompanies,
+    queryKey: [...crmDirectoryKeys.companies(), key],
+    queryFn: () => getCompanies(params),
   });
 }
 
-export function useContactsQuery() {
+export function useContactsQuery(includeFilters = true) {
+  const { params, key } = useCrmListParams(includeFilters);
   return useQuery({
-    queryKey: crmDirectoryKeys.contacts(),
-    queryFn: getContacts,
+    queryKey: [...crmDirectoryKeys.contacts(), key],
+    queryFn: () => getContacts(params),
   });
 }
 
@@ -175,8 +196,9 @@ export function useUploadLeadAvatar() {
   });
 }
 
-export function useLeadsQuery() {
-  return useQuery({ queryKey: crmDirectoryKeys.leads(), queryFn: getLeads });
+export function useLeadsQuery(includeFilters = true) {
+  const { params, key } = useCrmListParams(includeFilters);
+  return useQuery({ queryKey: [...crmDirectoryKeys.leads(), key], queryFn: () => getLeads(params) });
 }
 
 export function useCreateLead() {
@@ -214,14 +236,15 @@ export function useDeleteLead() {
 
 export function useActivitiesQuery() {
   const { user } = useAuth();
+  const { params, key } = useCrmListParams();
   const accessFingerprint = `${user?.entraObjectId ?? "anonymous"}:${(user?.roles ?? []).join(",")}:${(user?.permissions ?? []).join(",")}`;
 
   return useQuery({
     // Keep activity results isolated by user and current access grants. This
     // prevents a cached tenant-wide log from being reused after a role change
     // or when a different account signs in on the same browser.
-    queryKey: [...crmDirectoryKeys.activities(), accessFingerprint],
-    queryFn: getActivities,
+    queryKey: [...crmDirectoryKeys.activities(), accessFingerprint, key],
+    queryFn: () => getActivities(params),
     enabled: Boolean(user),
   });
 }
@@ -235,7 +258,8 @@ export function useCreateActivity() {
 }
 
 export function useNotesQuery() {
-  return useQuery({ queryKey: crmDirectoryKeys.notes(), queryFn: getNotes });
+  const { params, key } = useCrmListParams();
+  return useQuery({ queryKey: [...crmDirectoryKeys.notes(), key], queryFn: () => getNotes(params) });
 }
 
 export function useCreateNote() {
@@ -266,7 +290,8 @@ export function useDeleteNote() {
 }
 
 export function useTasksQuery() {
-  return useQuery({ queryKey: crmDirectoryKeys.tasks(), queryFn: getTasks });
+  const { params, key } = useCrmListParams();
+  return useQuery({ queryKey: [...crmDirectoryKeys.tasks(), key], queryFn: () => getTasks(params) });
 }
 
 export function useCreateTask() {

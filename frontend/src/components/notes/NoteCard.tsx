@@ -2,7 +2,6 @@ import type { NoteRecord } from "../../api/crm";
 import { formatDisplayDate } from "../../utils/date";
 import Avatar from "../ui/avatar/Avatar";
 import Badge from "../ui/badge/Badge";
-import { TrashBinIcon } from "../../icons";
 
 const categoryColor = {
   Client: "primary",
@@ -20,17 +19,13 @@ export type NoteRelatedOption = {
 type NoteCardProps = {
   note: NoteRecord;
   relatedOptions: readonly NoteRelatedOption[];
-  canDelete: boolean;
   onOpen: (note: NoteRecord) => void;
-  onDelete: (note: NoteRecord) => void;
 };
 
 export default function NoteCard({
   note,
   relatedOptions,
-  canDelete,
   onOpen,
-  onDelete,
 }: NoteCardProps) {
   const related = relatedOptions.find((item) => item.value === note.relatedTo);
   return (
@@ -48,23 +43,10 @@ export default function NoteCard({
     >
       <div className="flex items-start justify-between gap-3">
         <Badge variant="light" color={categoryColor[note.category]} size="sm">{note.category}</Badge>
-        <div className="flex items-center gap-2">
-          <span className="text-xs whitespace-nowrap text-gray-400">{formatDisplayDate(note.updatedAt)}</span>
-          <button
-            type="button"
-            disabled={!canDelete}
-            title={canDelete ? `Delete ${note.title}` : "Read-only access"}
-            onClick={(event) => { event.stopPropagation(); onDelete(note); }}
-            aria-label={`Delete ${note.title}`}
-            className="inline-flex size-7 items-center justify-center rounded-lg text-gray-400 hover:bg-error-50 hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-error-500/10"
-          >
-            <TrashBinIcon className="size-4" />
-          </button>
-        </div>
       </div>
       <div className="mt-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar src={related?.avatar ?? null} alt={note.relatedTo || "General"} size="xsmall" colorKey={note.relatedTo || note.id} />
+          <Avatar src={note.relatedAvatar ?? related?.avatar ?? null} alt={note.relatedTo || "General"} size="xsmall" colorKey={note.relatedTo || note.id} />
           <h2 className="line-clamp-2 text-base font-semibold text-gray-800 dark:text-white/90">{note.title}</h2>
         </div>
       </div>
@@ -74,9 +56,12 @@ export default function NoteCard({
         <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-500 dark:text-gray-400">{note.content}</p>
       )}
       <div className="mt-auto border-t border-gray-100 pt-3 dark:border-white/[0.05]">
-        <div className="flex items-center gap-2">
-          <Avatar src={note.authorAvatar} alt={note.author} size="xsmall" />
-          <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{note.author}</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Avatar src={note.authorAvatar} alt={note.author} size="xsmall" />
+            <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{note.author}</span>
+          </div>
+          <time dateTime={note.updatedAt} className="shrink-0 text-xs text-gray-400">{formatDisplayDate(note.updatedAt)}</time>
         </div>
       </div>
     </article>

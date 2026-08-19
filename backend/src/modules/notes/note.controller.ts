@@ -7,9 +7,16 @@ import { Note } from "./note.entity";
 import { createNoteSchema, updateNoteSchema } from "./note.schema";
 import { canAccessRecord, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import { toNoteDto } from "./note.mapper";
+import { getListQuery, matchesDateRange, matchesQuery, matchesSearch, paginate } from "../../shared/utils/list-query";
+import { Lead } from "../leads/lead.entity";
+import { Contact } from "../contacts/contact.entity";
+import { Company } from "../companies/company.entity";
 
 const noteRepository = () => AppDataSource.getRepository(Note);
 const userRepository = () => AppDataSource.getRepository(User);
+const leadRepository = () => AppDataSource.getRepository(Lead);
+const contactRepository = () => AppDataSource.getRepository(Contact);
+const companyRepository = () => AppDataSource.getRepository(Company);
 
 async function getAuthor(req: Request) {
   const sessionUser = req.session.user;
@@ -24,12 +31,27 @@ export async function listNotes(req: Request, res: Response, next: NextFunction)
       res.status(401).json({ success: false, message: "Authentication is required." });
       return;
     }
+    const query = getListQuery(req, 12);
     const notes = await noteRepository().find({ where: { tenantId }, order: { updatedAt: "DESC" }, take: 500 });
+    const [leads, contacts, companies] = await Promise.all([
+      leadRepository().find({ where: { owner: { entraTenantId: tenantId } }, relations: { owner: true } }),
+      contactRepository().find({ where: { tenantId } }),
+      companyRepository().find({ where: { tenantId } }),
+    ]);
+    const relatedAvatars = new Map<string, string | null>();
+    for (const lead of leads) relatedAvatars.set(`${lead.firstName} ${lead.lastName}`.trim().toLowerCase(), lead.avatarUrl ? `/api/v1/leads/${lead.id}/avatar` : null);
+    for (const contact of contacts) relatedAvatars.set((contact.name ?? "").toLowerCase(), contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null);
+    for (const company of companies) relatedAvatars.set(company.name.toLowerCase(), company.logoUrl ? `/api/v1/companies/${company.id}/logo` : null);
     const currentUser = await getAuthor(req);
     const visibleNotes = notes.filter((note) => canAccessRecord(req, "notes", note.id)).filter((note) => getDataScope(req, "notes") === "own"
       ? note.authorId === currentUser?.id
-      : true);
-    res.status(200).json({ data: visibleNotes.map((note) => toNoteDto(note, req)) });
+      : true).filter((note) => !query.category || note.category === query.category)
+      .filter((note) => matchesQuery(note.relatedTo, query.relatedTo))
+      .filter((note) => matchesQuery(note.authorName, query.author))
+      .filter((note) => matchesDateRange(note.createdAt, query.dateFrom, query.dateTo))
+      .filter((note) => matchesSearch([note.title, note.content, note.category, note.relatedTo, note.authorName].join(" "), query.search));
+    const page = paginate(visibleNotes, query);
+    res.status(200).json({ data: page.data.map((note) => toNoteDto(note, req, relatedAvatars.get((note.relatedTo ?? "").toLowerCase()))), meta: page.meta });
   } catch (error) {
     next(error);
   }

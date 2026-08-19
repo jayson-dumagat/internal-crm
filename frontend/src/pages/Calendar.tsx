@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -20,6 +20,9 @@ import {
   useCreateTask,
   useTasksQuery,
   useUpdateTask,
+  useDeleteTask,
+  useLeadsQuery,
+  useUsersQuery,
 } from "../hooks/crm/useCrmDirectory";
 import TaskFormSheet from "../components/task/TaskFormSheet";
 import { useCan } from "../hooks/auth/useCan";
@@ -27,6 +30,10 @@ import CalendarEventContent from "../components/calendar/CalendarEventContent";
 import CalendarToolbar from "../components/calendar/CalendarToolbar";
 import { selectionDateTime, taskEventColor } from "../utils/calendar";
 import { useToast } from "../hooks/useToast";
+import { useSearchParams } from "react-router";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import { DataLoadingSkeleton } from "../components/common/PageLoadingSkeleton";
+import CrmFilterControls, { toFilterOptions, toIdFilterOptions } from "../components/crm/CrmFilterControls";
 
 export default function Calendar() {
   const toast = useToast();
@@ -34,14 +41,36 @@ export default function Calendar() {
   const tasksQuery = useTasksQuery();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
   const canCreate = useCan("tasks.create");
   const canUpdate = useCan("tasks.update");
+  const canDelete = useCan("tasks.delete");
+  const [searchParams, setSearchParams] = useSearchParams();
   const tasks = tasksQuery.data ?? [];
+  const usersQuery = useUsersQuery();
+  const leadsQuery = useLeadsQuery(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [initialStartAt, setInitialStartAt] = useState<string | null>(null);
   const [initialDueAt, setInitialDueAt] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<TaskRecord | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get("kind") === "event") return;
+    const next = new URLSearchParams(searchParams);
+    next.set("kind", "event");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const updateFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next);
+  };
 
   const events = useMemo<EventInput[]>(
     () =>
@@ -168,7 +197,31 @@ export default function Calendar() {
         <CalendarToolbar
           canCreate={canCreate}
           onAddEvent={() => openNewEvent()}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((value) => !value)}
+          filters={
+            <CrmFilterControls
+              filters={[
+                { key: "type", label: "Type", value: searchParams.get("type") ?? "", options: toFilterOptions(["call", "email", "meeting", "follow_up", "document", "review", "general"]) },
+                { key: "priority", label: "Priority", value: searchParams.get("priority") ?? "", options: toFilterOptions(["low", "medium", "high", "urgent"]) },
+                { key: "assignedTo", label: "Assigned to", value: searchParams.get("assignedTo") ?? "", options: toIdFilterOptions((usersQuery.data ?? []).map((user) => ({ id: user.id, name: user.isCurrentUser ? "Me" : user.name }))) },
+                { key: "relatedTo", label: "Related lead", value: searchParams.get("relatedTo") ?? "", options: toIdFilterOptions((leadsQuery.data ?? []).map((lead) => ({ id: lead.id, name: lead.name }))) },
+                { key: "status", label: "Status", value: searchParams.get("status") ?? "", options: toFilterOptions(["not-started", "in-progress", "completed", "overdue", "blocked"]) },
+              ]}
+              dateFrom={searchParams.get("dateFrom") ?? ""}
+              dateTo={searchParams.get("dateTo") ?? ""}
+              onChange={updateFilter}
+              onDateChange={(from, to) => {
+                const next = new URLSearchParams(searchParams);
+                if (from) next.set("dateFrom", from); else next.delete("dateFrom");
+                if (to) next.set("dateTo", to); else next.delete("dateTo");
+                next.delete("page");
+                setSearchParams(next);
+              }}
+            />
+          }
         />
+        {tasksQuery.isLoading && <DataLoadingSkeleton rows={5} />}
         <div className="custom-calendar">
           <FullCalendar
             ref={calendarRef}
@@ -216,7 +269,27 @@ export default function Calendar() {
         initialDueAt={initialDueAt}
         onClose={closeForm}
         onSubmit={saveEvent}
+        canDelete={canDelete}
+        onDelete={() => { if (selectedTask) setDeleteCandidate(selectedTask); }}
         isPending={createTask.isPending || updateTask.isPending}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deleteCandidate)}
+        title="Delete event?"
+        description={deleteCandidate ? `This will permanently remove “${deleteCandidate.title}”.` : ""}
+        isPending={deleteTask.isPending}
+        onCancel={() => setDeleteCandidate(null)}
+        onConfirm={async () => {
+          if (!deleteCandidate) return;
+          try {
+            await deleteTask.mutateAsync(deleteCandidate.id);
+            toast.success("Calendar event deleted.");
+            setDeleteCandidate(null);
+            closeForm();
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to delete calendar event.");
+          }
+        }}
       />
     </>
   );

@@ -9,3 +9,8 @@ export function registerRealtimeServer(server: Server) {
 export function emitPermissionUpdate(tenantId: string, userId?: string) {
   realtimeServer?.to(`tenant:${tenantId}`).emit("permissions.updated", { userId: userId ?? null });
 }
+
+export function emitNotification(notification: Record<string, unknown>) {
+  const tenantId = typeof notification.tenantId === "string" ? notification.tenantId : undefined;
+  if (tenantId) realtimeServer?.to(`tenant:${tenantId}`).emit("notification.created", notification);
+}
