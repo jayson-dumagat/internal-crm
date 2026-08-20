@@ -13,6 +13,7 @@ import { createCompanySchema, updateCompanySchema } from "./company.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import { toCompanyContactSummary, toCompanyDto } from "./company.mapper";
 import { getListQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
+import { publishCrmEvent } from "../../services/realtime-events";
 
 const companyRepository = () => AppDataSource.getRepository(Company);
 const contactRepository = () => AppDataSource.getRepository(Contact);
@@ -91,6 +92,7 @@ export async function createCompany(
       createdById: req.session.user?.entraObjectId ?? null,
     });
     const savedCompany = await companyRepository().save(company);
+    await publishCrmEvent({ tenantId, resource: "companies", action: "created", entityId: savedCompany.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(201).json({ data: toCompanyDto(savedCompany, [], req) });
   } catch (error) {
@@ -130,6 +132,7 @@ export async function updateCompany(
     Object.assign(company, parsed.data);
     const savedCompany = await companyRepository().save(company);
     const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
+    await publishCrmEvent({ tenantId: savedCompany.tenantId, resource: "companies", action: "updated", entityId: savedCompany.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(200).json({
       data: toCompanyDto(savedCompany, contacts.map(toCompanyContactSummary), req),
@@ -168,6 +171,7 @@ export async function deleteCompany(
         console.error("Failed to remove company logo from object storage", error);
       });
     }
+    await publishCrmEvent({ tenantId: company.tenantId, resource: "companies", action: "deleted", entityId: company.id, actorObjectId: req.session.user?.entraObjectId });
     res.status(200).json({ success: true });
   } catch (error) {
     next(error);
@@ -211,6 +215,7 @@ export async function uploadCompanyLogo(
     }
 
     const contacts = await contactRepository().find({ where: { companyId: savedCompany.id, tenantId: req.session.user?.tenantId ?? "" } });
+    await publishCrmEvent({ tenantId: savedCompany.tenantId, resource: "companies", action: "updated", entityId: savedCompany.id, actorObjectId: req.session.user?.entraObjectId });
     res.status(200).json({
       data: toCompanyDto(savedCompany, contacts.map(toCompanyContactSummary), req),
     });

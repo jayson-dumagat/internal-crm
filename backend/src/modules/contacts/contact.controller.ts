@@ -16,6 +16,7 @@ import { createContactSchema, updateContactSchema } from "./contact.schema";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import { toContactDto } from "./contact.mapper";
 import { getListQuery, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
+import { publishCrmEvent } from "../../services/realtime-events";
 
 const contactRepository = () => AppDataSource.getRepository(Contact);
 const companyRepository = () => AppDataSource.getRepository(Company);
@@ -146,6 +147,7 @@ export async function createContact(
     const company = savedContact.companyId
       ? await companyRepository().findOneBy({ id: savedContact.companyId, tenantId: requestTenantId })
       : undefined;
+    await publishCrmEvent({ tenantId: requestTenantId, resource: "contacts", action: "created", entityId: savedContact.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(201).json({ data: toContactDto(savedContact, company ?? undefined, owner, req) });
   } catch (error) {
@@ -231,6 +233,7 @@ export async function updateContact(
     owner ??= savedContact.relationshipOwnerId
       ? await findRelationshipOwner(req, savedContact.relationshipOwnerId)
       : undefined;
+    await publishCrmEvent({ tenantId: savedContact.tenantId, resource: "contacts", action: "updated", entityId: savedContact.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(200).json({ data: toContactDto(savedContact, company ?? undefined, owner, req) });
   } catch (error) {
@@ -265,6 +268,7 @@ export async function deleteContact(
         console.error("Failed to remove contact avatar from object storage", error);
       });
     }
+    await publishCrmEvent({ tenantId: contact.tenantId, resource: "contacts", action: "deleted", entityId: contact.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(200).json({ success: true });
   } catch (error) {
@@ -312,6 +316,7 @@ export async function uploadContactAvatar(
     const company = savedContact.companyId
       ? await companyRepository().findOneBy({ id: savedContact.companyId, tenantId: req.session.user?.tenantId ?? "" })
       : undefined;
+    await publishCrmEvent({ tenantId: savedContact.tenantId, resource: "contacts", action: "updated", entityId: savedContact.id, actorObjectId: req.session.user?.entraObjectId });
 
     res.status(200).json({ data: toContactDto(savedContact, company ?? undefined, undefined, req) });
   } catch (error) {

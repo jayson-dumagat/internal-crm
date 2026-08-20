@@ -28,11 +28,15 @@ type PermissionState = {
 };
 
 const cardClassName =
-  "rounded-xl border border-gray-100 bg-white shadow-theme-xs dark:border-white/[0.05] dark:bg-white/[0.03]";
+  "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900";
 const actionButtonClassName =
-  "inline-flex h-8 items-center rounded-lg border border-gray-300 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]";
+  "inline-flex h-9 items-center rounded-lg border border-gray-300 px-3 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]";
 const primaryActionButtonClassName =
-  "inline-flex h-8 items-center rounded-lg bg-brand-500 px-3 text-xs font-medium text-white hover:bg-brand-600";
+  "inline-flex h-9 items-center rounded-lg bg-brand-500 px-3 text-xs font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50";
+const tableClassName =
+  "w-full text-left [&_td]:px-4 [&_td]:py-3 [&_th]:px-4 [&_th]:py-2.5";
+const tableHeaderClassName =
+  "border-b border-gray-100 bg-gray-50/80 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400";
 
 function policyState(user: AccessUser | undefined): PermissionState {
   return {
@@ -70,6 +74,15 @@ export default function AccessControl() {
     () => usersQuery.data?.find((user) => user.id === selectedUserId),
     [selectedUserId, usersQuery.data],
   );
+  const userStats = useMemo(() => {
+    const users = usersQuery.data ?? [];
+    return {
+      total: users.length,
+      withAccess: users.filter((user) => user.policy.effectivePermissions.length > 0).length,
+      withoutAccess: users.filter((user) => user.policy.effectivePermissions.length === 0).length,
+      restricted: users.filter((user) => Object.keys(user.policy.resourceAssignments).length > 0).length,
+    };
+  }, [usersQuery.data]);
   const roleLabelByEntraValue = useMemo(
     () =>
       new Map(
@@ -195,15 +208,41 @@ export default function AccessControl() {
       />
       <AppBreadcrumb pageName="Access Control" />
 
-      <section className={`${cardClassName} overflow-hidden`}>
-        <div className="flex flex-col gap-1 border-b border-gray-100 px-5 py-4 dark:border-white/[0.05]">
-          <h1 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">
             Access control
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Manage database-backed roles, then apply per-user privacy
-            restrictions where needed.
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Control role permissions, record scope, and field visibility from one place.
           </p>
+        </div>
+        <Badge color="info" size="sm">Database-backed policies</Badge>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {[
+          { label: "CRM users", value: userStats.total, color: "primary" as const },
+          { label: "With access", value: userStats.withAccess, color: "success" as const },
+          { label: "No access", value: userStats.withoutAccess, color: "error" as const },
+          { label: "Record restricted", value: userStats.restricted, color: "warning" as const },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-gray-800 dark:text-white/90">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className={`${cardClassName} overflow-hidden`}>
+        <div className="flex flex-col gap-2 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">User access</h2>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Per-user restrictions override, but never grant, role access.</p>
+          </div>
+          <Badge color={userStats.withoutAccess ? "warning" : "success"} size="sm">
+            {userStats.total} {userStats.total === 1 ? "user" : "users"}
+          </Badge>
         </div>
         {usersQuery.isLoading ? (
           <p className="px-5 py-8 text-sm text-gray-500">Loading users...</p>
@@ -213,16 +252,14 @@ export default function AccessControl() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left">
+            <table className={`${tableClassName} min-w-[700px]`}>
               <thead>
-                <tr className="border-b border-gray-100 text-xs tracking-wide text-gray-400 uppercase dark:border-white/[0.05]">
-                  <th className="px-5 py-3 font-medium">User</th>
-                  <th className="px-5 py-3 font-medium">Entra roles</th>
-                  <th className="px-5 py-3 font-medium">
-                    Effective permissions
-                  </th>
-                  <th className="px-5 py-3 font-medium">Access</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                <tr className={tableHeaderClassName}>
+                  <th className="font-semibold">User</th>
+                  <th className="font-semibold">Entra roles</th>
+                  <th className="font-semibold">Permissions</th>
+                  <th className="font-semibold">Access</th>
+                  <th className="text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,9 +268,9 @@ export default function AccessControl() {
                   return (
                     <tr
                       key={user.id}
-                      className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-white/[0.05] dark:hover:bg-white/[0.03]"
+                      className="border-b border-gray-100 last:border-0 transition-colors hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-white/[0.03]"
                     >
-                      <td className="px-5 py-4">
+                      <td>
                         <div className="flex items-center gap-3">
                           <Avatar
                             src={user.avatarUrl}
@@ -251,7 +288,7 @@ export default function AccessControl() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td>
                         <div className="flex flex-wrap gap-1">
                           {roles.length ? (
                             roles.map((role) => (
@@ -266,10 +303,11 @@ export default function AccessControl() {
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
-                        {user.policy.effectivePermissions.length}
+                      <td className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-semibold text-gray-800 dark:text-white/90">{user.policy.effectivePermissions.length}</span>
+                        <span className="ml-1 text-xs text-gray-400">active</span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td>
                         <Badge
                           color={
                             user.policy.effectivePermissions.length
@@ -283,7 +321,7 @@ export default function AccessControl() {
                             : "No access"}
                         </Badge>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
@@ -310,15 +348,13 @@ export default function AccessControl() {
         )}
       </section>
 
-      <section className={`${cardClassName} mt-5 overflow-hidden`}>
-        <div className="flex flex-col gap-1 border-b border-gray-100 px-5 py-4 dark:border-white/[0.05]">
-          <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">
-            CRM roles
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Customize the permissions granted by each Entra app role. Users
-            inherit the updated mapping on their next request.
-          </p>
+      <section className={`${cardClassName} mt-4 overflow-hidden`}>
+        <div className="flex flex-col gap-2 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">CRM roles</h2>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Customize the permissions inherited from each Entra app role.</p>
+          </div>
+          <Badge color="primary" size="sm">{rolesQuery.data?.length ?? 0} roles</Badge>
         </div>
         {rolesQuery.isLoading ? (
           <p className="px-5 py-8 text-sm text-gray-500">Loading roles...</p>
@@ -328,42 +364,41 @@ export default function AccessControl() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] text-left">
+            <table className={`${tableClassName} min-w-[780px]`}>
               <thead>
-                <tr className="border-b border-gray-100 text-xs tracking-wide text-gray-400 uppercase dark:border-white/[0.05]">
-                  <th className="px-5 py-3 font-medium">Role</th>
-                  <th className="px-5 py-3 font-medium">
-                    Entra app role value
-                  </th>
-                  <th className="px-5 py-3 font-medium">Permissions</th>
-                  <th className="px-5 py-3 font-medium">Description</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                <tr className={tableHeaderClassName}>
+                  <th className="font-semibold">Role</th>
+                  <th className="font-semibold">Entra app role</th>
+                  <th className="font-semibold">Permissions</th>
+                  <th className="font-semibold">Description</th>
+                  <th className="text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {(rolesQuery.data ?? []).map((role) => (
                   <tr
                     key={role.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50 dark:border-white/[0.05] dark:hover:bg-white/[0.03]"
+                    className="border-b border-gray-100 last:border-0 transition-colors hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-white/[0.03]"
                   >
-                    <td className="px-5 py-4">
+                    <td>
                       <p className="font-medium text-gray-800 dark:text-white/90">
                         {role.name}
                       </p>
                       <p className="text-xs text-gray-400">{role.code}</p>
                     </td>
-                    <td className="px-5 py-4">
+                    <td>
                       <Badge color="light" size="sm">
                         {role.entraAppRoleValue}
                       </Badge>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      {role.permissionCodes.length}
+                    <td className="text-sm text-gray-600 dark:text-gray-300">
+                      <span className="font-semibold text-gray-800 dark:text-white/90">{role.permissionCodes.length}</span>
+                      <span className="ml-1 text-xs text-gray-400">granted</span>
                     </td>
-                    <td className="max-w-sm px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="max-w-sm text-sm text-gray-500 dark:text-gray-400">
                       {role.description ?? "No description"}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="text-right">
                       <button
                         type="button"
                         onClick={() => openRoleEditor(role)}
@@ -390,8 +425,8 @@ export default function AccessControl() {
       >
         {selectedRole && catalogQuery.data && (
           <div className="space-y-5">
-            <section className={cardClassName}>
-              <div className="mb-4">
+            <section className={`${cardClassName} p-4 sm:p-5`}>
+              <div className="mb-4 border-b border-gray-100 pb-3 dark:border-gray-800">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">
                   Role permissions
                 </h2>
@@ -405,7 +440,7 @@ export default function AccessControl() {
                 {catalogQuery.data.permissions.map((permission) => (
                   <label
                     key={permission.code}
-                    className="flex items-start gap-2 rounded-lg border border-gray-100 px-3 py-2.5 text-sm dark:border-white/[0.06]"
+                    className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors dark:border-white/[0.06] ${roleDraft.includes(permission.code) ? "border-brand-200 bg-brand-50/60 dark:border-brand-500/30 dark:bg-brand-500/10" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50/70 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}
                   >
                     <Checkbox
                       checked={roleDraft.includes(permission.code)}
@@ -456,8 +491,8 @@ export default function AccessControl() {
       >
         {selectedUser && catalogQuery.data && (
           <div className="space-y-5">
-            <section className={cardClassName}>
-              <div className="mb-4">
+            <section className={`${cardClassName} p-4 sm:p-5`}>
+              <div className="mb-4 border-b border-gray-100 pb-3 dark:border-gray-800">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">
                   Permissions
                 </h2>
@@ -476,7 +511,7 @@ export default function AccessControl() {
                   return (
                     <label
                       key={permission.code}
-                      className={`flex items-start gap-2 rounded-lg border border-gray-100 px-3 py-2.5 text-sm dark:border-white/[0.06] ${!roleAllows ? "opacity-60" : ""}`}
+                      className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors dark:border-white/[0.06] ${!roleAllows ? "border-gray-100 opacity-60 dark:border-white/[0.06]" : enabled ? "border-brand-200 bg-brand-50/60 dark:border-brand-500/30 dark:bg-brand-500/10" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50/70 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}
                     >
                       <Checkbox
                         checked={enabled}
@@ -499,8 +534,8 @@ export default function AccessControl() {
                 })}
               </div>
             </section>
-            <section className={cardClassName}>
-              <div className="mb-4">
+            <section className={`${cardClassName} p-4 sm:p-5`}>
+              <div className="mb-4 border-b border-gray-100 pb-3 dark:border-gray-800">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">
                   Record scope
                 </h2>
@@ -543,8 +578,8 @@ export default function AccessControl() {
                 ))}
               </div>
             </section>
-            <section className={cardClassName}>
-              <div className="mb-4">
+            <section className={`${cardClassName} p-4 sm:p-5`}>
+              <div className="mb-4 border-b border-gray-100 pb-3 dark:border-gray-800">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">
                   Exact record assignments
                 </h2>
@@ -565,7 +600,7 @@ export default function AccessControl() {
                   return (
                     <div
                       key={resource.key}
-                      className="rounded-lg border border-gray-100 p-3 dark:border-white/[0.06]"
+                      className={`rounded-lg border p-3 transition-colors dark:border-white/[0.06] ${restricted ? "border-brand-200 bg-brand-50/30 dark:border-brand-500/30 dark:bg-brand-500/5" : "border-gray-100"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div>
@@ -641,8 +676,8 @@ export default function AccessControl() {
                 })}
               </div>
             </section>
-            <section className={cardClassName}>
-              <div className="mb-4">
+            <section className={`${cardClassName} p-4 sm:p-5`}>
+              <div className="mb-4 border-b border-gray-100 pb-3 dark:border-gray-800">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-white/90">
                   Field visibility
                 </h2>
@@ -660,7 +695,7 @@ export default function AccessControl() {
                   return (
                     <label
                       key={field.key}
-                      className={`flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2.5 text-sm dark:border-white/[0.06] ${!roleCanSee ? "opacity-60" : ""}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors dark:border-white/[0.06] ${!roleCanSee ? "border-gray-100 opacity-60 dark:border-white/[0.06]" : visible ? "border-brand-200 bg-brand-50/60 dark:border-brand-500/30 dark:bg-brand-500/10" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50/70 dark:hover:border-gray-700 dark:hover:bg-white/[0.03]"}`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-medium text-gray-700 dark:text-gray-200">

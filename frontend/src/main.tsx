@@ -12,6 +12,7 @@ import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastProvider";
 import { SearchProvider } from "./context/SearchProvider";
 import { PermissionProvider } from "./context/PermissionContext";
+import { RealtimeProvider } from "./context/RealtimeProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,15 +28,17 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <PermissionProvider>
-            <AppWrapper>
-              <ToastProvider>
-                <SearchProvider>
-                  <App />
-                </SearchProvider>
-              </ToastProvider>
-            </AppWrapper>
-          </PermissionProvider>
+          <RealtimeProvider>
+            <PermissionProvider>
+              <AppWrapper>
+                <ToastProvider>
+                  <SearchProvider>
+                    <App />
+                  </SearchProvider>
+                </ToastProvider>
+              </AppWrapper>
+            </PermissionProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

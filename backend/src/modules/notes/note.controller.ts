@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { User } from "../users/user.entity";
 import { recordActivity } from "../activities/activity.service";
+import { publishCrmEvent } from "../../services/realtime-events";
 import { Note } from "./note.entity";
 import { createNoteSchema, updateNoteSchema } from "./note.schema";
 import { canAccessRecord, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
@@ -92,6 +93,9 @@ export async function createNote(req: Request, res: Response, next: NextFunction
     await recordActivity({
       tenantId: sessionUser.tenantId,
       actorId: author?.id,
+      actorObjectId: sessionUser.entraObjectId,
+      resource: "notes",
+      entityId: saved.id,
       actorName: author?.displayName ?? sessionUser.name,
       actorAvatarUrl: author?.avatarUrl ? `/api/v1/users/${author.entraObjectId}/avatar` : null,
       action: "created note",
@@ -133,6 +137,7 @@ export async function updateNote(req: Request, res: Response, next: NextFunction
     if ("relatedTo" in parsed.data) note.relatedTo = parsed.data.relatedTo || null;
     if ("contentHtml" in parsed.data) note.contentHtml = parsed.data.contentHtml || null;
     const saved = await noteRepository().save(note);
+    await publishCrmEvent({ tenantId: sessionUser.tenantId, resource: "notes", action: "updated", entityId: saved.id, actorObjectId: sessionUser.entraObjectId });
     res.status(200).json({ data: toNoteDto(saved, req) });
   } catch (error) {
     next(error);
@@ -152,6 +157,7 @@ export async function deleteNote(req: Request, res: Response, next: NextFunction
       res.status(404).json({ success: false, message: "Note not found." });
       return;
     }
+    await publishCrmEvent({ tenantId, resource: "notes", action: "deleted", entityId: String(req.params.id), actorObjectId: req.session.user?.entraObjectId });
     res.status(200).json({ success: true });
   } catch (error) {
     next(error);

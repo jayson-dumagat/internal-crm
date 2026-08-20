@@ -6,6 +6,7 @@ import type {
   ResourceAssignments,
   ResourceKey,
 } from "../../shared/types/access";
+import { hasRbacPermission } from "./rbac";
 
 export type {
   AccessPermission,
@@ -169,8 +170,9 @@ export function canViewField(
   if (rule === "hidden") return false;
   const catalogEntry = accessFieldCatalog.find((entry) => entry.key === field);
   if (!catalogEntry?.sensitive) return true;
-  return (
-    request.session?.user?.permissions?.includes("data.sensitive.read") ?? false
+  return hasRbacPermission(
+    request.session?.user?.permissions ?? [],
+    "data.sensitive.read",
   );
 }
 

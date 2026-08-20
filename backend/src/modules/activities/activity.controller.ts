@@ -7,6 +7,7 @@ import { createActivitySchema } from "./activity.schema";
 import { canAccessRecord, firstHiddenInput, hasResourceRestriction } from "../access/access-control";
 import { toActivityDto } from "./activity.mapper";
 import { canViewTenantActivityLog } from "./activity.service";
+import { publishCrmEvent } from "../../services/realtime-events";
 import { getListQuery, matchesDateRange, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
 
 const activityRepository = () => AppDataSource.getRepository(Activity);
@@ -99,6 +100,7 @@ export async function createActivity(req: Request, res: Response, next: NextFunc
       details: parsed.data.details ?? null,
     });
     const saved = await activityRepository().save(activity);
+    await publishCrmEvent({ tenantId: sessionUser.tenantId, resource: "activities", action: "created", entityId: saved.id, actorObjectId: sessionUser.entraObjectId });
     res.status(201).json({ data: toActivityDto(saved, req) });
   } catch (error) {
     next(error);

@@ -1,5 +1,6 @@
 import { redisClient } from "../config/redis";
-import { emitNotification } from "./realtime";
+import { emitNotification, emitRealtimeEvent } from "./realtime";
+import { realtimeEventChannel, type RealtimeEvent } from "./realtime-events";
 
 const channel = "crm:notifications";
 let subscriber: typeof redisClient | null = null;
@@ -16,6 +17,13 @@ export async function startNotificationSubscriber(): Promise<void> {
       emitNotification(JSON.parse(message) as Record<string, unknown>);
     } catch {
       console.error("Ignoring malformed Redis notification");
+    }
+  });
+  await subscriber.subscribe(realtimeEventChannel, (message) => {
+    try {
+      emitRealtimeEvent(JSON.parse(message) as RealtimeEvent);
+    } catch {
+      console.error("Ignoring malformed CRM realtime event");
     }
   });
 }

@@ -29,7 +29,7 @@ import {
   accessPolicySchema,
   accessRolePermissionsSchema,
 } from "./access.schema.js";
-import { emitPermissionUpdate } from "../../services/realtime.js";
+import { publishPermissionEvent } from "../../services/realtime-events.js";
 
 const userRepository = () => AppDataSource.getRepository(User);
 const policyRepository = () => AppDataSource.getRepository(UserAccessPolicy);
@@ -158,7 +158,7 @@ export async function updateAccessRolePermissions(
       return;
     }
     if (req.session.user?.tenantId) {
-      emitPermissionUpdate(req.session.user.tenantId);
+      await publishPermissionEvent({ tenantId: req.session.user.tenantId });
     }
     res.status(200).json({ data: toAccessRoleDto(updatedRole) });
   } catch (error) {
@@ -435,7 +435,7 @@ export async function updateAccessPolicy(
       );
     }
 
-    emitPermissionUpdate(sessionUser.tenantId, targetId);
+    await publishPermissionEvent({ tenantId: sessionUser.tenantId, userId: targetId });
 
     res.status(200).json({ data: await toAccessUserDto(target, policy, req) });
   } catch (error) {

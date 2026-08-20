@@ -10,6 +10,7 @@ import {
 } from "../../shared/utils/media";
 import { splitPersonName as sharedSplitPersonName } from "../../shared/utils/names";
 import { recordActivity } from "../activities/activity.service";
+import { publishCrmEvent } from "../../services/realtime-events";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Lead } from "./lead.entity";
@@ -141,6 +142,9 @@ export async function createLead(req: Request, res: Response, next: NextFunction
     await recordActivity({
       tenantId: sessionUser.tenantId,
       actorId: currentUser.id,
+      actorObjectId: sessionUser.entraObjectId,
+      resource: "leads",
+      entityId: saved.id,
       actorName: currentUser.displayName,
       actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null,
       action: "created lead",
@@ -213,6 +217,9 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
       await recordActivity({
         tenantId: sessionUser.tenantId,
         actorId: currentUser.id,
+        actorObjectId: sessionUser.entraObjectId,
+        resource: "leads",
+        entityId: saved.id,
         actorName: currentUser.displayName,
         actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null,
         action: "updated lead",
@@ -247,6 +254,7 @@ export async function deleteLead(req: Request, res: Response, next: NextFunction
     if (lead.avatarUrl) {
       await removeObject(lead.avatarUrl).catch((error) => console.error("Failed to remove lead avatar from object storage", error));
     }
+    await publishCrmEvent({ tenantId: sessionUser.tenantId, resource: "leads", action: "deleted", entityId: lead.id, actorObjectId: sessionUser.entraObjectId });
     res.status(200).json({ success: true });
   } catch (error) {
     next(error);
@@ -284,6 +292,7 @@ export async function uploadLeadAvatar(req: Request, res: Response, next: NextFu
     if (previousObjectKey) {
       await removeObject(previousObjectKey).catch((error) => console.error("Failed to remove previous lead avatar", error));
     }
+    await publishCrmEvent({ tenantId: sessionUser.tenantId, resource: "leads", action: "updated", entityId: savedLead.id, actorObjectId: sessionUser.entraObjectId });
 
     res.status(200).json({ data: mapLeadDto(savedLead, req) });
   } catch (error) {

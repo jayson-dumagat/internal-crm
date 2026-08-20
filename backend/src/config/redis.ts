@@ -17,10 +17,19 @@ export const sessionStore = new RedisStore({
   ttl: env.SESSION_TTL_SECONDS,
 });
 
+let redisConnectionPromise: Promise<void> | null = null;
+
 export async function connectRedis(): Promise<void> {
-  if (!redisClient.isOpen) {
-    await redisClient.connect();
+  if (redisClient.isOpen) return;
+  if (!redisConnectionPromise) {
+    redisConnectionPromise = redisClient
+      .connect()
+      .then(() => undefined)
+      .finally(() => {
+        redisConnectionPromise = null;
+      });
   }
+  await redisConnectionPromise;
 }
 
 export async function disconnectRedis(): Promise<void> {

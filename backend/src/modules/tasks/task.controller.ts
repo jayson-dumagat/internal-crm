@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { AppDataSource } from "../../database/data-source";
 import { recordActivity } from "../activities/activity.service";
+import { publishCrmEvent } from "../../services/realtime-events";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
 import { Task, TaskKind, TaskPriority, TaskStatus, TaskType } from "./task.entity";
@@ -110,7 +111,7 @@ export async function createTask(req: Request, res: Response, next: NextFunction
       isReminderSent: false,
     });
     const saved = await taskRepository().save(task);
-    await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "created event" : "created task", target: saved.title, category: "Task", ipAddress: req.ip });
+    await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorObjectId: sessionUser.entraObjectId, resource: "tasks", entityId: saved.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "created event" : "created task", target: saved.title, category: "Task", ipAddress: req.ip });
     res.status(201).json({ data: toTaskDto(saved, req) });
   } catch (error) { next(error); }
 }
@@ -159,7 +160,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     if (task.status === TaskStatus.COMPLETED && !task.completedAt) { task.completedAt = new Date(); task.completedById = currentUser?.id ?? null; }
     if (task.status !== TaskStatus.COMPLETED) { task.completedAt = null; task.completedById = null; }
     const saved = await taskRepository().save(task);
-    if (currentUser) await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "updated event" : "updated task", target: saved.title, category: "Task", ipAddress: req.ip });
+    if (currentUser) await recordActivity({ tenantId: sessionUser.tenantId, actorId: currentUser.id, actorObjectId: sessionUser.entraObjectId, resource: "tasks", entityId: saved.id, actorName: currentUser.displayName, actorAvatarUrl: currentUser.avatarUrl ? `/api/v1/users/${currentUser.entraObjectId}/avatar` : null, action: saved.kind === TaskKind.EVENT ? "updated event" : "updated task", target: saved.title, category: "Task", ipAddress: req.ip });
     res.status(200).json({ data: toTaskDto(saved, req) });
   } catch (error) { next(error); }
 }
@@ -181,6 +182,7 @@ export async function deleteTask(req: Request, res: Response, next: NextFunction
     if (!canAccessRecord(req, "tasks", String(req.params.id))) { res.status(404).json({ success: false, message: "Task not found." }); return; }
     const result = await taskRepository().delete({ id: String(req.params.id), tenantId });
     if (!result.affected) { res.status(404).json({ success: false, message: "Task not found." }); return; }
+    await publishCrmEvent({ tenantId, resource: "tasks", action: "deleted", entityId: String(req.params.id), actorObjectId: req.session.user?.entraObjectId });
     res.status(200).json({ success: true });
   } catch (error) { next(error); }
 }

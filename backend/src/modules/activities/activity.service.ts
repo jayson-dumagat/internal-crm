@@ -1,6 +1,7 @@
 import { AppDataSource } from "../../database/data-source";
 import { Activity } from "./activity.entity";
 import { publishNotification } from "../../services/notifications";
+import { publishCrmEvent } from "../../services/realtime-events";
 
 const fullActivityLogRoles = new Set([
   "crm.admin",
@@ -20,6 +21,9 @@ export function canViewTenantActivityLog(roles: readonly string[] = []): boolean
 export async function recordActivity(input: {
   tenantId: string;
   actorId?: string | null;
+  actorObjectId?: string | null;
+  resource?: string;
+  entityId?: string | null;
   actorName: string;
   actorAvatarUrl?: string | null;
   action: string;
@@ -46,9 +50,19 @@ export async function recordActivity(input: {
   await publishNotification({
     tenantId: input.tenantId,
     id: saved.id,
+    actorObjectId: input.actorObjectId ?? null,
     title: input.action,
     message: `${input.actorName} ${input.action} ${input.target}`,
     category: input.category,
     createdAt: saved.createdAt,
   }).catch((error) => console.error("Failed to publish CRM notification", error));
+  if (input.resource) {
+    await publishCrmEvent({
+      tenantId: input.tenantId,
+      resource: input.resource,
+      action: input.action.startsWith("created") ? "created" : "updated",
+      entityId: input.entityId ?? null,
+      actorObjectId: input.actorObjectId ?? null,
+    }).catch((error) => console.error("Failed to publish CRM realtime event", error));
+  }
 }

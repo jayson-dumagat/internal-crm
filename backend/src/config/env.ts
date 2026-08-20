@@ -26,6 +26,39 @@ const envSchema = z.object({
     .min(1)
     .default("ccrms:sess:"),
 
+  REDIS_RATE_LIMIT_PREFIX: z
+    .string()
+    .min(1)
+    .default("ccrms:rate:"),
+
+  API_RATE_LIMIT_WINDOW_MS: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .default(60_000),
+
+  API_RATE_LIMIT_MAX: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .default(300),
+
+  AUTH_RATE_LIMIT_WINDOW_MS: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 60_000),
+
+  AUTH_RATE_LIMIT_MAX: z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .default(20),
+
   SESSION_TTL_SECONDS: z
     .coerce
     .number()

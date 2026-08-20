@@ -100,9 +100,12 @@ export default function ArkDatePickerField({
         </DatePicker.ClearTrigger>
       </DatePicker.Control>
       <Portal container={sheetPortal ?? undefined}>
-        <DatePicker.Positioner className="pointer-events-auto z-[100000]">
+        <DatePicker.Positioner
+          className="pointer-events-auto z-[999999]"
+          style={{ zIndex: 999999 }}
+        >
           <DatePicker.Content
-            className="mt-1 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            className="relative z-[999999] mt-1 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-900"
             onPointerDown={(event) => event.stopPropagation()}
           >
             <DatePicker.View view="day">

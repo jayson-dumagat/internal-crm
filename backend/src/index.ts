@@ -46,6 +46,15 @@ async function bootstrap() {
     const server = createServer(app);
     const io = new SocketIOServer(server, {
       cors: { origin: env.FRONTEND_ORIGIN, credentials: true },
+      maxHttpBufferSize: 1e6,
+      allowRequest: (request, callback) => {
+        const origin = request.headers.origin;
+        if (!origin || origin.replace(/\/+$/, "") === env.FRONTEND_ORIGIN.replace(/\/+$/, "")) {
+          callback(null, true);
+          return;
+        }
+        callback("Origin not trusted", false);
+      },
     });
     io.engine.use(sessionMiddleware as never);
     io.use((socket, next) => {

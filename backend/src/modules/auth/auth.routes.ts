@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authRateLimiter } from "../../middleware/security";
 
 import {
   getCurrentSession,
@@ -10,9 +11,9 @@ import {
 
 const router = Router();
 
-router.get("/login-url", getEntraLoginUrl);
+router.get("/login-url", authRateLimiter, getEntraLoginUrl);
 
-router.get("/callback", handleEntraCallback);
+router.get("/callback", authRateLimiter, handleEntraCallback);
 
 router.get("/session", getCurrentSession);
 

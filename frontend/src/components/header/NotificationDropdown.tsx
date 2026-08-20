@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import { cn } from "../../utils";
 import { formatDisplayDate } from "../../utils/date";
+import { useAuth } from "../../hooks/auth/useAuth";
+import { useRealtimeEvent } from "../../context/RealtimeProvider";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
@@ -12,19 +13,28 @@ type NotificationItem = {
   message: string;
   category: string;
   createdAt: string | null;
+  actorObjectId: string | null;
 };
 
 function normalizeNotification(payload: unknown): NotificationItem | null {
   if (!payload || typeof payload !== "object") return null;
 
   const value = payload as Record<string, unknown>;
-  const title = typeof value.title === "string" ? value.title : "Activity update";
+  const title =
+    typeof value.title === "string" ? value.title : "Activity update";
   const message = typeof value.message === "string" ? value.message : title;
-  const category = typeof value.category === "string" ? value.category : "Activity";
-  const createdAt = typeof value.createdAt === "string" ? value.createdAt : null;
-  const id = typeof value.id === "string" ? value.id : `${title}-${message}-${createdAt ?? Date.now()}`;
+  const category =
+    typeof value.category === "string" ? value.category : "Activity";
+  const createdAt =
+    typeof value.createdAt === "string" ? value.createdAt : null;
+  const actorObjectId =
+    typeof value.actorObjectId === "string" ? value.actorObjectId : null;
+  const id =
+    typeof value.id === "string"
+      ? value.id
+      : `${title}-${message}-${createdAt ?? Date.now()}`;
 
-  return { id, title, message, category, createdAt };
+  return { id, title, message, category, createdAt, actorObjectId };
 }
 
 function formatNotificationTime(value: string | null): string {
@@ -33,45 +43,41 @@ function formatNotificationTime(value: string | null): string {
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return "Just now";
 
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp) / 1000),
+  );
   if (elapsedSeconds < 60) return "Just now";
-  if (elapsedSeconds < 3600) return `${Math.floor(elapsedSeconds / 60)} min ago`;
-  if (elapsedSeconds < 86400) return `${Math.floor(elapsedSeconds / 3600)} hr ago`;
+  if (elapsedSeconds < 3600)
+    return `${Math.floor(elapsedSeconds / 60)} min ago`;
+  if (elapsedSeconds < 86400)
+    return `${Math.floor(elapsedSeconds / 3600)} hr ago`;
   return formatDisplayDate(value);
 }
 
 export default function NotificationDropdown() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  useEffect(() => {
-    const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
-    const socketUrl = configuredApiUrl?.startsWith("http")
-      ? new URL(configuredApiUrl).origin
-      : window.location.origin;
-    const socket = io(socketUrl, {
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
+  const handleNotification = useCallback((payload: unknown) => {
+    const notification = normalizeNotification(payload);
+    if (!notification) return;
+    if (
+      notification.actorObjectId &&
+      notification.actorObjectId === user?.entraObjectId
+    ) {
+      return;
+    }
 
-    const handleNotification = (payload: unknown) => {
-      const notification = normalizeNotification(payload);
-      if (!notification) return;
+    setNotifications((current) =>
+      [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 25),
+    );
+    setNotifying(true);
+  }, [user?.entraObjectId]);
 
-      setNotifications((current) => [
-        notification,
-        ...current.filter((item) => item.id !== notification.id),
-      ].slice(0, 25));
-      setNotifying(true);
-    };
-
-    socket.on("notification.created", handleNotification);
-    return () => {
-      socket.off("notification.created", handleNotification);
-      socket.disconnect();
-    };
-  }, []);
+  useRealtimeEvent("notification.created", handleNotification);
 
   function closeDropdown() {
     setIsOpen(false);
@@ -126,9 +132,6 @@ export default function NotificationDropdown() {
             <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               Notifications
             </h5>
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              Live activity updates
-            </p>
           </div>
           <button
             type="button"
@@ -154,12 +157,16 @@ export default function NotificationDropdown() {
           </button>
         </div>
 
-        <ul className="custom-scrollbar flex h-auto flex-col overflow-y-auto">
+        <ul className="flex custom-scrollbar h-auto flex-col overflow-y-auto">
           {notifications.length === 0 ? (
             <li className="flex flex-1 items-center justify-center px-4 py-16 text-center">
               <div>
                 <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                  <svg className="size-5 fill-current" viewBox="0 0 20 20" aria-hidden="true">
+                  <svg
+                    className="size-5 fill-current"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
                     <path d="M10 1.667a6.667 6.667 0 0 0-6.667 6.666v3.333l-1.25 1.667h15.834l-1.25-1.667V8.333A6.667 6.667 0 0 0 10 1.667Zm-2.083 13.75a2.083 2.083 0 0 0 4.166 0H7.917Z" />
                   </svg>
                 </div>
@@ -178,7 +185,7 @@ export default function NotificationDropdown() {
                   onItemClick={closeDropdown}
                   className="flex gap-3 rounded-lg border-b border-gray-100 p-3 px-4.5 py-3 text-left hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5"
                 >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold uppercase text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600 uppercase dark:bg-brand-500/15 dark:text-brand-400">
                     {notification.category.slice(0, 2)}
                   </span>
                   <span className="min-w-0">

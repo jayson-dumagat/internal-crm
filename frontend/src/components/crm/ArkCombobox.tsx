@@ -76,9 +76,12 @@ export default function ArkCombobox({
         </Combobox.Trigger>
       </Combobox.Control>
       <Portal container={sheetPortal ?? undefined}>
-        <Combobox.Positioner className="pointer-events-auto z-[100000] w-[var(--reference-width)]">
+        <Combobox.Positioner
+          className="pointer-events-auto z-[999999] w-[var(--reference-width)]"
+          style={{ zIndex: 999999 }}
+        >
           <Combobox.Content
-            className="mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+            className="relative z-[999999] mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
             onPointerDown={(event) => event.stopPropagation()}
           >
             <Combobox.Empty className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
