@@ -8,19 +8,29 @@ import { hasRbacPermission } from "../modules/access/rbac";
 import { UserAccessPolicy } from "../modules/access/user-access-policy.entity";
 
 export function requirePermission(permission: AccessPermission) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const sessionUser = req.session.user;
       const policy = sessionUser
         ? await AppDataSource.getRepository(UserAccessPolicy).findOne({
-            where: { entraTenantId: sessionUser.tenantId, entraObjectId: sessionUser.entraObjectId },
+            where: {
+              entraTenantId: sessionUser.tenantId,
+              entraObjectId: sessionUser.entraObjectId,
+            },
           })
         : null;
       if (policy) {
         req.accessPolicy = toAccessPolicySnapshot(policy);
       }
 
-      const effectivePermissions = await getDatabaseEffectivePermissions(sessionUser?.roles ?? [], req.accessPolicy);
+      const effectivePermissions = await getDatabaseEffectivePermissions(
+        sessionUser?.roles ?? [],
+        req.accessPolicy,
+      );
       if (sessionUser) sessionUser.permissions = effectivePermissions;
       if (!hasRbacPermission(effectivePermissions, permission)) {
         res.status(403).json({

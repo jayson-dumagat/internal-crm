@@ -26,6 +26,9 @@ import { LeadStatus, LeadInterestLevel } from "./lead.types";
 @Index("idx_leads_organization_id", ["organizationId"])
 @Index("idx_leads_pipeline_id", ["pipelineId"])
 @Index("idx_leads_pipeline_stage_id", ["pipelineStageId"])
+@Index("idx_leads_converted_contact_id", ["convertedContactId"], {
+  where: '"converted_contact_id" IS NOT NULL',
+})
 @Check(`"pipeline_progress" >= 0 AND "pipeline_progress" <= 100`)
 export class Lead {
   @PrimaryGeneratedColumn("uuid")
@@ -166,6 +169,21 @@ export class Lead {
     nullable: true,
   })
   lastActivityAt!: Date | null;
+
+  /** The canonical client/contact created or reused during conversion. */
+  @Column({
+    name: "converted_contact_id",
+    type: "uuid",
+    nullable: true,
+  })
+  convertedContactId!: string | null;
+
+  @Column({
+    name: "converted_at",
+    type: "timestamptz",
+    nullable: true,
+  })
+  convertedAt!: Date | null;
 
   @Column({
     name: "organization_id",

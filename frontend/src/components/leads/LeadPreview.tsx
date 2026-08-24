@@ -9,7 +9,7 @@ import LexicalNoteEditor from "../notes/LexicalNoteEditor";
 
 import type { Lead } from "../../types/Leads";
 import { leadStatusBadgeColor, normalizePhone } from "../../utils/leads";
-import { CalendarAltIcon, EllipsisIcon, EmailIcon, PhoneIcon, SquarePenIcon, TaskIcon } from "../../icons";
+import { CalendarAltIcon, EmailIcon, MultiUserIcon, PhoneIcon, SquarePenIcon, TaskIcon } from "../../icons";
 import { formatDisplayDate } from "../../utils/date";
 import { useActivitiesQuery, useCreateNote, useNotesQuery, useTasksQuery } from "../../hooks/crm/useCrmDirectory";
 import type { TaskRecord } from "../../api/crm";
@@ -22,6 +22,7 @@ interface LeadPreviewProps {
   lead: Lead | null;
   onClose: () => void;
   onEdit?: (lead: Lead) => void;
+  onConvert?: (lead: Lead) => void;
 }
 
 const tabs: Array<{
@@ -57,8 +58,12 @@ export default function LeadPreview({
   lead,
   onClose,
   onEdit,
+  onConvert,
 }: LeadPreviewProps) {
   const canUpdate = useCan("leads.update");
+  const canCreateContact = useCan("contacts.create");
+  const canUpdateContact = useCan("contacts.update");
+  const canConvert = canUpdate && canCreateContact && canUpdateContact;
   const [activeTab, setActiveTab] = useState<LeadPreviewTab>("activity");
 
   useEffect(() => {
@@ -76,7 +81,13 @@ export default function LeadPreview({
     >
       {lead && (
         <div>
-          <LeadSummary lead={lead} onEdit={onEdit} canUpdate={canUpdate} />
+          <LeadSummary
+            lead={lead}
+            onEdit={onEdit}
+            onConvert={onConvert}
+            canUpdate={canUpdate}
+            canConvert={canConvert && lead.status !== "Converted"}
+          />
 
           <LeadTabs activeTab={activeTab} onChange={setActiveTab} />
 
@@ -98,11 +109,15 @@ export default function LeadPreview({
 function LeadSummary({
   lead,
   onEdit,
+  onConvert,
   canUpdate,
+  canConvert,
 }: {
   lead: Lead;
   onEdit?: (lead: Lead) => void;
+  onConvert?: (lead: Lead) => void;
   canUpdate: boolean;
+  canConvert: boolean;
 }) {
   return (
     <div className="border-b border-gray-100 dark:border-white/[0.05]">
@@ -162,8 +177,18 @@ function LeadSummary({
             <SquarePenIcon />
           </QuickAction>
 
-          <QuickAction label="More">
-            <EllipsisIcon />
+          <QuickAction
+            label={
+              lead.status === "Converted"
+                ? "Already a client"
+                : canConvert
+                  ? "Convert to client"
+                  : "No permission"
+            }
+            disabled={!canConvert}
+            onClick={() => onConvert?.(lead)}
+          >
+            <MultiUserIcon />
           </QuickAction>
         </div>
       </div>

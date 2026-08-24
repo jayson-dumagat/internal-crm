@@ -56,6 +56,7 @@ export const contactSchema = z.object({
   risk_profile: z.string().nullable().optional(),
   preferred_contact_method: z.string().nullable().optional(),
   relationship_owner_id: z.string().nullable().optional(),
+  source_lead_id: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
 });
 
@@ -83,6 +84,8 @@ export const leadSchema = z.object({
   address: z.string(),
   assignedToId: z.string().nullable().optional(),
   assignedTo: leadUserSchema,
+  convertedContactId: z.string().nullable().optional(),
+  convertedAt: z.string().nullable().optional(),
 });
 
 export const activitySchema = z.object({

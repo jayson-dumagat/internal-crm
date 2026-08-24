@@ -202,6 +202,30 @@ export async function updateLead(id: LeadRecord["id"], input: UpdateLeadInput): 
   }
 }
 
+export type LeadConversionResponse = {
+  lead: LeadRecord;
+  client: ContactRecord;
+  createdClient: boolean;
+  alreadyConverted: boolean;
+};
+
+export async function convertLeadToClient(
+  id: LeadRecord["id"],
+): Promise<LeadConversionResponse> {
+  try {
+    const response = await apiClient.post(`/leads/${id}/convert`);
+    const data = response.data?.data;
+    return {
+      lead: leadSchema.parse(data?.lead),
+      client: contactSchema.parse(data?.client),
+      createdClient: Boolean(data?.createdClient),
+      alreadyConverted: Boolean(data?.alreadyConverted),
+    };
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Unable to convert lead to client."));
+  }
+}
+
 export async function deleteLead(id: LeadRecord["id"]): Promise<void> {
   try {
     await apiClient.delete(`/leads/${id}`);

@@ -41,6 +41,8 @@ export function toLeadDto(lead: Lead, req?: Request) {
     assignedTo: canSee("leads.assignedTo")
       ? toUserDto(lead.assignedTo)
       : toUserDto(null),
+    convertedContactId: lead.convertedContactId,
+    convertedAt: lead.convertedAt?.toISOString() ?? null,
   };
 
   if (!canSee("leads.email")) dto.email = maskSensitive(lead.email);

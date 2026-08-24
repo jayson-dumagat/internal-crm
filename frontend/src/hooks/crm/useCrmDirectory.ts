@@ -16,6 +16,7 @@ import {
   getLeads,
   createLead,
   updateLead,
+  convertLeadToClient,
   deleteLead,
   getActivities,
   createActivity,
@@ -218,6 +219,18 @@ export function useUpdateLead() {
     mutationFn: ({ id, input }: { id: string | number; input: UpdateLeadInput }) => updateLead(String(id), input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
+    },
+  });
+}
+
+export function useConvertLeadToClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string | number) => convertLeadToClient(String(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.leads() });
+      queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.contacts() });
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });
     },
   });

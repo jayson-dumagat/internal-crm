@@ -49,6 +49,7 @@ export function toContactDto(
         : maskSensitive(owner?.displayName ?? contact.relationshipOwner),
     },
     relationship_owner_id: contact.relationshipOwnerId,
+    source_lead_id: contact.sourceLeadId,
     location: contact.location ?? "—",
     status: contact.status,
     last_activity: contact.lastActivityAt?.toISOString() ?? null,

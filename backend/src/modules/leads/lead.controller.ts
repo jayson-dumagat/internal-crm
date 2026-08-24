@@ -13,8 +13,15 @@ import { recordActivity } from "../activities/activity.service";
 import { publishCrmEvent } from "../../services/realtime-events";
 import { User } from "../users/user.entity";
 import { UserStatus } from "../users/user.types";
+import { hasRbacPermission } from "../access/rbac";
+import { Company } from "../companies/company.entity";
+import { toContactDto } from "../contacts/contact.mapper";
 import { Lead } from "./lead.entity";
 import { createLeadSchema, updateLeadSchema } from "./lead.schema";
+import {
+  convertLeadToClient as convertLeadToClientRecord,
+  LeadConversionError,
+} from "./lead-conversion.service";
 import { canAccessRecord, canViewField, firstHiddenInput, getDataScope, hasResourceRestriction } from "../access/access-control";
 import {
   formatLeadName as formatLeadNameDto,
@@ -23,9 +30,11 @@ import {
   toLeadStatus as mapLeadStatus,
 } from "./lead.mapper";
 import { getListQuery, matchesQuery, matchesSearch, matchesStatus, paginate } from "../../shared/utils/list-query";
+import { publishNotification } from "../../services/notifications";
 
 const leadRepository = () => AppDataSource.getRepository(Lead);
 const userRepository = () => AppDataSource.getRepository(User);
+const companyRepository = () => AppDataSource.getRepository(Company);
 
 async function getCurrentUser(req: Request) {
   const sessionUser = req.session.user;
@@ -230,6 +239,115 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     }
     res.status(200).json({ data: mapLeadDto(saved, req) });
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function convertLeadToClient(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const sessionUser = req.session.user;
+    if (!sessionUser) {
+      res.status(401).json({ success: false, message: "Authentication is required." });
+      return;
+    }
+
+    // Conversion writes the canonical contact/client record, so it requires
+    // write access to both sides of the lifecycle.
+    const permissions = sessionUser.permissions ?? [];
+    if (
+      !hasRbacPermission(permissions, "contacts.create") ||
+      !hasRbacPermission(permissions, "contacts.update")
+    ) {
+      res.status(403).json({
+        success: false,
+        message: "You need contact create and update access to convert a lead into a client.",
+        code: "contact_write_permission_required",
+      });
+      return;
+    }
+
+    const currentUser = await getCurrentUser(req);
+    const result = await convertLeadToClientRecord({
+      leadId: String(req.params.id),
+      tenantId: sessionUser.tenantId,
+      actorId: currentUser?.id ?? null,
+      actorObjectId: sessionUser.entraObjectId,
+      actorName: currentUser?.displayName ?? sessionUser.name,
+      actorAvatarUrl: currentUser?.avatarUrl
+        ? `/api/v1/users/${sessionUser.entraObjectId}/avatar`
+        : null,
+      ipAddress: req.ip ?? null,
+    });
+
+    const company = result.contact.companyId
+      ? await companyRepository().findOneBy({
+          id: result.contact.companyId,
+          tenantId: sessionUser.tenantId,
+        })
+      : undefined;
+    const contactOwner = result.contact.relationshipOwnerId
+      ? await userRepository().findOne({
+          where: {
+            entraTenantId: sessionUser.tenantId,
+            entraObjectId: result.contact.relationshipOwnerId,
+            status: UserStatus.ACTIVE,
+            isAccessEnabled: true,
+          },
+        })
+      : undefined;
+
+    if (result.activity) {
+      await publishNotification({
+        tenantId: sessionUser.tenantId,
+        id: result.activity.id,
+        actorObjectId: sessionUser.entraObjectId,
+        title: result.activity.action,
+        message: `${result.activity.actorName} ${result.activity.action} ${result.activity.target}`,
+        category: result.activity.category,
+        createdAt: result.activity.createdAt,
+      }).catch((error) => console.error("Failed to publish lead conversion notification", error));
+
+      await publishCrmEvent({
+        tenantId: sessionUser.tenantId,
+        resource: "leads",
+        action: "updated",
+        entityId: result.lead.id,
+        actorObjectId: sessionUser.entraObjectId,
+      }).catch((error) =>
+        console.error("Failed to publish lead conversion event", error),
+      );
+      await publishCrmEvent({
+        tenantId: sessionUser.tenantId,
+        resource: "contacts",
+        action: result.createdContact ? "created" : "updated",
+        entityId: result.contact.id,
+        actorObjectId: sessionUser.entraObjectId,
+      }).catch((error) =>
+        console.error("Failed to publish client conversion event", error),
+      );
+    }
+
+    res.status(result.alreadyConverted ? 200 : 201).json({
+      data: {
+        lead: mapLeadDto(result.lead, req),
+        client: toContactDto(result.contact, company ?? undefined, contactOwner ?? undefined, req),
+        createdClient: result.createdContact,
+        alreadyConverted: result.alreadyConverted,
+      },
+    });
+  } catch (error) {
+    if (error instanceof LeadConversionError) {
+      res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+      return;
+    }
     next(error);
   }
 }

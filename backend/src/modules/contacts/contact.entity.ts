@@ -11,6 +11,10 @@ import {
 @Index("idx_contacts_name", ["name"])
 @Index("idx_contacts_email", ["email"])
 @Index("idx_contacts_company_id", ["companyId"])
+@Index("uq_contacts_source_lead_id", ["sourceLeadId"], {
+  unique: true,
+  where: '"source_lead_id" IS NOT NULL',
+})
 export class Contact {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -74,6 +78,10 @@ export class Contact {
 
   @Column({ name: "created_by_id", type: "varchar", length: 150, nullable: true })
   createdById!: string | null;
+
+  /** The lead that originated this client record, when converted. */
+  @Column({ name: "source_lead_id", type: "uuid", nullable: true })
+  sourceLeadId!: string | null;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

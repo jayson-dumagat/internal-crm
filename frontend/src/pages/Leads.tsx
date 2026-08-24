@@ -15,6 +15,7 @@ import {
   useCreateLead,
   useDeleteLead,
   useLeadsQuery,
+  useConvertLeadToClient,
   useUpdateLead,
 } from "../hooks/crm/useCrmDirectory";
 import { ExportIcon, FilterIcon, PlusIcon } from "../icons";
@@ -63,6 +64,7 @@ export default function Leads() {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const convertLead = useConvertLeadToClient();
   const contactsQuery = useContactsQuery(false);
   const companiesQuery = useCompaniesQuery(false);
   const usersQuery = useUsersQuery();
@@ -195,6 +197,31 @@ export default function Leads() {
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Unable to delete lead.",
+      );
+    }
+  };
+
+  const convertLeadToClient = async (lead: Lead) => {
+    if (lead.status === "Converted") {
+      toast.info("This lead is already linked to a client.");
+      return;
+    }
+
+    if (!window.confirm(`Convert ${lead.name} into a client?`)) return;
+
+    try {
+      const result = await convertLead.mutateAsync(lead.id);
+      setSelectedLead(result.lead as Lead);
+      toast.success(
+        result.alreadyConverted
+          ? "This lead is already linked to a client."
+          : "Lead converted to client successfully.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to convert lead to client.",
       );
     }
   };
@@ -346,6 +373,7 @@ export default function Leads() {
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}
         onEdit={openEditLead}
+        onConvert={convertLeadToClient}
       />
       <LeadFormSheet
         isOpen={isLeadFormOpen}
