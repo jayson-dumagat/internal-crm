@@ -21,7 +21,7 @@ export function toCompanyDto(
     contacts: canSee("companies.contacts") ? contacts : [],
     website: company.website ?? "—",
     customerSince: company.customerSince ?? "—",
-    tags: canSee("companies.tags") ? company.tags ?? [] : [],
+    tags: canSee("companies.tags") ? (company.tags ?? []) : [],
     status: company.status,
     lastActivity: company.updatedAt?.toISOString() ?? null,
     logoUrl:
@@ -30,26 +30,33 @@ export function toCompanyDto(
         : null,
   };
 
-  if (!canSee("companies.revenue")) dto.revenue = maskSensitive(company.revenue);
-  if (!canSee("companies.industry")) dto.industry = maskSensitive(company.industry);
-  if (!canSee("companies.location")) dto.location = maskSensitive(company.location);
-  if (!canSee("companies.employees")) dto.employees = maskSensitive(company.employees);
-  if (!canSee("companies.website")) dto.website = maskSensitive(company.website);
+  if (!canSee("companies.revenue"))
+    dto.revenue = maskSensitive(company.revenue);
+  if (!canSee("companies.industry"))
+    dto.industry = maskSensitive(company.industry);
+  if (!canSee("companies.location"))
+    dto.location = maskSensitive(company.location);
+  if (!canSee("companies.employees"))
+    dto.employees = maskSensitive(company.employees);
+  if (!canSee("companies.website"))
+    dto.website = maskSensitive(company.website);
   if (!canSee("companies.status")) dto.status = "Restricted";
 
   return {
     ...dto,
-    customerSince: canSee("companies.customerSince") ? company.customerSince : null,
+    customerSince: canSee("companies.customerSince")
+      ? company.customerSince
+      : null,
   };
 }
 
-export function toCompanyContactSummary(
-  contact: { id: string; name: string; avatarUrl: string | null },
-): CompanyContactSummary {
+export function toCompanyContactSummary(contact: {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}): CompanyContactSummary {
   return {
     name: contact.name,
-    avatar: contact.avatarUrl
-      ? `/api/v1/contacts/${contact.id}/avatar`
-      : null,
+    avatar: contact.avatarUrl ? `/api/v1/contacts/${contact.id}/avatar` : null,
   };
 }

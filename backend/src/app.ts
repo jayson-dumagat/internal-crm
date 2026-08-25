@@ -52,15 +52,15 @@ app.use(morganMiddleware);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 export const sessionMiddleware = session({
-    name: "ccrms.sid",
-    secret: env.JWT_SECRET,
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    rolling: true,
-    cookie: {
-      ...sessionCookieOptions,
-    },
+  name: "ccrms.sid",
+  secret: env.JWT_SECRET,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
+    ...sessionCookieOptions,
+  },
 });
 
 app.use(sessionMiddleware);
@@ -75,7 +75,11 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.use("/api/documentation", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(
+  "/api/documentation",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument),
+);
 
 app.use(
   "/api",
@@ -91,8 +95,6 @@ app.use((_req, res) => {
     message: "Route not found",
   });
 });
-
-
 
 app.use(
   (

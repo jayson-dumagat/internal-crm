@@ -8,7 +8,7 @@ export function requireAuth(
   if (!req.session.user) {
     res.status(401).json({
       success: false,
-      message: "Authentication is required.",
+      message: "You don't have access to this resource, please try agian.",
     });
     return;
   }
