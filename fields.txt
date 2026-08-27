@@ -1,0 +1,158 @@
+CAIF (individual/joint)
+
+type - cash, discretionary, margin
+
+surname, first name, middle name, suffix, present address, permanent address, date of birth, place of birth, nationality, sex, phone, mobile, primary email, alternate email, sss/gsis, TIN, civil status, 
+
+spouse
+surname, first name, middle name, suffix
+
+mother's maiden name
+surname, first name, middle name, suffix
+
+employment / business / school info
+employment status
+name of employer / business / school
+occupation / designation, phone, mobile, email address
+nature of business
+
+financial information
+source of funds
+annual income less than 1m, 1m to less than 10m, 10m to less than 50m, 50m and above
+assets less than 1m, 1m to less than 10m, 10m to less than 50m, 50m and above
+networth less than 1m, 1m to less than 10m, 10m to less than 50m, 50m and above
+
+investment profile
+investment objective rank 1-4 growth, long term, preservation, speculation
+investment experience less than 1m, less than 5 years, more than 5 years, more than 10 years
+applicable investment experience none, stocks, time depo, mutual fund, bond, uitf
+
+disclosures, 
+officer, director or PSE listed company yes/no company name:
+director, officer, employee, or a shareholder of another broker/dealer yes/no broker name:
+do you have an account with another broker? no/yes broker name:
+
+authorized person to give trading instruction on behalf of client
+surname, first name, middle name, suffix
+phone, mobile, email, signature, date granted
+
+research and market updates - email, sms, viber, telegram, others
+
+settlement instructions - primary email / alternate email
+request to receive trade confirmation via courier, business, residence
+special instruction to courier
+authorized person to receive the documents on client's behalf:
+surname, first name, middle name, suffix
+relationship, phone, mobile, email
+
+do you req duplicate copy of trade confirmation / invoice - yes/no
+authorized to receive documents on client's behalf
+surname, first name, middle name, suffix
+relationship, phone, mobile, email, address
+
+funds and proceeds to be paid via: cheque, electronic transfer
+bank account details
+account name, account type, account number, bank, branch
+
+fatca declaration
+I am not a us person under us law and I have no us indicia / i am a us person under us law / 
+i am not a us person under us law but have at least one us indicia
+
+us permanent address
+zip code, us telephone number, us tax identification
+
+trading service agreement - printed name/signature of account holder, citizenship, date
+
+document requirements (maybe checklist) - passport, sss/gsis, prc, driver's license, others
+proof of income presented - financial statement, certificate of employment, income tax return, others
+
+cgsi account code, pse tc code, ipse client account code, commission rate, trading limit, date opened, client referred by, how long known by salesman introducing the account
+
+responsible trader / agent
+trader/agent, signature, date, remarks
+
+reviewed by 
+AP, signature, date, remarks
+
+approved by
+head of trading, signature, head of advisory & execution, signature, date
+chief operating officers, signature, date, president, signature, date
+
+encoded by:
+name, signature, date, 
+
+authorized by:
+name, signature, date
+
+specimen signature - surname, first name, middle name, suffix, address, tin, tel number, citizenship, i hereby declare under pain of perjury that all the information contained here are true and correct(1,2), 
+
+signature by caballes-go securities
+
+
+CAIF (corporate)
+type - cash, discretionary, margin
+
+corporate information
+complete registered corporate name, corporate address, sec registration no, incorporation date, place of incorporation, nature of business, phone, mobile, primary email, alternate email, nationality, sss / gsis, TIN, taxable/tax exempt
+
+financial information
+annual income - less than 20M, 20m to less than 100m, 100m to less than 1b, 1b and above
+assets
+net worth, source of funds - commission, others
+
+investment profile
+investment objective (1-4) - growth, long term investment, preservation of capital, speculation
+investment experience - less than 1 year, less than 5 years, more than 5 years, more than 10 years
+applicable investment experience, none, stocks, others, time depo, mutual fund, bond, uitf
+
+affiliations
+is any of the company's officers, or directors also a director or officer of a pse listed company - no/yes name of broker/dealer
+is any of the company's officers, or directors or shareholders associated with another broker/dealer - no/yes name of broker/dealer 
+do you have trading accounts with another broker/dealer - no/yes name of broker/dealer
+
+authorized to give trading instructions on behalf of client - surname, first name,  middle name, suffix, phone, mobile, email, signature, date granted
+
+research and regular market updates - email, sms, viber, telegram, others
+
+settlement instructions - primary email, alternate email
+request to receive trade confirmation, invoice statement of account etc via courier - business, residence
+special instructions
+
+please provide the following information of the person's authorized to receive the documents on clients behalf - surname, first name, middle name, address, role, mobile, email, signature
+
+funds and proceeds to be paid via - cheque, electronic transfer
+account name, account type, account number, bank, branch
+
+fatca declaration
+corp is not a us person under us law and i have no us indicia
+corp is not a us person under us law but have at least one us indicia
+us permanent address, zip, us telephone number, us TIN
+
+trading service agreement
+printed name/signature of account holder, citizenship, date
+
+account opening required documents
+
+cgsi account code, pse tc code, ipse client account code, commission rate, trading limit, date opened, client referred by, how long known by salesman introducing the account
+
+responsible trader / agent
+trader/agent, signature, date, remarks
+
+reviewed by 
+AP, signature, date, remarks
+
+approved by
+head of trading, signature, head of advisory & execution, signature, date
+chief operating officers, signature, date, president, signature, date
+
+encoded by:
+name, signature, date, 
+
+authorized by:
+name, signature, date
+
+specimen signature - surname, first name, middle name, suffix, address, tin, tel number, citizenship, i hereby declare under pain of perjury that all the information contained here are true and correct(1,2), 
+
+signature by caballes-go securities
+
+
