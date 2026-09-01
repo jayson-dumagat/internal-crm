@@ -46,10 +46,12 @@ export default function Calendar() {
   const canUpdate = useCan("tasks.update");
   const canDelete = useCan("tasks.delete");
   const [searchParams, setSearchParams] = useSearchParams();
-  const tasks = tasksQuery.data ?? [];
+  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   const usersQuery = useUsersQuery();
   const leadsQuery = useLeadsQuery(false);
   const [showFilters, setShowFilters] = useState(false);
+  const today = dayjs().startOf("day");
+  const todayDate = today.format("YYYY-MM-DD");
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
@@ -83,12 +85,22 @@ export default function Calendar() {
         )
         .map((task) => {
           const color = taskEventColor(task);
+          const start = task.startAt ?? task.dueAt ?? undefined;
+          const startDate = start ? dayjs(start) : null;
+          let end = task.dueAt ? dayjs(task.dueAt) : null;
+          // FullCalendar needs a real end to render an event's duration. A
+          // missing/identical end would otherwise collapse the event to a
+          // point in month view.
+          if (startDate && (!end || !end.isAfter(startDate))) {
+            end = startDate.add(30, "minute");
+          }
           return {
             id: task.id,
             title: task.title,
-            start: task.startAt ?? task.dueAt ?? undefined,
-            end: task.dueAt ?? undefined,
+            start,
+            end: end?.toISOString(),
             allDay: false,
+            display: "block",
             backgroundColor: color,
             borderColor: color,
             extendedProps: { calendar: task.priority, lead: task.lead?.name },
@@ -113,6 +125,11 @@ export default function Calendar() {
   };
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
+    if (dayjs(selectInfo.start).isBefore(today, "day")) {
+      selectInfo.view.calendar.unselect();
+      toast.info("Past dates cannot be scheduled.");
+      return;
+    }
     const start = selectionDateTime(selectInfo.startStr, selectInfo.allDay);
     const end = selectInfo.endStr
       ? selectInfo.allDay
@@ -135,6 +152,13 @@ export default function Calendar() {
   const saveEvent = async (input: CreateTaskInput, editing?: TaskRecord) => {
     if (editing && !canUpdate) return;
     if (!editing && !canCreate) return;
+    if (
+      (input.startAt && dayjs(input.startAt).isBefore(today)) ||
+      (input.dueAt && dayjs(input.dueAt).isBefore(today))
+    ) {
+      toast.error("Calendar events must use today or a future date.");
+      return;
+    }
     try {
       if (editing) {
         await updateTask.mutateAsync({
@@ -163,8 +187,17 @@ export default function Calendar() {
   const persistEventRange = async (
     change: EventDropArg | EventResizeDoneArg,
   ) => {
-    if (!canUpdate || !change.event.start) {
+    if (
+      !canUpdate ||
+      !change.event.start ||
+      dayjs(change.event.start).isBefore(today, "day") ||
+      (change.event.end &&
+        dayjs(change.event.end).isBefore(change.event.start))
+    ) {
       change.revert();
+      if (change.event.start && dayjs(change.event.start).isBefore(today, "day")) {
+        toast.info("Past dates cannot be scheduled.");
+      }
       return;
     }
     try {
@@ -236,11 +269,17 @@ export default function Calendar() {
             selectable
             selectMirror
             nowIndicator
+            validRange={{ start: todayDate }}
+            selectAllow={(selection) => !dayjs(selection.start).isBefore(today, "day")}
+            eventAllow={(dropInfo) => !dayjs(dropInfo.start).isBefore(today, "day")}
             editable={canUpdate}
             eventStartEditable={canUpdate}
             eventDurationEditable={canUpdate}
             dayMaxEvents={3}
             eventMaxStack={3}
+            eventDisplay="block"
+            forceEventDuration
+            displayEventEnd
             select={handleDateSelect}
             eventClick={handleEventClick}
             eventDrop={(change) => void persistEventRange(change)}

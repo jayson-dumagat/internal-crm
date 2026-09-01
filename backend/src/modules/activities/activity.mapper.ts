@@ -13,14 +13,18 @@ export function toActivityDto(activity: Activity, req?: Request) {
       : maskSensitive(activity.actorName),
     avatar: activity.actorAvatarUrl,
     action: activity.action,
-    target: canSee("activities.target") ? activity.target : maskSensitive(activity.target),
+    target: canSee("activities.target")
+      ? activity.target
+      : maskSensitive(activity.target),
     category: activity.category,
     outcome: activity.outcome,
     timestamp: activity.createdAt.toISOString(),
     ipAddress: canSee("activities.ipAddress")
-      ? activity.ipAddress ?? "Internal"
+      ? (activity.ipAddress ?? "Internal")
       : maskSensitive(activity.ipAddress),
-    details: canSee("activities.details") ? activity.details ?? "" : maskSensitive(activity.details),
+    details: canSee("activities.details")
+      ? (activity.details ?? "")
+      : maskSensitive(activity.details),
   };
 
   if (!canSee("activities.action")) dto.action = maskSensitive(activity.action);

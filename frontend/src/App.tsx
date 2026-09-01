@@ -181,7 +181,7 @@ export default function App() {
             <Route
               path="/pipelines"
               element={
-                <PermissionRoute permission="pipelines.read">
+                <PermissionRoute permission="leads.read">
                   <Pipelines />
                 </PermissionRoute>
               }

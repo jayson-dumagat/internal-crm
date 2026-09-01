@@ -6,7 +6,28 @@ import { env } from "../config/env";
 import { connectRedis, redisClient } from "../config/redis";
 
 const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const allowedOrigin = env.FRONTEND_ORIGIN.replace(/\/+$/, "");
+
+function normalizeOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.origin.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+const allowedOrigin = normalizeOrigin(env.FRONTEND_ORIGIN) ?? env.FRONTEND_ORIGIN;
+const allowedOriginUrl = new URL(allowedOrigin);
+const isDevTunnelOrigin = allowedOriginUrl.hostname.endsWith(".devtunnels.ms");
+const rewrittenLocalOrigins = new Set([
+  "http://localhost",
+  "https://localhost",
+  "http://127.0.0.1",
+  "https://127.0.0.1",
+]);
 
 function createRedisRateLimitStore(prefix = env.REDIS_RATE_LIMIT_PREFIX): RedisStore {
   return new RedisStore({
@@ -75,13 +96,28 @@ export function requireTrustedOrigin(
     return;
   }
 
-  const origin = req.get("origin");
+  const origin = normalizeOrigin(req.get("origin"));
   if (!origin) {
     next();
     return;
   }
 
-  if (origin.replace(/\/+$/, "") !== allowedOrigin) {
+  if (origin === allowedOrigin) {
+    next();
+    return;
+  }
+
+  // Microsoft Dev Tunnels may rewrite Origin to localhost before forwarding
+  // a request to an HTTP origin. Only accept that rewrite when the request's
+  // Referer still identifies this exact configured tunnel origin. This keeps
+  // the CSRF check strict and avoids trusting arbitrary localhost origins.
+  const refererOrigin = normalizeOrigin(req.get("referer"));
+  const isTrustedDevTunnelRewrite =
+    isDevTunnelOrigin &&
+    rewrittenLocalOrigins.has(origin) &&
+    refererOrigin === allowedOrigin;
+
+  if (!isTrustedDevTunnelRewrite) {
     res.status(403).json({
       success: false,
       message: "The request origin is not trusted.",

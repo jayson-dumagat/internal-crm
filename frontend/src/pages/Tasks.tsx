@@ -26,6 +26,7 @@ import KanbanBoard, {
   type TaskKanbanStatus,
 } from "../components/task/kanban/KanbanBoard";
 import TaskTableView from "../components/task/TaskTableView";
+import TaskTablePagination from "../components/task/TaskTablePagination";
 import type { KanbanTask, ListTask, TaskView } from "../types/Tasks";
 import { useCan } from "../hooks/auth/useCan";
 import { filterTasks, toKanbanTask, toListTask } from "../utils/tasks";
@@ -65,6 +66,8 @@ export default function Tasks() {
   const [newTaskStatus, setNewTaskStatus] =
     useState<TaskKanbanStatus>("not-started");
   const [deleteCandidate, setDeleteCandidate] = useState<TaskRecord | null>(null);
+  const [tablePage, setTablePage] = useState(1);
+  const [tableItemsPerPage, setTableItemsPerPage] = useState(10);
   const debouncedSearch = useDebounce(search, 400);
   useEffect(() => {
     if (searchParams.get("kind") === "task") return;
@@ -79,11 +82,21 @@ export default function Tasks() {
     else next.delete(key);
     next.delete("page");
     setSearchParams(next);
+    setTablePage(1);
     if (key === "status") setStatusFilter((value || "All") as TaskRecord["status"] | "All");
   };
   const filteredTasks = useMemo(
     () => filterTasks(tasks, debouncedSearch, statusFilter),
     [debouncedSearch, statusFilter, tasks],
+  );
+  const tableTotalPages = Math.max(
+    1,
+    Math.ceil(filteredTasks.length / tableItemsPerPage),
+  );
+  const safeTablePage = Math.min(tablePage, tableTotalPages);
+  const tableTasks = filteredTasks.slice(
+    (safeTablePage - 1) * tableItemsPerPage,
+    safeTablePage * tableItemsPerPage,
   );
   const listTasks: ListTask[] = filteredTasks.map(toListTask);
   const kanbanTasks: KanbanTask[] = filteredTasks.map(toKanbanTask);
@@ -261,16 +274,28 @@ export default function Tasks() {
             />
           )}
           {activeView === "table" && (
-            <TaskTableView
-              tasks={filteredTasks}
-              onEdit={(task) => {
-                setEditingTask(task);
-                setIsTaskFormOpen(true);
-              }}
-              onDelete={(task) => setDeleteCandidate(task)}
-              canUpdate={canUpdate}
-              canDelete={canDelete}
-            />
+            <>
+              <TaskTableView
+                tasks={tableTasks}
+                onEdit={(task) => {
+                  setEditingTask(task);
+                  setIsTaskFormOpen(true);
+                }}
+                onDelete={(task) => setDeleteCandidate(task)}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
+              />
+              <TaskTablePagination
+                page={safeTablePage}
+                totalPages={tableTotalPages}
+                itemsPerPage={tableItemsPerPage}
+                onPageChange={setTablePage}
+                onItemsPerPageChange={(value) => {
+                  setTableItemsPerPage(value);
+                  setTablePage(1);
+                }}
+              />
+            </>
           )}
         </div>
       </div>

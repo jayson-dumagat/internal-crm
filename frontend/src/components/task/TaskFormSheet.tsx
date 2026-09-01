@@ -70,16 +70,32 @@ export default function TaskFormSheet({ isOpen, task, defaultStatus = "not-start
   const leadsQuery = useLeadsQuery();
   const form = useForm<Values>({ resolver: zodResolver(taskFormSchema), defaultValues: defaults(task, defaultStatus, initialStartAt, initialDueAt) });
   const startDate = form.watch("startDate") ?? ""; const endDate = form.watch("endDate") ?? ""; const startTime = form.watch("startTime") ?? "09:00"; const endTime = form.watch("endTime") ?? "09:00"; const description = form.watch("description") ?? "";
+  const minimumScheduleDate = mode === "event" ? dayjs().format("YYYY-MM-DD") : "2000-01-01";
 
   useEffect(() => { if (isOpen) form.reset(defaults(task, defaultStatus, initialStartAt, initialDueAt)); }, [defaultStatus, form, initialDueAt, initialStartAt, isOpen, task]);
   const updateDateRange = (start: string, end?: string) => {
+    if (mode === "event" && start && dayjs(start).isBefore(dayjs(), "day")) {
+      form.setError("startAt", { type: "validate", message: "Events cannot be scheduled in the past." });
+      return;
+    }
+    if (mode === "event" && end && dayjs(end).isBefore(dayjs(), "day")) {
+      form.setError("dueAt", { type: "validate", message: "Events cannot be scheduled in the past." });
+      return;
+    }
     const selectedEnd = end && end !== start ? end : "";
     form.setValue("startDate", start, { shouldValidate: true, shouldDirty: true });
     form.setValue("endDate", selectedEnd, { shouldValidate: true, shouldDirty: true });
     form.setValue("startAt", combineDateTime(start, startTime), { shouldValidate: true });
     form.setValue("dueAt", combineDateTime(selectedEnd || start, endTime), { shouldValidate: true });
   };
-  const updateReminderDate = (date: string) => { form.setValue("reminderDate", date, { shouldValidate: true, shouldDirty: true }); form.setValue("reminderAt", combineDateTime(date, "09:00"), { shouldValidate: true }); };
+  const updateReminderDate = (date: string) => {
+    if (mode === "event" && date && dayjs(date).isBefore(dayjs(), "day")) {
+      form.setError("reminderAt", { type: "validate", message: "Reminders cannot be scheduled in the past." });
+      return;
+    }
+    form.setValue("reminderDate", date, { shouldValidate: true, shouldDirty: true });
+    form.setValue("reminderAt", combineDateTime(date, "09:00"), { shouldValidate: true });
+  };
   const submit = form.handleSubmit(async (values) => onSubmit({
     title: values.title.trim(), description: values.description?.trim() || null, kind: mode === "event" ? "event" : "task", type: values.type, priority: values.priority, status: values.status, color: values.color,
     startAt: values.startDate && values.startTime ? new Date(combineDateTime(values.startDate, values.startTime)).toISOString() : null,
@@ -108,12 +124,12 @@ export default function TaskFormSheet({ isOpen, task, defaultStatus = "not-start
           </div>
         </FormSection>
         <FormSection title="Schedule" description="Set a date range, time range, and optional reminder.">
-          <Field label="Date range" error={form.formState.errors.startAt?.message ?? form.formState.errors.dueAt?.message}><ArkDatePickerField startValue={startDate} endValue={endDate} range min="2000-01-01" max="2100-12-31" onChange={updateDateRange} placeholder="Start date" /></Field>
+          <Field label="Date range" error={form.formState.errors.startAt?.message ?? form.formState.errors.dueAt?.message}><ArkDatePickerField startValue={startDate} endValue={endDate} range min={minimumScheduleDate} max="2100-12-31" onChange={updateDateRange} placeholder="Start date" /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Start time"><input type="time" min="00:00" max="23:59" {...form.register("startTime", { onChange: (event) => form.setValue("startAt", combineDateTime(startDate, event.target.value), { shouldValidate: true }) })} className={inputClassName} /></Field>
             <Field label="End time"><input type="time" min="00:00" max="23:59" {...form.register("endTime", { onChange: (event) => form.setValue("dueAt", combineDateTime(endDate || startDate, event.target.value), { shouldValidate: true }) })} className={inputClassName} /></Field>
           </div>
-          <Field label="Reminder" error={form.formState.errors.reminderAt?.message}><ArkDatePickerField startValue={form.watch("reminderDate") ?? ""} min="2000-01-01" max="2100-12-31" onChange={(date) => updateReminderDate(date)} placeholder="Reminder date" /></Field>
+          <Field label="Reminder" error={form.formState.errors.reminderAt?.message}><ArkDatePickerField startValue={form.watch("reminderDate") ?? ""} min={minimumScheduleDate} max="2100-12-31" onChange={(date) => updateReminderDate(date)} placeholder="Reminder date" /></Field>
         </FormSection>
         <FormSection title="Workflow" description="Set the current status. Calendar colors are assigned automatically.">
           <Field label="Status" required error={form.formState.errors.status?.message}><input type="hidden" {...form.register("status")} /><ArkCombobox value={form.watch("status")} options={statusOptions} onChange={(value) => form.setValue("status", value as Values["status"], { shouldValidate: true, shouldDirty: true })} placeholder="Search status" /></Field>

@@ -44,6 +44,7 @@ import type {
   UpdateTaskInput,
 } from "../../types/Crm";
 import type { TaskStatus } from "../../types/Crm";
+import type { TaskRecord } from "../../api/crm";
 import { getUsers } from "../../api/users";
 import { useAuth } from "../auth/useAuth";
 import { useSearch } from "../useSearch";
@@ -333,6 +334,30 @@ export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => updateTaskStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: crmDirectoryKeys.tasks() });
+      const previous = queryClient.getQueriesData<TaskRecord[]>({
+        queryKey: crmDirectoryKeys.tasks(),
+      });
+
+      // Move the card immediately in every cached task list. The server
+      // response still remains authoritative and the query is invalidated
+      // below once the request settles.
+      queryClient.setQueriesData<TaskRecord[]>(
+        { queryKey: crmDirectoryKeys.tasks() },
+        (current) =>
+          current?.map((task) =>
+            task.id === id ? { ...task, status } : task,
+          ),
+      );
+
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previous.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.tasks() });
       queryClient.invalidateQueries({ queryKey: crmDirectoryKeys.activities() });

@@ -18,7 +18,6 @@ import {
   NoteIcon,
   UsersRoundIcon,
   TrophyIcon,
-  NetworkIcon,
   KeyIcon,
   CCWClockIcon,
 } from "../icons";
@@ -146,14 +145,6 @@ const navGroups: NavGroup[] = [
         path: "/leads",
         permission: "leads.read",
         icon: <TrophyIcon />,
-      },
-      {
-        id: "pipelines",
-        label: "Pipelines",
-        path: "/pipelines",
-        permission: "pipelines.read",
-        icon: <NetworkIcon />,
-        badges: [{ label: "New", enabled: false, variant: "success" }],
       },
       {
         id: "contacts",

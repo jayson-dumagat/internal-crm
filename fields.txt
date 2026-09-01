@@ -156,3 +156,92 @@ specimen signature - surname, first name, middle name, suffix, address, tin, tel
 signature by caballes-go securities
 
 
+Highest-priority additions
+1. Client brokerage accounts
+Add a brokerage account record linked to contacts or companies:
+- Account number, masked by default
+- Cash or margin account
+- Account status: pending, active, suspended, dormant, closed
+- Account opening and approval dates
+- Assigned trader/relationship manager
+- Funding status
+- External core-brokerage account ID
+2. KYC/AML onboarding workflow
+Add a dedicated workflow for:
+- Identity verification
+- Beneficial owners
+- Authorized representatives
+- Source of funds
+- Purpose of account
+- PEP/sanctions screening status
+- Missing or expired documents
+- Enhanced due diligence
+- Review and approval history
+This is especially important because securities brokers are AMLC-covered persons, and CDD includes customer identification, agent and beneficial-owner verification, purpose of relationship, and ongoing monitoring. AMLC covered-person guidance
+3. Suitability and investor profile
+Extend the existing risk profile with:
+- Investment objective
+- Investment horizon
+- Trading experience
+- Product knowledge
+- Income and net worth range
+- Liquidity needs
+- Preferred securities
+- Suitability review date
+- Approver and approval status
+4. Document vault
+Support categorized, versioned documents:
+- IDs
+- Account-opening forms
+- Corporate registration documents
+- Tax forms
+- Risk disclosures
+- Signed agreements
+- Proof of address
+- Beneficial ownership documents
+Add expiration dates, document review tasks, access logs, and download restrictions.
+5. Read-only trading/account snapshot
+Do not make the CRM the trading system. Integrate with the core brokerage or OMS and display:
+- Holdings
+- Available cash
+- Recent transactions
+- Orders and execution status
+- Account value
+- Last trade date
+- Inactivity indicators
+PSE describes the broker workflow as account opening, KYC, order submission, execution, and trade confirmation, so this information would fit naturally into the client profile. PSE investor workflow
+6. Compliance and supervisory queue
+Create a compliance page for:
+- KYC renewals
+- Suspicious activity alerts
+- Unusual transactions
+- Restricted or watch-listed clients
+- Suitability exceptions
+- Dormant accounts
+- Complaints
+- Supervisor approvals
+- Manual overrides
+7. Brokerage-specific pipeline stages
+Update the pipeline to:
+Prospect → KYC Pending → Documents Review → Account Approved → Funding Pending → Active Client → Dormant → Closed
+8. Communication and order-instruction records
+Add structured logs for:
+- Client calls
+- Emails
+- Trade instructions
+- Research recommendations
+- Disclosures sent
+- Consent and communication preferences
+- Complaint records
+These should be immutable or versioned and included in the audit trail.
+Recommended MVP order
+I would implement these first:
+1. Brokerage accounts
+2. KYC/AML case workflow
+3. Suitability profile
+4. Document vault
+5. Compliance tasks and alerts
+6. Read-only account/trade integration
+7. Brokerage dashboard metrics
+Keep order execution, settlement, custody, balances, and official trade records in the core brokerage/back-office system. The CRM should provide relationship context and workflow, not become the financial system of record.
+For the Philippines, confirm retention, reporting, and approval requirements with your compliance officer and SEC/AMLC/PSE advisers; implementation requirements can differ by license and business model.

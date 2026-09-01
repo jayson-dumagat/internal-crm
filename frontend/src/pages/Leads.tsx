@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -25,6 +25,7 @@ import LeadFooter from "../components/leads/LeadFooter";
 import LeadFormSheet from "../components/leads/LeadFormSheet";
 import LeadPreview from "../components/leads/LeadPreview";
 import LeadTable from "../components/leads/LeadTable";
+import LeadKanbanBoard from "../components/leads/LeadKanbanBoard";
 import PageMeta from "../components/common/PageMeta";
 import SearchField from "../components/search/SearchField";
 import { useCan } from "../hooks/auth/useCan";
@@ -38,6 +39,9 @@ import CrmFilterControls, {
   toFilterOptions,
   toIdFilterOptions,
 } from "../components/crm/CrmFilterControls";
+import TabButton from "../components/ui/tabs/TabButton";
+
+type LeadView = "table" | "kanban";
 
 const leadColumn = createColumnHelper<Lead>();
 const leadColumns = [
@@ -60,6 +64,9 @@ export default function Leads() {
     (searchParams.get("status") as LeadStatus | "All") || "All",
   );
   const [showFilters, setShowFilters] = useState(false);
+  const [activeView, setActiveView] = useState<LeadView>(() =>
+    searchParams.get("view") === "kanban" ? "kanban" : "table",
+  );
   const leadsQuery = useLeadsQuery();
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
@@ -97,6 +104,37 @@ export default function Leads() {
   useEffect(() => setCurrentPage(1), [search, statusFilter]);
 
   const debouncedSearch = useDebounce(search, 300);
+
+  useEffect(() => {
+    const requestedView = searchParams.get("view");
+    if (requestedView === "kanban" || requestedView === "table") {
+      setActiveView(requestedView);
+    }
+  }, [searchParams]);
+
+  const selectView = (view: LeadView) => {
+    setActiveView(view);
+    const next = new URLSearchParams(searchParams);
+    if (view === "kanban") next.set("view", view);
+    else next.delete("view");
+    setSearchParams(next, { replace: true });
+  };
+
+  const updateLeadStatus = useCallback(
+    async (id: string, status: LeadStatus) => {
+      if (!canUpdate) return;
+      try {
+        await updateLead.mutateAsync({ id, input: { status } });
+        toast.success("Lead status updated.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to update lead status.",
+        );
+        throw error;
+      }
+    },
+    [canUpdate, toast, updateLead],
+  );
 
   const updateFilter = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -338,6 +376,20 @@ export default function Leads() {
             </div>
           )}
         </div>
+        <div className="bg-gray-50/60 px-4 dark:bg-white/[0.02]">
+          <nav className="-mb-px flex gap-2 overflow-x-auto">
+            <TabButton
+              label="Table"
+              isActive={activeView === "table"}
+              onClick={() => selectView("table")}
+            />
+            <TabButton
+              label="Kanban"
+              isActive={activeView === "kanban"}
+              onClick={() => selectView("kanban")}
+            />
+          </nav>
+        </div>
         {leadsQuery.isLoading && (
           <div className="border-b border-gray-100 text-sm text-gray-500 dark:border-white/[0.05]">
             <DataLoadingSkeleton rows={5} />
@@ -348,26 +400,38 @@ export default function Leads() {
             {leadsQuery.error.message}
           </p>
         )}
-        <LeadTable
-          leads={currentData}
-          selectedIds={selectedIds}
-          isCurrentPageSelected={isCurrentPageSelected}
-          onToggleSelected={toggleSelected}
-          onToggleCurrentPage={toggleCurrentPage}
-          onSelectLead={setSelectedLead}
-          onEditLead={openEditLead}
-          onDeleteLead={removeLead}
-          canUpdate={canUpdate}
-          canDelete={canDelete}
-        />
-        <LeadCards leads={currentData} onSelectLead={setSelectedLead} />
-        <LeadFooter
-          totalPages={totalPages}
-          currentPage={safePage}
-          setCurrentPage={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          setItemsPerPage={setItemsPerPage}
-        />
+        {activeView === "table" ? (
+          <>
+            <LeadTable
+              leads={currentData}
+              selectedIds={selectedIds}
+              isCurrentPageSelected={isCurrentPageSelected}
+              onToggleSelected={toggleSelected}
+              onToggleCurrentPage={toggleCurrentPage}
+              onSelectLead={setSelectedLead}
+              onEditLead={openEditLead}
+              onDeleteLead={removeLead}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+            />
+            <LeadCards leads={currentData} onSelectLead={setSelectedLead} />
+            <LeadFooter
+              totalPages={totalPages}
+              currentPage={safePage}
+              setCurrentPage={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              setItemsPerPage={setItemsPerPage}
+            />
+          </>
+        ) : (
+          <LeadKanbanBoard
+            leads={filteredLeads}
+            canUpdate={canUpdate}
+            onStatusChange={updateLeadStatus}
+            onSelectLead={setSelectedLead}
+            onEditLead={openEditLead}
+          />
+        )}
       </div>
       <LeadPreview
         lead={selectedLead}

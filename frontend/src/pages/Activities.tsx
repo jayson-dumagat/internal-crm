@@ -121,7 +121,7 @@ export default function Activities() {
     <>
       <PageMeta
         title="CDEX Activities"
-        description="Review security and CRM audit activity for CDEX."
+        description="Review relationship work, outcomes, and recent CRM activity."
       />
       <AppBreadcrumb pageName="Activities" />
       <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">

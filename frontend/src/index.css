@@ -765,6 +765,11 @@ span.flatpickr-weekday,
   border: 0;
   box-shadow: none;
 }
+.custom-calendar .fc-daygrid-block-event .fc-event-main,
+.custom-calendar .fc-daygrid-block-event .fc-event-main-frame {
+  width: 100%;
+  min-width: 0;
+}
 .fc .fc-daygrid-day.fc-day-today .fc-scrollgrid-sync-inner {
   @apply rounded-sm bg-gray-100 dark:bg-white/[0.03];
 }
