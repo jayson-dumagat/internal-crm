@@ -10,7 +10,13 @@ export type ResourceKey =
   | "contacts"
   | "tasks"
   | "notes"
-  | "activities";
+  | "activities"
+  | "brokerageAccounts"
+  | "kyc"
+  | "suitability"
+  | "documents"
+  | "compliance"
+  | "communications";
 export type ResourceAssignments = Partial<Record<ResourceKey, string[]>>;
 
 export interface AccessPolicySnapshot {

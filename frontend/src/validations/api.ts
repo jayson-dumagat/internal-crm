@@ -100,6 +100,8 @@ export const activitySchema = z.object({
     "KYC",
     "Pipeline",
     "Task",
+    "Brokerage",
+    "Compliance",
     "System",
   ]),
   outcome: z.enum(["Success", "Warning", "Denied"]),

@@ -22,6 +22,7 @@ export type ListQuery = {
   clientType?: string;
   riskProfile?: string;
   interestLevel?: string;
+  fundingStatus?: string;
   page: number;
   pageSize: number;
 };

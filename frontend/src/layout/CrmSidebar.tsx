@@ -175,6 +175,25 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    group: "Client Operations",
+    items: [
+      {
+        id: "brokerage-accounts",
+        label: "Brokerage Accounts",
+        path: "/brokerage-accounts",
+        permission: "brokerageAccounts.read",
+        icon: <Building2Icon />,
+      },
+      {
+        id: "compliance",
+        label: "Compliance Queue",
+        path: "/compliance",
+        permission: "compliance.read",
+        icon: <KeyIcon />,
+      },
+    ],
+  },
+  {
     group: "Analytics",
     enabled: false,
     items: [

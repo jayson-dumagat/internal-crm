@@ -4,230 +4,1304 @@
     "title": "CDEX Internal CRM API",
     "version": "1.0.0",
     "description": "Session-authenticated API for the Caballes-Go Securities, Inc. internal CRM. Lead conversion is transactional: a lead remains as acquisition history and is linked to one canonical contact/client record.",
-    "contact": { "name": "CDEX Engineering" }
+    "contact": {
+      "name": "CDEX Engineering"
+    }
   },
-  "servers": [{ "url": "/api/v1", "description": "API v1 (same origin)" }],
-  "tags": [
-    { "name": "Authentication", "description": "Microsoft Entra ID session lifecycle" },
-    { "name": "Leads", "description": "Prospects and lead-to-client conversion" },
-    { "name": "Contacts", "description": "Canonical client/contact records" },
-    { "name": "Companies", "description": "Companies associated with contacts and leads" },
-    { "name": "Tasks", "description": "CRM tasks" },
-    { "name": "Notes", "description": "CRM notes" },
-    { "name": "Activities", "description": "Audit and activity log" },
-    { "name": "Users", "description": "Tenant users and avatars" },
-    { "name": "Access control", "description": "Database-backed roles, permissions, and policies" }
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "API v1 (same origin)"
+    }
   ],
-  "security": [{ "sessionCookie": [] }],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Microsoft Entra ID session lifecycle"
+    },
+    {
+      "name": "Leads",
+      "description": "Prospects and lead-to-client conversion"
+    },
+    {
+      "name": "Contacts",
+      "description": "Canonical client/contact records"
+    },
+    {
+      "name": "Companies",
+      "description": "Companies associated with contacts and leads"
+    },
+    {
+      "name": "Tasks",
+      "description": "CRM tasks"
+    },
+    {
+      "name": "Notes",
+      "description": "CRM notes"
+    },
+    {
+      "name": "Activities",
+      "description": "Audit and activity log"
+    },
+    {
+      "name": "Users",
+      "description": "Tenant users and avatars"
+    },
+    {
+      "name": "Access control",
+      "description": "Database-backed roles, permissions, and policies"
+    },
+    {
+      "name": "Brokerage operations",
+      "description": "Client brokerage accounts, KYC/AML, suitability, documents, and immutable communications"
+    },
+    {
+      "name": "Compliance",
+      "description": "Supervisory queue and compliance exceptions"
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
   "paths": {
     "/": {
       "get": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Legacy Entra callback alias",
-        "servers": [{ "url": "/" }],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
         "security": [],
-        "responses": { "302": { "description": "Redirects to the frontend sign-in page" } }
+        "responses": {
+          "302": {
+            "description": "Redirects to the frontend sign-in page"
+          }
+        }
       }
     },
     "/health": {
       "get": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Health check",
-        "servers": [{ "url": "/" }],
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
         "security": [],
-        "responses": { "200": { "description": "API is healthy", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } }
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/login-url": {
       "get": {
-        "tags": ["Authentication"], "summary": "Get the Microsoft sign-in URL", "security": [],
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get the Microsoft sign-in URL",
+        "security": [],
         "responses": {
-          "200": { "description": "Login URL", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "200": {
+            "description": "Login URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/auth/callback": {
       "get": {
-        "tags": ["Authentication"], "summary": "Complete the Entra ID callback and create a session", "security": [],
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Complete the Entra ID callback and create a session",
+        "security": [],
         "parameters": [
-          { "$ref": "#/components/parameters/Code" },
-          { "$ref": "#/components/parameters/State" },
-          { "name": "error", "in": "query", "schema": { "type": "string" } },
-          { "name": "error_description", "in": "query", "schema": { "type": "string" } }
+          {
+            "$ref": "#/components/parameters/Code"
+          },
+          {
+            "$ref": "#/components/parameters/State"
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error_description",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "302": { "description": "Redirects to the frontend sign-in page" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "302": {
+            "description": "Redirects to the frontend sign-in page"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/auth/session": {
       "get": {
-        "tags": ["Authentication"], "summary": "Get the current session and effective permissions", "security": [],
-        "responses": { "200": { "description": "Session state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionResponse" } } } } }
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get the current session and effective permissions",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Session state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/logout-url": {
       "get": {
-        "tags": ["Authentication"], "summary": "Get the Microsoft logout URL",
-        "responses": { "200": { "description": "Logout URL", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } }
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get the Microsoft logout URL",
+        "responses": {
+          "200": {
+            "description": "Logout URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/logout": {
       "post": {
-        "tags": ["Authentication"], "summary": "Destroy the local session",
-        "responses": { "200": { "description": "Session destroyed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } }
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Destroy the local session",
+        "responses": {
+          "200": {
+            "description": "Session destroyed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/leads": {
       "get": {
-        "tags": ["Leads"], "summary": "List leads", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }],
-        "responses": { "200": { "description": "Paginated leads", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+        "tags": [
+          "Leads"
+        ],
+        "summary": "List leads",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated leads",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       },
       "post": {
-        "tags": ["Leads"], "summary": "Create a lead", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" },
-        "responses": { "201": { "description": "Lead created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Create a lead",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Lead created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/leads/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
       "patch": {
-        "tags": ["Leads"], "summary": "Update a lead", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" },
-        "responses": { "200": { "description": "Lead updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } }, "404": { "$ref": "#/components/responses/NotFound" } }
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Update a lead",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Lead updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       },
-      "delete": { "tags": ["Leads"], "summary": "Delete a lead", "responses": { "200": { "description": "Lead deleted" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+      "delete": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Delete a lead",
+        "responses": {
+          "200": {
+            "description": "Lead deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     },
     "/leads/{id}/convert": {
       "post": {
-        "tags": ["Leads"], "summary": "Convert a lead into a canonical client/contact",
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Convert a lead into a canonical client/contact",
         "description": "Runs in one SERIALIZABLE database transaction. It locks the lead and matching tenant/email identity, reuses an existing contact when possible, links the records, and writes the activity audit row. A repeated request is idempotent.",
-        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
         "responses": {
-          "201": { "description": "Lead converted and client created or reused", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConversionResponse" } } } },
-          "200": { "description": "Lead was already converted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConversionResponse" } } } },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "description": "Matching client is closed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "201": {
+            "description": "Lead converted and client created or reused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Lead was already converted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Matching client is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/leads/{id}/avatar": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "get": { "tags": ["Leads"], "summary": "Get a lead avatar", "responses": { "200": { "$ref": "#/components/responses/Image" }, "404": { "$ref": "#/components/responses/NotFound" } } },
-      "post": { "tags": ["Leads"], "summary": "Upload a lead avatar", "requestBody": { "$ref": "#/components/requestBodies/ImageBody" }, "responses": { "200": { "description": "Avatar uploaded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Get a lead avatar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Image"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Upload a lead avatar",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ImageBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "/contacts": {
-      "get": { "tags": ["Contacts"], "summary": "List canonical contacts/clients", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }], "responses": { "200": { "description": "Paginated contacts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } },
-      "post": { "tags": ["Contacts"], "summary": "Create a contact/client", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "201": { "description": "Contact created" } } }
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "List canonical contacts/clients",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Create a contact/client",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Contact created"
+          }
+        }
+      }
     },
     "/contacts/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "patch": { "tags": ["Contacts"], "summary": "Update a contact/client", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Contact updated" }, "404": { "$ref": "#/components/responses/NotFound" } } },
-      "delete": { "tags": ["Contacts"], "summary": "Delete a contact/client", "responses": { "200": { "description": "Contact deleted" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Update a contact/client",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Contact updated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Delete a contact/client",
+        "responses": {
+          "200": {
+            "description": "Contact deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     },
     "/contacts/{id}/avatar": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "get": { "tags": ["Contacts"], "summary": "Get a contact avatar", "responses": { "200": { "$ref": "#/components/responses/Image" } } },
-      "post": { "tags": ["Contacts"], "summary": "Upload a contact avatar", "requestBody": { "$ref": "#/components/requestBodies/ImageBody" }, "responses": { "200": { "description": "Avatar uploaded" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Get a contact avatar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Image"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Upload a contact avatar",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ImageBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar uploaded"
+          }
+        }
+      }
     },
     "/companies": {
-      "get": { "tags": ["Companies"], "summary": "List companies", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }], "responses": { "200": { "description": "Paginated companies", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } },
-      "post": { "tags": ["Companies"], "summary": "Create a company", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "201": { "description": "Company created" } } }
+      "get": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "List companies",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated companies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "Create a company",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Company created"
+          }
+        }
+      }
     },
     "/companies/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "patch": { "tags": ["Companies"], "summary": "Update a company", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Company updated" }, "404": { "$ref": "#/components/responses/NotFound" } } },
-      "delete": { "tags": ["Companies"], "summary": "Delete a company", "responses": { "200": { "description": "Company deleted" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "Update a company",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Company updated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "Delete a company",
+        "responses": {
+          "200": {
+            "description": "Company deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     },
     "/companies/{id}/logo": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "get": { "tags": ["Companies"], "summary": "Get a company logo", "responses": { "200": { "$ref": "#/components/responses/Image" } } },
-      "post": { "tags": ["Companies"], "summary": "Upload a company logo", "requestBody": { "$ref": "#/components/requestBodies/ImageBody" }, "responses": { "200": { "description": "Logo uploaded" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "Get a company logo",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Image"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Companies"
+        ],
+        "summary": "Upload a company logo",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ImageBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Logo uploaded"
+          }
+        }
+      }
     },
     "/tasks": {
-      "get": { "tags": ["Tasks"], "summary": "List tasks", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }], "responses": { "200": { "description": "Paginated tasks", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } },
-      "post": { "tags": ["Tasks"], "summary": "Create a task", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "201": { "description": "Task created" } } }
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "List tasks",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Create a task",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Task created"
+          }
+        }
+      }
     },
     "/tasks/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "patch": { "tags": ["Tasks"], "summary": "Update a task", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Task updated" } } },
-      "delete": { "tags": ["Tasks"], "summary": "Delete a task", "responses": { "200": { "description": "Task deleted" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update a task",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Delete a task",
+        "responses": {
+          "200": {
+            "description": "Task deleted"
+          }
+        }
+      }
     },
     "/tasks/{id}/status": {
-      "patch": { "tags": ["Tasks"], "summary": "Update task status", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Task status updated" } } }
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "summary": "Update task status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Task status updated"
+          }
+        }
+      }
     },
     "/notes": {
-      "get": { "tags": ["Notes"], "summary": "List notes", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }], "responses": { "200": { "description": "Paginated notes", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } },
-      "post": { "tags": ["Notes"], "summary": "Create a note", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "201": { "description": "Note created" } } }
+      "get": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "List notes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated notes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Create a note",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Note created"
+          }
+        }
+      }
     },
     "/notes/{id}": {
-      "parameters": [{ "$ref": "#/components/parameters/Id" }],
-      "patch": { "tags": ["Notes"], "summary": "Update a note", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Note updated" } } },
-      "delete": { "tags": ["Notes"], "summary": "Delete a note", "responses": { "200": { "description": "Note deleted" } } }
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Update a note",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Note updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Delete a note",
+        "responses": {
+          "200": {
+            "description": "Note deleted"
+          }
+        }
+      }
     },
     "/activities": {
-      "get": { "tags": ["Activities"], "summary": "List audit activities", "parameters": [{ "$ref": "#/components/parameters/ListQuery" }], "responses": { "200": { "description": "Paginated activity log", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } },
-      "post": { "tags": ["Activities"], "summary": "Create an activity entry", "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "201": { "description": "Activity created" } } }
+      "get": {
+        "tags": [
+          "Activities"
+        ],
+        "summary": "List audit activities",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ListQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated activity log",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Activities"
+        ],
+        "summary": "Create an activity entry",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "201": {
+            "description": "Activity created"
+          }
+        }
+      }
     },
     "/users": {
-      "get": { "tags": ["Users"], "summary": "List active tenant users", "responses": { "200": { "description": "Users", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ListResponse" } } } } } }
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List active tenant users",
+        "responses": {
+          "200": {
+            "description": "Users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "/users/{id}/avatar": {
-      "get": { "tags": ["Users"], "summary": "Get a user avatar", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/Image" } } }
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get a user avatar",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Image"
+          }
+        }
+      }
     },
     "/users/me/avatar": {
-      "get": { "tags": ["Users"], "summary": "Get the current user's avatar", "responses": { "200": { "$ref": "#/components/responses/Image" } } }
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get the current user's avatar",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Image"
+          }
+        }
+      }
     },
     "/access/catalog": {
-      "get": { "tags": ["Access control"], "summary": "Get roles, permissions, and policy catalog", "responses": { "200": { "description": "Access catalog" } } }
+      "get": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "Get roles, permissions, and policy catalog",
+        "responses": {
+          "200": {
+            "description": "Access catalog"
+          }
+        }
+      }
     },
     "/access/roles": {
-      "get": { "tags": ["Access control"], "summary": "List roles and permissions", "responses": { "200": { "description": "Roles" } } }
+      "get": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "List roles and permissions",
+        "responses": {
+          "200": {
+            "description": "Roles"
+          }
+        }
+      }
     },
     "/access/roles/{id}": {
-      "patch": { "tags": ["Access control"], "summary": "Update role permissions", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Role updated" } } }
+      "patch": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "Update role permissions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          }
+        }
+      }
     },
     "/access/resources": {
-      "get": { "tags": ["Access control"], "summary": "List access-controlled resources and fields", "responses": { "200": { "description": "Resources" } } }
+      "get": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "List access-controlled resources and fields",
+        "responses": {
+          "200": {
+            "description": "Resources"
+          }
+        }
+      }
     },
     "/access/users": {
-      "get": { "tags": ["Access control"], "summary": "List user access policies", "responses": { "200": { "description": "Policies" } } }
+      "get": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "List user access policies",
+        "responses": {
+          "200": {
+            "description": "Policies"
+          }
+        }
+      }
     },
     "/access/users/{entraObjectId}": {
-      "patch": { "tags": ["Access control"], "summary": "Update a user's access policy", "parameters": [{ "name": "entraObjectId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }], "requestBody": { "$ref": "#/components/requestBodies/JsonBody" }, "responses": { "200": { "description": "Policy updated" } } }
+      "patch": {
+        "tags": [
+          "Access control"
+        ],
+        "summary": "Update a user's access policy",
+        "parameters": [
+          {
+            "name": "entraObjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonBody"
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated"
+          }
+        }
+      }
+    },
+    "/brokerage/accounts": {
+      "get": { "tags": ["Brokerage operations"], "summary": "List masked brokerage accounts", "responses": { "200": { "description": "Accounts" } } },
+      "post": { "tags": ["Brokerage operations"], "summary": "Create a brokerage account record", "responses": { "201": { "description": "Account created" } } }
+    },
+    "/brokerage/accounts/{id}": {
+      "patch": { "tags": ["Brokerage operations"], "summary": "Update a brokerage account record", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "Account updated" } } }
+    },
+    "/brokerage/accounts/{id}/snapshot": {
+      "get": { "tags": ["Brokerage operations"], "summary": "Read the latest core-brokerage snapshot", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "Read-only snapshot" } } }
+    },
+    "/brokerage/kyc": {
+      "get": { "tags": ["Brokerage operations"], "summary": "List KYC/AML cases", "responses": { "200": { "description": "KYC cases" } } },
+      "post": { "tags": ["Brokerage operations"], "summary": "Open a KYC/AML case", "responses": { "201": { "description": "Case created" } } }
+    },
+    "/brokerage/kyc/{id}/reviews": {
+      "post": { "tags": ["Brokerage operations"], "summary": "Record an immutable KYC review decision", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "Review recorded" } } }
+    },
+    "/brokerage/suitability": {
+      "get": { "tags": ["Brokerage operations"], "summary": "List suitability profiles", "responses": { "200": { "description": "Suitability profiles" } } },
+      "post": { "tags": ["Brokerage operations"], "summary": "Create a suitability profile", "responses": { "201": { "description": "Profile created" } } }
+    },
+    "/brokerage/documents": {
+      "get": { "tags": ["Brokerage operations"], "summary": "List versioned client documents", "responses": { "200": { "description": "Documents" } } },
+      "post": { "tags": ["Brokerage operations"], "summary": "Upload a versioned client document", "responses": { "201": { "description": "Document uploaded" } } }
+    },
+    "/brokerage/documents/{id}/download": {
+      "get": { "tags": ["Brokerage operations"], "summary": "Download a permitted document and write an access log", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "description": "Document stream" } } }
+    },
+    "/brokerage/compliance": {
+      "get": { "tags": ["Compliance"], "summary": "List the supervisory compliance queue", "responses": { "200": { "description": "Compliance cases" } } },
+      "post": { "tags": ["Compliance"], "summary": "Create a compliance case", "responses": { "201": { "description": "Case created" } } }
+    },
+    "/brokerage/communications": {
+      "get": { "tags": ["Brokerage operations"], "summary": "List immutable communication and order-instruction records", "responses": { "200": { "description": "Communication records" } } },
+      "post": { "tags": ["Brokerage operations"], "summary": "Record a communication or trade instruction", "responses": { "201": { "description": "Record created" } } }
     }
   },
   "components": {
     "securitySchemes": {
-      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "ccrms.sid", "description": "HttpOnly session cookie created after Microsoft Entra ID authentication." }
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "ccrms.sid",
+        "description": "HttpOnly session cookie created after Microsoft Entra ID authentication."
+      }
     },
     "parameters": {
-      "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-      "Code": { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
-      "State": { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } },
-      "ListQuery": { "name": "query", "in": "query", "description": "Backend list query string. Supports search, page, limit, sort, date ranges, and resource-specific filters.", "schema": { "type": "string", "example": "search=alice&page=1&limit=25&status=Active" } }
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Code": {
+        "name": "code",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "State": {
+        "name": "state",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ListQuery": {
+        "name": "query",
+        "in": "query",
+        "description": "Backend list query string. Supports search, page, limit, sort, date ranges, and resource-specific filters.",
+        "schema": {
+          "type": "string",
+          "example": "search=alice&page=1&limit=25&status=Active"
+        }
+      }
     },
     "requestBodies": {
-      "JsonBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JsonObject" } } } },
-      "ImageBody": { "required": true, "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["image"], "properties": { "image": { "type": "string", "format": "binary" } } } } } }
+      "JsonBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonObject"
+            }
+          }
+        }
+      },
+      "ImageBody": {
+        "required": true,
+        "content": {
+          "multipart/form-data": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "image"
+              ],
+              "properties": {
+                "image": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "schemas": {
-      "JsonObject": { "type": "object", "additionalProperties": true, "description": "Request fields are validated by the endpoint schema layer." },
-      "ApiResponse": { "type": "object", "properties": { "data": {}, "success": { "type": "boolean" }, "message": { "type": "string" } } },
-      "ListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "type": "object", "additionalProperties": true } }, "meta": { "$ref": "#/components/schemas/Pagination" } } },
-      "Pagination": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "limit": { "type": "integer", "minimum": 1 }, "total": { "type": "integer", "minimum": 0 }, "totalPages": { "type": "integer", "minimum": 0 } } },
-      "Error": { "type": "object", "required": ["success", "message"], "properties": { "success": { "type": "boolean", "example": false }, "message": { "type": "string" }, "code": { "type": "string" }, "details": {} } },
-      "SessionResponse": { "type": "object", "properties": { "authenticated": { "type": "boolean" }, "user": { "type": "object", "nullable": true, "additionalProperties": true }, "permissions": { "type": "array", "items": { "type": "string" } } } },
-      "ConversionResponse": { "type": "object", "required": ["data"], "properties": { "data": { "type": "object", "required": ["lead", "client", "createdClient", "alreadyConverted"], "properties": { "lead": { "type": "object", "additionalProperties": true }, "client": { "type": "object", "additionalProperties": true }, "createdClient": { "type": "boolean" }, "alreadyConverted": { "type": "boolean" } } } } }
+      "JsonObject": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Request fields are validated by the endpoint schema layer."
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "data": {},
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "details": {}
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "boolean"
+          },
+          "user": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ConversionResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "lead",
+              "client",
+              "createdClient",
+              "alreadyConverted"
+            ],
+            "properties": {
+              "lead": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "client": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "createdClient": {
+                "type": "boolean"
+              },
+              "alreadyConverted": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
     },
     "responses": {
-      "BadRequest": { "description": "Invalid request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "Unauthorized": { "description": "Authentication is required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "Forbidden": { "description": "Required permission is missing", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "NotFound": { "description": "Resource not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "RateLimited": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "Image": { "description": "Private image stream", "content": { "image/jpeg": {}, "image/png": {}, "image/webp": {} } }
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication is required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Required permission is missing",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Image": {
+        "description": "Private image stream",
+        "content": {
+          "image/jpeg": {},
+          "image/png": {},
+          "image/webp": {}
+        }
+      }
     }
   }
 }

@@ -8,6 +8,7 @@ import activityRouter from "../../modules/activities/activity.routes";
 import noteRouter from "../../modules/notes/note.routes";
 import taskRouter from "../../modules/tasks/task.routes";
 import accessRouter from "../../modules/access/access.routes";
+import brokerageRouter from "../../modules/brokerage/brokerage.routes";
 
 export const v1Router = Router();
 
@@ -20,4 +21,5 @@ v1Router.use("/activities", activityRouter);
 v1Router.use("/notes", noteRouter);
 v1Router.use("/tasks", taskRouter);
 v1Router.use("/access", accessRouter);
+v1Router.use("/brokerage", brokerageRouter);
 

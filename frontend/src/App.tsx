@@ -100,6 +100,8 @@ const Contacts = lazy(() => import("./pages/Contacts"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Notes = lazy(() => import("./pages/Notes"));
 const Activities = lazy(() => import("./pages/Activities"));
+const BrokerageAccounts = lazy(() => import("./pages/BrokerageAccounts"));
+const Compliance = lazy(() => import("./pages/Compliance"));
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PermissionRoute from "./components/auth/PermissionRoute";
 import Unauthorized from "./pages/saved/OtherPage/Unauthorized";
@@ -199,6 +201,22 @@ export default function App() {
               element={
                 <PermissionRoute permission="access.manage">
                   <AccessControl />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/brokerage-accounts"
+              element={
+                <PermissionRoute permission="brokerageAccounts.read">
+                  <BrokerageAccounts />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/compliance"
+              element={
+                <PermissionRoute permission="compliance.read">
+                  <Compliance />
                 </PermissionRoute>
               }
             />

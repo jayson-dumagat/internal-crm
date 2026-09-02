@@ -48,6 +48,7 @@ export function getListQuery(req: Request, defaultPageSize = 50): ListQuery {
     clientType: stringQuery(req.query.clientType),
     riskProfile: stringQuery(req.query.riskProfile),
     interestLevel: stringQuery(req.query.interestLevel),
+    fundingStatus: stringQuery(req.query.fundingStatus),
     page,
     pageSize,
   };

@@ -10,6 +10,17 @@ import { Note } from "../modules/notes/note.entity.js";
 import { UserAccessPolicy } from "../modules/access/user-access-policy.entity.js";
 import { Permission } from "../modules/access/permission.entity.js";
 import { Role } from "../modules/access/role.entity.js";
+import {
+  BrokerageAccount,
+  BrokerageAccountSnapshot,
+  BrokerageDocument,
+  CommunicationRecord,
+  ComplianceCase,
+  DocumentAccessLog,
+  KycCase,
+  KycReview,
+  SuitabilityProfile,
+} from "../modules/brokerage/brokerage.entity.js";
 
 export const entities = [
   User,
@@ -24,4 +35,13 @@ export const entities = [
   UserAccessPolicy,
   Permission,
   Role,
+  BrokerageAccount,
+  KycCase,
+  KycReview,
+  SuitabilityProfile,
+  BrokerageDocument,
+  DocumentAccessLog,
+  BrokerageAccountSnapshot,
+  ComplianceCase,
+  CommunicationRecord,
 ];

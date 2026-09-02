@@ -9,7 +9,13 @@ export type PermissionResource =
   | "contacts"
   | "tasks"
   | "notes"
-  | "activities";
+  | "activities"
+  | "brokerageAccounts"
+  | "kyc"
+  | "suitability"
+  | "documents"
+  | "compliance"
+  | "communications";
 export type PermissionField = string;
 export type PermissionDataScope = "all" | "assigned" | "own";
 
@@ -50,6 +56,13 @@ const sensitiveFields = new Set([
   "activities.target",
   "activities.details",
   "activities.ipAddress",
+  "brokerageAccounts.accountNumber",
+  "brokerageAccounts.externalId",
+  "brokerageAccounts.snapshot",
+  "kyc.details",
+  "documents.content",
+  "compliance.details",
+  "communications.body",
 ]);
 
 const createPermissions: Record<PermissionResource, AccessPermission> = {
@@ -59,6 +72,12 @@ const createPermissions: Record<PermissionResource, AccessPermission> = {
   tasks: "tasks.create",
   notes: "notes.create",
   activities: "activities.create",
+  brokerageAccounts: "brokerageAccounts.create",
+  kyc: "kyc.create",
+  suitability: "suitability.create",
+  documents: "documents.create",
+  compliance: "compliance.create",
+  communications: "communications.create",
 };
 
 const PermissionContext = createContext<PermissionContextValue | null>(null);

@@ -24,6 +24,12 @@ export const accessResourceCatalog = [
   { key: "tasks", label: "Tasks and events" },
   { key: "notes", label: "Notes" },
   { key: "activities", label: "Activities" },
+  { key: "brokerageAccounts", label: "Brokerage accounts" },
+  { key: "kyc", label: "KYC / AML cases" },
+  { key: "suitability", label: "Suitability profiles" },
+  { key: "documents", label: "Document vault" },
+  { key: "compliance", label: "Compliance queue" },
+  { key: "communications", label: "Communications" },
 ] as const;
 
 export const accessFieldCatalog = [
@@ -110,6 +116,13 @@ export const accessFieldCatalog = [
     label: "Activity IP address",
     sensitive: true,
   },
+  { key: "brokerageAccounts.accountNumber", label: "Brokerage account number", sensitive: true },
+  { key: "brokerageAccounts.externalId", label: "External brokerage ID", sensitive: true },
+  { key: "brokerageAccounts.snapshot", label: "Account and trading snapshot", sensitive: true },
+  { key: "kyc.details", label: "KYC / AML details", sensitive: true },
+  { key: "documents.content", label: "Document contents", sensitive: true },
+  { key: "compliance.details", label: "Compliance case details", sensitive: true },
+  { key: "communications.body", label: "Communication contents", sensitive: true },
 ] as const;
 
 export const accessScopeCatalog = [
@@ -126,6 +139,12 @@ export const accessScopeCatalog = [
     options: ["all", "assigned", "own"] as const,
   },
   { key: "notes", label: "Notes", options: ["all", "own"] as const },
+  { key: "brokerageAccounts", label: "Brokerage accounts", options: ["all", "assigned", "own"] as const },
+  { key: "kyc", label: "KYC / AML cases", options: ["all", "assigned", "own"] as const },
+  { key: "suitability", label: "Suitability profiles", options: ["all", "own"] as const },
+  { key: "documents", label: "Document vault", options: ["all", "own"] as const },
+  { key: "compliance", label: "Compliance queue", options: ["all", "assigned", "own"] as const },
+  { key: "communications", label: "Communications", options: ["all", "own"] as const },
 ] as const;
 
 export function toAccessPolicySnapshot(
