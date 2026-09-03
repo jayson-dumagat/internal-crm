@@ -34,5 +34,24 @@ export type CommunicationRecord = z.infer<typeof communicationRecordSchema>;
 export const createAccountInputSchema = z.object({ accountNumber: z.string().trim().min(4).max(120), accountType: z.enum(["cash", "margin"]), status: z.enum(["pending", "active", "suspended", "dormant", "closed"]), openedAt: date, approvedAt: date, assignedToId: nullableId, fundingStatus: z.enum(["not_funded", "partially_funded", "funded", "withdrawal_hold"]), externalAccountId: z.string().trim().max(255).nullable().optional(), contactId: nullableId, companyId: nullableId });
 export type CreateAccountInput = z.infer<typeof createAccountInputSchema>;
 
+export const createSuitabilityInputSchema = z.object({
+  contactId: nullableId,
+  companyId: nullableId,
+  accountId: nullableId,
+  investmentObjective: z.string().trim().max(255).nullable().optional(),
+  investmentHorizon: z.string().trim().max(100).nullable().optional(),
+  tradingExperience: z.string().trim().max(100).nullable().optional(),
+  productKnowledge: z.string().trim().max(100).nullable().optional(),
+  incomeRange: z.string().trim().max(100).nullable().optional(),
+  netWorthRange: z.string().trim().max(100).nullable().optional(),
+  liquidityNeeds: z.string().trim().max(255).nullable().optional(),
+  preferredSecurities: z.array(z.string().trim().max(80)).max(100),
+  riskProfile: z.enum(["conservative", "balanced", "aggressive"]).nullable().optional(),
+  reviewedAt: date,
+  approverId: nullableId,
+  status: z.enum(["pending", "approved", "rejected", "expired"]),
+});
+export type CreateSuitabilityInput = z.infer<typeof createSuitabilityInputSchema>;
+
 export const createComplianceInputSchema = z.object({ type: z.enum(["kyc_renewal", "suspicious_activity", "unusual_transaction", "watchlist", "suitability_exception", "dormant_account", "complaint", "supervisor_approval", "manual_override"]), status: z.enum(["open", "in_review", "escalated", "resolved", "closed"]), priority: z.enum(["low", "medium", "high", "critical"]), title: z.string().trim().min(1).max(255), description: z.string().max(10000).nullable().optional(), contactId: nullableId, companyId: nullableId, accountId: nullableId, assignedToId: nullableId, dueAt: date, resolution: z.string().max(10000).nullable().optional() });
 export type CreateComplianceInput = z.infer<typeof createComplianceInputSchema>;

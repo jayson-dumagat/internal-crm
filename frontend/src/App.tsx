@@ -101,6 +101,10 @@ const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Notes = lazy(() => import("./pages/Notes"));
 const Activities = lazy(() => import("./pages/Activities"));
 const BrokerageAccounts = lazy(() => import("./pages/BrokerageAccounts"));
+const KycAml = lazy(() => import("./pages/KycAml"));
+const Suitability = lazy(() => import("./pages/Suitability"));
+const DocumentVault = lazy(() => import("./pages/DocumentVault"));
+const Communications = lazy(() => import("./pages/Communications"));
 const Compliance = lazy(() => import("./pages/Compliance"));
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PermissionRoute from "./components/auth/PermissionRoute";
@@ -217,6 +221,38 @@ export default function App() {
               element={
                 <PermissionRoute permission="compliance.read">
                   <Compliance />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/kyc-aml"
+              element={
+                <PermissionRoute permission="kyc.read">
+                  <KycAml />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/suitability"
+              element={
+                <PermissionRoute permission="suitability.read">
+                  <Suitability />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/document-vault"
+              element={
+                <PermissionRoute permission="documents.read">
+                  <DocumentVault />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/communications"
+              element={
+                <PermissionRoute permission="communications.read">
+                  <Communications />
                 </PermissionRoute>
               }
             />

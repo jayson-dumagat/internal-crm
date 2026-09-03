@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router";
 import { useDebounce } from "../useDebounce";
 import { useSearch } from "../useSearch";
-import { createBrokerageAccount, createComplianceCase, getBrokerageAccounts, getComplianceCases, getKycCases, getSuitabilityProfiles, getBrokerageDocuments, getCommunications, updateBrokerageAccount, updateComplianceCase, updateKycCase, reviewKycCase, uploadBrokerageDocument, createKycCase, createCommunication, getBrokerageAccountSnapshot } from "../../api/brokerage";
+import { createBrokerageAccount, createComplianceCase, getBrokerageAccounts, getComplianceCases, getKycCases, getSuitabilityProfiles, getBrokerageDocuments, getCommunications, updateBrokerageAccount, updateComplianceCase, updateKycCase, reviewKycCase, uploadBrokerageDocument, createKycCase, createCommunication, getBrokerageAccountSnapshot, createSuitabilityProfile, updateSuitabilityProfile, downloadBrokerageDocument } from "../../api/brokerage";
 import type { BrokerageQuery } from "../../api/brokerage";
-import type { CreateAccountInput, CreateComplianceInput } from "../../validations/brokerage";
+import type { CreateAccountInput, CreateComplianceInput, CreateSuitabilityInput } from "../../validations/brokerage";
 
 const keys = {
   all: ["brokerage"] as const,
@@ -29,6 +29,8 @@ export function useBrokerageAccountsQuery() { const params = useParams(); return
 export function useBrokerageAccountSnapshotQuery(id: string | null) { return useQuery({ queryKey: [...keys.accounts(), "snapshot", id], queryFn: () => getBrokerageAccountSnapshot(id as string), enabled: Boolean(id) }); }
 export function useKycCasesQuery() { const params = useParams(); return useQuery({ queryKey: [...keys.kyc(), params], queryFn: () => getKycCases(params) }); }
 export function useSuitabilityProfilesQuery() { const params = useParams(); return useQuery({ queryKey: [...keys.suitability(), params], queryFn: () => getSuitabilityProfiles(params) }); }
+export function useCreateSuitabilityProfile() { const client = useQueryClient(); return useMutation({ mutationFn: (input: CreateSuitabilityInput) => createSuitabilityProfile(input), onSuccess: () => invalidate(client) }); }
+export function useUpdateSuitabilityProfile() { const client = useQueryClient(); return useMutation({ mutationFn: ({ id, input }: { id: string; input: Partial<CreateSuitabilityInput> }) => updateSuitabilityProfile(id, input), onSuccess: () => invalidate(client) }); }
 export function useBrokerageDocumentsQuery() { const params = useParams(); return useQuery({ queryKey: [...keys.documents(), params], queryFn: () => getBrokerageDocuments(params) }); }
 export function useComplianceCasesQuery() { const params = useParams(); return useQuery({ queryKey: [...keys.compliance(), params], queryFn: () => getComplianceCases(params) }); }
 export function useCommunicationsQuery() { const params = useParams(); return useQuery({ queryKey: [...keys.communications(), params], queryFn: () => getCommunications(params) }); }
@@ -44,4 +46,5 @@ export function useReviewKycCase() { const client = useQueryClient(); return use
 export function useCreateComplianceCase() { const client = useQueryClient(); return useMutation({ mutationFn: (input: CreateComplianceInput) => createComplianceCase(input), onSuccess: () => invalidate(client) }); }
 export function useUpdateComplianceCase() { const client = useQueryClient(); return useMutation({ mutationFn: ({ id, input }: { id: string; input: Partial<CreateComplianceInput> }) => updateComplianceCase(id, input), onSuccess: () => invalidate(client) }); }
 export function useUploadBrokerageDocument() { const client = useQueryClient(); return useMutation({ mutationFn: ({ file, fields }: { file: File; fields: Record<string, string> }) => uploadBrokerageDocument(file, fields), onSuccess: () => invalidate(client) }); }
+export function useDownloadBrokerageDocument() { return useMutation({ mutationFn: (id: string) => downloadBrokerageDocument(id) }); }
 export function useCreateCommunication() { const client = useQueryClient(); return useMutation({ mutationFn: (input: Record<string, unknown>) => createCommunication(input), onSuccess: () => invalidate(client) }); }
